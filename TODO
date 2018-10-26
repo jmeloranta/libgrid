@@ -1,0 +1,16 @@
+- try using local memory for derivatives etc. (avooid jumping in memory)
+- large memory cuda: something's not right with memory transfers - excessive?
+- CUDA: Does CN with absorbing boundaries work correctly??
+- Grid: 512 x 343 x 343 does not seem to work. Problem with mapping the potential? Propagation leads to exapnsion of the bubble.
+- Still sometimes eating all CPU (800% !, 100% would be OK) while everything should be running on GPU?! It seems to have openmp
+  busy wait threads as well as cuda initiated threads.
+- grid_wf_nornmalize2(gwf, REAL, INT, INT, INT): nornmalize value of |gwf->value[i.j.k]|^2 to REAL
+  write CUDA version so that driver.c scale_wf does not have to fetch data from GPU
+- CUDA Poisson solver
+
+- profiling normal & cuda.
+
+- Check that HD, thermal, and HD BF terms work (from libdft)
+X multi GPU support (at least be able to select GPU). Can we use streams?
+
+also fgrep TODO *.[ch] to find out more specific issues.

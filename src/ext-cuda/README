@@ -1,0 +1,13 @@
+Why are these files here? The don't seem to belong to libgrid?
+
+In order to make operations that apply a user defined function on
+a grid with CUDA, one must have the corresponding CUDA kernel for them.
+Two possibilities to do this:
+
+1) Have the application do this CUDA programming (not clean as libgrid is
+supposed to hide all this).
+
+2) Embed these functions to libgrid (this is why these functions are here).
+
+To add a new function, number the files in sequence and follow the examples
+in the files. Also, add the new ext files to the make file (../Makefile).

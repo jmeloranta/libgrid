@@ -1,0 +1,2 @@
+- FFT with cuda
+- tridiagonal matrix solution from operator splitting (NX * NY number of tridiagonal problems, etc.)
