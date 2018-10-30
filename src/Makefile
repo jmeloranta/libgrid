@@ -16,8 +16,8 @@ endif
 	make prototypes
 	make libgrid.a
 
-SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c grid_itp.c \
-      threads.c linalg.c ctimer.c other.c lapack.c
+SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c grid_itp.c cgrid_bc.c \
+      rgrid_bc.c threads.c linalg.c ctimer.c other.c lapack.c
 SRC += ext-cuda/func1c.c ext-cuda/func2c.c ext-cuda/func3c.c ext-cuda/func4c.c ext-cuda/func5c.c ext-cuda/func6c.c ext-cuda/func7c.c
 
 ifeq ($(CUDA),yes)

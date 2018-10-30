@@ -80,6 +80,15 @@ __device__ inline CUCOMPLEX CUCEXP(CUCOMPLEX val) {
   return val;
 }
 
+__device__ inline CUCOMPLEX CUCPOW(CUCOMPLEX val, CUREAL exp) {
+
+  CUCOMPLEX tmp = CUCLOG(val);
+
+  tmp.x *= exp;
+  tmp.y *= exp;
+  return CUCEXP(tmp);
+}
+
 __device__ inline CUCOMPLEX CUCMULR(CUCOMPLEX cval, CUREAL rval) {
 
   cval.x *= rval;

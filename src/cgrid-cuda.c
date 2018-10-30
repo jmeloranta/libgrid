@@ -93,6 +93,26 @@ EXPORT char cgrid_cuda_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
   return 0;
 }
 
+/* 
+ * Rise grid to given power.
+ *
+ * gridb    = destination grid (cgrid *).
+ * grida    = 1st source grid (cgrid *).
+ * exponent = exponent to be used (REAL complex).
+ *
+ * Return value: 0 = OK, -1 = cannot be done on GPU.
+ *
+ */
+
+EXPORT char cgrid_cuda_power(cgrid *gridb, cgrid *grida, REAL exponent) {
+
+  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->id, 1, gridb->value, gridb->grid_len, gridb->id, 0) < 0) return -1;
+
+  cgrid_cuda_powerW((CUCOMPLEX *) cuda_block_address(gridb->value), (CUCOMPLEX *) cuda_block_address(grida->value), exponent, grida->nx, grida->ny, grida->nz);
+
+  return 0;
+}
+
 /*
  * Multiply grid by a constant.
  *

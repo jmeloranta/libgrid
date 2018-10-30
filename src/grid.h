@@ -4,6 +4,8 @@
  *
  */
 
+#ifndef __GRID__
+#define __GRID__
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h> 
@@ -39,7 +41,7 @@
 #include "proto.h"
 #include "defs.h"
 
-/* identifier for extracting prototypes */
+/* get rid of the identifier used for extracting prototypes */
 #define EXPORT
 
 /* Formatting strings */
@@ -57,3 +59,5 @@
 #else
 #define FMT_I "%ld"
 #endif
+
+#endif /* __GRID__ */

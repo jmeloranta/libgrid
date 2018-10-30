@@ -106,6 +106,50 @@ extern "C" void cgrid_cuda_abs_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL
 /********************************************************************************************************************/
 
 /*
+ * Grid power device code. This cannot not be called directly.
+ *
+ * A = POW(B,x)
+ *
+ */
+
+__global__ void cgrid_cuda_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+  a[idx] = CUCPOW(b[idx], x);
+}
+
+/*
+ * Grid power.
+ *
+ * gridb    = Destination for operation (REAL complex *; output).
+ * grida    = Source for operation (REAL complex *; input).
+ * nx       = # of points along x (INT).
+ * ny       = # of points along y (INT).
+ * nz       = # of points along z (INT).
+ *
+ */
+
+extern "C" void cgrid_cuda_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL exponent, INT nx, INT ny, INT nz) {
+
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  cgrid_cuda_power_gpu<<<blocks,threads>>>(gridb, grida, exponent, nx, ny, nz);
+  cuda_error_check();
+}
+
+/********************************************************************************************************************/
+
+/********************************************************************************************************************/
+
+/*
  * Multiply grid by constant device code. This cannot not be called directly.
  *
  * A = C * A

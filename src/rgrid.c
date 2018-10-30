@@ -3,6 +3,11 @@
  *
  * Nx is major index and Nz is minor index (varies most rapidly).
  *
+ * For 2-D grids use: (1, NY, NZ)
+ * For 1-D grids use: (1, 1, NZ)
+ *
+ * Note that due to FFT, the last index dimension is 2 * (nz / 2 + 1) rather than just nz.
+ *
  */
 
 #include "grid.h"
@@ -44,8 +49,8 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   INT nz2, i;
   size_t len; 
  
-  if (!(grid = (rgrid *) malloc(sizeof(rgrid)))) {
-    fprintf(stderr, "libgrid: Error in rgrid_alloc(). Could not allocate memory for  grid structure.\n");
+  if(!(grid = (rgrid *) malloc(sizeof(rgrid)))) {
+    fprintf(stderr, "libgrid: Error in rgrid_alloc(). Could not allocate memory for grid structure.\n");
    return 0;
   }
   
@@ -67,8 +72,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 #endif
 #endif
     fprintf(stderr, "libgrid: Error in rgrid_alloc(). Could not allocate memory for rgrid->value.\n");
-    free(grid);
-    return 0;
+    abort();
   }
 
   grid->step = step;
@@ -103,6 +107,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
     grid->fft_norm = 1.0 / (2.0 * ((REAL) grid->nx) * 2.0 * ((REAL) grid->ny) * 2.0 * ((REAL) grid->nz));
   else
     grid->fft_norm = 1.0 / ((REAL) (grid->nx * grid->ny * grid->nz));
+
   // Account for the correct dimensionality of the grid
   grid->fft_norm2 = grid->fft_norm;
   if(grid->nx > 1) grid->fft_norm2 *= grid->step;
@@ -129,15 +134,15 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 /*
  * Set the grid origin.
  *
- * grid   = Grid for which the origin is to be defined (rgrid *).
- * x0     = X coordinate for the origin (REAL).
- * y0     = Y coordinate for the origin (REAL).
- * z0     = Z coordinate for the origin (REAL).
+ * grid   = Grid for which the origin is to be defined (rgrid *; input/output).
+ * x0     = X coordinate for the origin (REAL; input).
+ * y0     = Y coordinate for the origin (REAL; input).
+ * z0     = Z coordinate for the origin (REAL; input).
  *
- * The coordinates are evaluated as:
- * x(i)  = (i - nx/2) * step - x0
- * y(j)  = (j - ny/2) * step - y0
- * z(k)  = (k - nz/2) * step - z0
+ * The grid coordinates will be evaluated as:
+ * x(i)  = (i - nx / 2) * step - x0
+ * y(j)  = (j - ny / 2) * step - y0
+ * z(k)  = (k - nz / 2) * step - z0
  *
  * No return value.
  *
@@ -153,10 +158,10 @@ EXPORT void rgrid_set_origin(rgrid *grid, REAL x0, REAL y0, REAL z0) {
 /* 
  * Shift the grid origin.
  * 
- * grid  = Grid for which the origin is to be shifted (rgrid *).
- * x0    = Shift in X coordinate (REAL).
- * y0    = Shift in Y coordinate (REAL).
- * z0    = Shift in Z coordinate (REAL).
+ * grid  = Grid for which the origin is to be shifted (rgrid *; input/output).
+ * x0    = Shift in X coordinate (REAL; input).
+ * y0    = Shift in Y coordinate (REAL; input).
+ * z0    = Shift in Z coordinate (REAL; input).
  *
  * No return value.
  *
@@ -172,10 +177,10 @@ EXPORT void rgrid_shift_origin(rgrid *grid, REAL x0, REAL y0, REAL z0) {
 /*
  * Set the grid origin in momentum space (or the velocity of the frame of reference).
  * 
- * grid    = Grid for which the momentum origin is to be defined (rgrid *).
- * kx0     = Momentum origin along the X axis (REAL).
- * ky0     = Momentum origin along the Y axis (REAL).
- * kz0     = Momentum origin along the Z axis (REAL).
+ * grid    = Grid for which the momentum origin is to be defined (rgrid *; input/output).
+ * kx0     = Momentum origin along the X axis (REAL; input).
+ * ky0     = Momentum origin along the Y axis (REAL; input).
+ * kz0     = Momentum origin along the Z axis (REAL; input).
  *
  * kx0, ky0 and kz0 can be any real numbers but keep in mind that the grid
  * will only contain the compoent k = 0 if they are multiples of:
@@ -196,9 +201,9 @@ EXPORT void rgrid_set_momentum(rgrid *grid, REAL kx0, REAL ky0, REAL kz0) {
 }
 
 /*
- * Free  grid.
+ * Free grid.
  *
- * grid = pointer to  grid to be freed (rgrid *).
+ * grid = pointer to  grid to be freed (rgrid *; input).
  *
  * No return value.
  *
@@ -233,10 +238,10 @@ EXPORT void rgrid_free(rgrid *grid) {
 }
 
 /* 
- * Write  grid on disk in binary format.
+ * Write grid on disk in binary format.
  *
- * grid =  grid to be written (rgrid *).
- * out  = file handle for the file (FILE * as defined in stdio.h).
+ * grid = grid to be written (rgrid *; input).
+ * out  = file handle for the file (FILE *; input).
  *
  * No return value.
  *
@@ -255,11 +260,11 @@ EXPORT void rgrid_write(rgrid *grid, FILE *out) {
 }
 
 /* 
- * Read  grid from disk in binary format.
+ * Read grid from disk in binary format.
  *
- * grid =  grid to be read (rgrid *). If NULL, a grid with the correct dimensions will be allocated.
- *         Note that the boundary condition will assigned to PERIODIC.
- * in   = file handle for reading the file (FILE * as defined in stdio.h).
+ * grid = grid to be read (rgrid *; output). If NULL, a grid with the correct dimensions will be allocated.
+ *        Note that the boundary condition will assigned to PERIODIC by default.
+ * in   = file handle for reading the file (FILE *; input).
  *
  * Returns value to the grid (NULL on error).
  *
@@ -271,7 +276,7 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
   REAL step;
   
 #ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
+  if(cuda_status()) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
 #endif
   fread(&nx, sizeof(INT), 1, in);
   fread(&ny, sizeof(INT), 1, in);
@@ -306,15 +311,12 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
 }
 
 /*
- * Copy  grid from one grid to another.
+ * Copy grid from one grid to another.
  *
- * copy = destination grid (rgrid *).
- * grid = source grid (rgrid *).
+ * copy = destination grid (rgrid *; output).
+ * grid = source grid (rgrid *; input).
  *
  * No return value.
- *
- * NOTE: If FFT transformed grid needs to be copied,
- * one must use the nz2 as the last dimension.
  *
  */
 
@@ -348,15 +350,13 @@ EXPORT void rgrid_copy(rgrid *copy, rgrid *grid) {
 }
 
 /*
- * Shift  grid by given amount spatially.
+ * Shift grid by given amount spatially.
  *
- * shifted = destination grid for the operation (rgrid *).
- * grid    = source grid for the operation (rgrid *).
- * x       = shift spatially by this amount in x (REAL).
- * y       = shift spatially by this amount in y (REAL).
- * z       = shift spatially by this amount in z (REAL).
- *
- * NOTE: Source and destination may be the same grid.
+ * shifted = destination grid for the operation (rgrid *; output).
+ * grid    = source grid for the operation (rgrid *; input).
+ * x       = shift spatially by this amount in x (REAL; input).
+ * y       = shift spatially by this amount in y (REAL; input).
+ * z       = shift spatially by this amount in z (REAL; input).
  *
  * No return value.
  *
@@ -366,15 +366,22 @@ EXPORT void rgrid_shift(rgrid *shifted, rgrid *grid, REAL x, REAL y, REAL z) {
 
   sShiftParametersr params;
 
+  if(grid == shifted) {
+    fprintf(stderr, "libgrid: Source and destination must be different in rgrid_shift().\n");
+    abort();
+  }
   /* shift by (x,y,z) i.e. current grid center to (x,y,z) */
-  params.x = x;  params.y = y;  params.z = z;  params.grid = grid;
+  params.x = x;
+  params.y = y;
+  params.z = z; 
+  params.grid = grid;
   rgrid_map(shifted, shift_rgrid, &params);
 }
 
 /* 
- * Zero  grid.
+ * Zero grid.
  *
- * grid = grid to be zeroed (rgrid *).
+ * grid = grid to be zeroed (rgrid *; input/output).
  *
  * No return value.
  * 
@@ -386,10 +393,10 @@ EXPORT void rgrid_zero(rgrid *grid) {
 }
 
 /* 
- * Set  grid to a constant value.
+ * Set grid to a constant value.
  *
- * grid = grid to be set (rgrid *).
- * c    = constant value (REAL).
+ * grid = grid to be set (rgrid *; input/output).
+ * c    = constant value (REAL; input).
  *
  * No return value.
  *
@@ -408,18 +415,18 @@ EXPORT void rgrid_constant(rgrid *grid, REAL c) {
      ijnz = ij * nzz;
      for(k = 0; k < nz; k++)
        value[ijnz + k] = c;
-     if(nz != nzz) value[ijnz + nz] = value[ijnz + nz + 1] = 0.0;
+     if(nz != nzz) value[ijnz + nz] = value[ijnz + nz + 1] = 0.0;   // TODO: Needed?
    }
 }
 
 /*
  * Multiply a given grid by a function.
  *
- * grid = destination grid for the operation (rgrid *).
- * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL, REAL)).
+ * grid = destination grid for the operation (rgrid *; output).
+ * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL, REAL); input).
  *        The first argument (void *) is for external user specified data, the next is grid value at the point,
  *        and x, y, z are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *).
+ * farg = pointer to user specified data (void *; input).
  *
  * No return value.
  *
@@ -427,7 +434,8 @@ EXPORT void rgrid_constant(rgrid *grid, REAL c) {
 
 EXPORT void rgrid_product_func(rgrid *grid, REAL (*func)(void *arg, REAL val, REAL x, REAL y, REAL z), void *farg) {
 
-  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx/2, ny2 = ny/2, nz2 = nz/2;
+  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx / 2, 
+      ny2 = ny / 2, nz2 = nz / 2;
   REAL x, y, z, step = grid->step;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
   REAL *value = grid->value;
@@ -450,13 +458,13 @@ EXPORT void rgrid_product_func(rgrid *grid, REAL (*func)(void *arg, REAL val, RE
 }
 
 /*
- * Map a given function onto  grid.
+ * Map a given function onto grid.
  *
- * grid = destination grid for the operation (rgrid *).
- * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL)).
+ * grid = destination grid for the operation (rgrid *; output).
+ * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL); input).
  *        The first argument (void *) is for external user specified data
  *        and x,y,z are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *).
+ * farg = pointer to user specified data (void *; input).
  *
  * No return value.
  *
@@ -464,13 +472,14 @@ EXPORT void rgrid_product_func(rgrid *grid, REAL (*func)(void *arg, REAL val, RE
 
 EXPORT void rgrid_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y, REAL z), void *farg) {
 
-  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx/2, ny2 = ny/2, nz2 = nz/2;
+  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx / 2, ny2 = ny / 2, 
+      nz2 = nz / 2;
   REAL x, y, z, step = grid->step;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
   REAL *value = grid->value;
   
 #ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
+  if(cuda_status()) cuda_remove_block(grid->value, 0);
 #endif
 #pragma omp parallel for firstprivate(farg,nx,ny,nz,nzz,nx2,ny2,nz2,nxy,step,func,value,x0,y0,z0) private(i,j,ij,ijnz,k,x,y,z) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -490,13 +499,13 @@ EXPORT void rgrid_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y, REAL 
  * Map a given function onto  grid with linear "smoothing".
  * This can be used to weight the values at grid points to produce more
  * accurate integration over the grid.
- * *
- * grid = destination grid for the operation (rgrid *).
- * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL)).
+ *
+ * grid = destination grid for the operation (rgrid *; output).
+ * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL); input).
  *        The first argument (void *) is for external user specified data
  *        and (x, y, z) is the point (REALs) where the function is evaluated.
- * farg = pointer to user specified data (void *).
- * ns   = number of intermediate points to be used in smoothing (INT).
+ * farg = pointer to user specified data (void *; input).
+ * ns   = number of intermediate points to be used in smoothing (INT; input).
  *
  * No return value.
  *
@@ -504,13 +513,14 @@ EXPORT void rgrid_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y, REAL 
 
 EXPORT void rgrid_smooth_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y, REAL z), void *farg, INT ns) {
 
-  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
+  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx / 2, ny2 = ny / 2, 
+      nz2 = nz / 2;
   REAL xc, yc, zc, step = grid->step;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
   REAL *value = grid->value;
   
 #ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
+  if(cuda_status()) cuda_remove_block(grid->value, 0);
 #endif
 #pragma omp parallel for firstprivate(farg,nx,ny,nz,nzz,nx2,ny2,nz2,nxy,ns,step,func,value,x0,y0,z0) private(i,j,k,ijnz,xc,yc,zc) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -532,14 +542,14 @@ EXPORT void rgrid_smooth_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y
  * accurate integration over the grid. Limits for intermediate steps and
  * tolerance can be given.
  *
- * grid   = destination grid for the operation (rgrid *).
- * func   = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL)).
+ * grid   = destination grid for the operation (rgrid *; output).
+ * func   = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL); input).
  *          The first argument (void *) is for external user specified data
  *          and x, y, z are the coordinates (REAL) where the function is evaluated.
- * farg   = pointer to user specified data (void *).
- * min_ns = minimum number of intermediate points to be used in smoothing (INT).
- * max_ns = maximum number of intermediate points to be used in smoothing (INT).
- * tol    = tolerance for weighing (REAL).
+ * farg   = pointer to user specified data (void *; input).
+ * min_ns = minimum number of intermediate points to be used in smoothing (INT; input).
+ * max_ns = maximum number of intermediate points to be used in smoothing (INT; input).
+ * tol    = tolerance for weighing (REAL; input).
  *
  * No return value.
  *
@@ -558,7 +568,7 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
   if (max_ns < min_ns) max_ns = min_ns;
   
 #ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
+  if(cuda_status()) cuda_remove_block(grid->value, 0);
 #endif
 
 #pragma omp parallel for firstprivate(stderr,farg,nx,ny,nz,nzz,nx2,ny2,nz2,nxy,min_ns,max_ns,step,func,value,tol2,x0,y0,z0) private(i,j,k,ijnz,ns,xc,yc,zc,sum,sump) default(none) schedule(runtime)
@@ -573,7 +583,7 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
       sum  = func(farg, xc, yc, zc); sump = 0.0;
       for(ns = min_ns; ns <= max_ns; ns *= 2) {
         sum  = linearly_weighted_integralr(func, farg, xc, yc, zc, step, ns);
-        sump = linearly_weighted_integralr(func, farg, xc, yc, zc, step, ns+1);
+        sump = linearly_weighted_integralr(func, farg, xc, yc, zc, step, ns + 1);
         if (sqnorm(sum - sump) < tol2) break;
       }
 #if 0
@@ -592,11 +602,11 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
 }
 
 /*
- * Add two  grids ("gridc = grida + gridb").
+ * Add two grids: gridc = grida + gridb
  *
- * gridc = destination grid (rgrid *).
- * grida = 1st of the grids to be added (rgrid *).
- * gridb = 2nd of the grids to be added (rgrid *).
+ * gridc = destination grid (rgrid *; output).
+ * grida = 1st of the grids to be added (rgrid *; input).
+ * gridb = 2nd of the grids to be added (rgrid *; input).
  *
  * No return value.
  *
@@ -623,11 +633,11 @@ EXPORT void rgrid_sum(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /* 
- * Subtract two grids ("gridc = grida - gridb").
+ * Subtract two grids: gridc = grida - gridb
  *
- * gridc = destination grid (rgrid *).
- * grida = 1st source grid (rgrid *).
- * gridb = 2nd source grid (rgrid *).
+ * gridc = destination grid (rgrid *; output).
+ * grida = 1st source grid (rgrid *; input).
+ * gridb = 2nd source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -654,11 +664,11 @@ EXPORT void rgrid_difference(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /* 
- * Calculate product of two grids ("gridc = grida * gridb").
+ * Calculate product of two grids: gridc = grida * gridb
  *
- * gridc = destination grid (rgrid *).
- * grida = 1st source grid (rgrid *).
- * gridb = 2nd source grid (rgrid *).
+ * gridc = destination grid (rgrid *; output).
+ * grida = 1st source grid (rgrid *; input).
+ * gridb = 2nd source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -687,16 +697,16 @@ EXPORT void rgrid_product(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 /* 
  * Rise a grid to given power.
  *
- * gridb    = destination grid (rgrid *).
- * grida    = 1st source grid (rgrid *).
- * exponent = exponent to be used (REAL).
+ * gridb    = destination grid (rgrid *; output).
+ * grida    = 1st source grid (rgrid *; input).
+ * exponent = exponent to be used (REAL; input).
  *
  * No return value.
  *
- * Note: Source and destination grids may be the same.
- *       This routine uses pow() so that the exponent can be
- *       fractional but this is slow! Do not use this for integer
- *       exponents.
+ * Notes: - Source and destination grids may be the same.
+ *         - This routine uses pow() so that the exponent can be
+ *           fractional but this is slow! Do not use this for integer
+ *           exponents.
  *
  */
 
@@ -720,16 +730,16 @@ EXPORT void rgrid_power(rgrid *gridb, rgrid *grida, REAL exponent) {
 /* 
  * Rise absolute value of a grid to given power.
  *
- * gridb    = destination grid (rgrid *).
- * grida    = 1st source grid (rgrid *).
- * exponent = exponent to be used (REAL).
+ * gridb    = destination grid (rgrid *; output).
+ * grida    = 1st source grid (rgrid *; input).
+ * exponent = exponent to be used (REAL; input).
  *
  * No return value.
  *
- * Note: Source and destination grids may be the same.
- *       This routine uses pow() so that the exponent can be
- *       fractional but this is slow! Do not use this for integer
- *       exponents.
+ * Notes: - Source and destination grids may be the same.
+ *         - This routine uses pow() so that the exponent can be
+ *           fractional but this is slow! Do not use this for integer
+ *           exponents.
  *
  */
 
@@ -751,11 +761,11 @@ EXPORT void rgrid_abs_power(rgrid *gridb, rgrid *grida, REAL exponent) {
 }
 
 /*
- * Divide two grids ("gridc = grida / gridb").
+ * Divide two grids: gridc = grida / gridb
  *
- * gridc = destination grid (rgrid *).
- * grida = 1st source grid (rgrid *).
- * gridb = 2nd source grid (rgrid *).
+ * gridc = destination grid (rgrid *; output).
+ * grida = 1st source grid (rgrid *; input).
+ * gridb = 2nd source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -782,12 +792,12 @@ EXPORT void rgrid_division(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * "Safely" divide two grids ("gridc = grida / gridb").
+ * "Safely" divide two grids: gridc = grida / gridb
  *
- * gridc = destination grid (rgrid *).
- * grida = 1st source grid (rgrid *).
- * gridb = 2nd source grid (rgrid *).
- * eps   = Epsilon to add to the divisor.
+ * gridc = destination grid (rgrid *; output).
+ * grida = 1st source grid (rgrid *; input).
+ * gridb = 2nd source grid (rgrid *; input).
+ * eps   = Epsilon to add to the divisor (REAL; input).
  *
  * No return value.
  *
@@ -814,10 +824,10 @@ EXPORT void rgrid_division_eps(rgrid *gridc, rgrid *grida, rgrid *gridb, REAL ep
 }
 
 /*
- * Add a constant to a  grid.
+ * Add a constant to a grid.
  *
- * grid = grid where the constant is added (rgrid *).
- * c    = constant to be added (REAL).
+ * grid = grid where the constant is added (rgrid *; input/output).
+ * c    = constant to be added (REAL; input).
  *
  * No return value.
  *
@@ -842,8 +852,8 @@ EXPORT void rgrid_add(rgrid *grid, REAL c) {
 /*
  * Multiply grid by a constant.
  *
- * grid = grid to be multiplied (rgrid *).
- * c    = multiplier (REAL).
+ * grid = grid to be multiplied (rgrid *; input/output).
+ * c    = multiplier (REAL; input).
  *
  * No return value.
  *
@@ -868,9 +878,9 @@ EXPORT void rgrid_multiply(rgrid *grid, REAL c) {
 /* 
  * Add and multiply: grid = (grid + ca) * cm.
  *
- * grid = grid to be operated (rgrid *).
- * ca   = constant to be added (REAL).
- * cm   = multiplier (REAL).
+ * grid = grid to be operated (rgrid *; input/output).
+ * ca   = constant to be added (REAL; input).
+ * cm   = multiplier (REAL; input).
  *
  * No return value.
  *
@@ -895,9 +905,9 @@ EXPORT void rgrid_add_and_multiply(rgrid *grid, REAL ca, REAL cm) {
 /*
  * Multiply and add: grid = cm * grid + ca.
  *
- * grid = grid to be operated (rgrid *).
- * cm   = multiplier (REAL).
- * ca   = constant to be added (REAL).
+ * grid = grid to be operated (rgrid *; input/output).
+ * cm   = multiplier (REAL; input).
+ * ca   = constant to be added (REAL; input).
  *
  * No return value.
  *
@@ -922,9 +932,9 @@ EXPORT void rgrid_multiply_and_add(rgrid *grid, REAL cm, REAL ca) {
 /* 
  * Add scaled grid (multiply/add): gridc = gridc + d * grida
  *
- * gridc = destination grid for the operation (rgrid *).
- * d     = multiplier for the operation (REAL).
- * grida = source grid for the operation (rgrid *).
+ * gridc = destination grid for the operation (rgrid *; input/output).
+ * d     = multiplier for the operation (REAL; input).
+ * grida = source grid for the operation (rgrid *; input).
  *
  * No return value.
  *
@@ -952,10 +962,10 @@ EXPORT void rgrid_add_scaled(rgrid *gridc, REAL d, rgrid *grida) {
 /*
  * Perform the following operation: gridc = gridc + d * grida * gridb.
  *
- * gridc = destination grid (rgrid *).
- * d     = constant multiplier (REAL).
- * grida = 1st source grid (rgrid *).
- * gridb = 2nd source grid (rgrid *).
+ * gridc = destination grid (rgrid *; output).
+ * d     = constant multiplier (REAL; input).
+ * grida = 1st source grid (rgrid *; input).
+ * gridb = 2nd source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -984,9 +994,9 @@ EXPORT void rgrid_add_scaled_product(rgrid *gridc, REAL d, rgrid *grida, rgrid *
 /*
  * Operate on a grid by a given operator: gridc = O(grida).
  *
- * gridc    = destination grid (rgrid *).
- * grida    = source grid (rgrid *).
- * operator = operator (REAL (*)(REAL, void *)). Args are value and param pointer.
+ * gridc    = destination grid (rgrid *; output).
+ * grida    = source grid (rgrid *; input).
+ * operator = operator (REAL (*)(REAL, void *); input). Args are value and param pointer.
  *            (i.e., a function mapping a given R-number to another)
  *
  * No return value.
@@ -1003,8 +1013,8 @@ EXPORT void rgrid_operate_one(rgrid *gridc, rgrid *grida, REAL (*operator)(REAL 
   
 #ifdef USE_CUDA
   if(cuda_status()) {
-    cuda_remove_block(grida->value, 1);
-    cuda_remove_block(gridc->value, 0);
+    cuda_remove_block(avalue, 1);
+    if(avalue != cvalue) cuda_remove_block(cvalue, 0);
   }
 #endif
 #pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,cvalue,operator,params) private(ij,ijnz,k) default(none) schedule(runtime)
@@ -1018,10 +1028,10 @@ EXPORT void rgrid_operate_one(rgrid *gridc, rgrid *grida, REAL (*operator)(REAL 
 /*
  * Operate on a grid by a given operator and multiply: gridc = gridb * O(grida).
  *
- * gridc    = destination grid (rgrid *).
- * gridb    = multiply with this grid (rgrid *).
- * grida    = source grid (rgrid *).
- * operator = operator (REAL (*)(REAL), void *). Args are value and params.
+ * gridc    = destination grid (rgrid *; output).
+ * gridb    = multiply with this grid (rgrid *; input).
+ * grida    = source grid (rgrid *; input).
+ * operator = operator (REAL (*)(REAL), void *; input). Args are value and params.
  *            (i.e., a function mapping a given R-number to another)
  *
  * No return value.
@@ -1039,9 +1049,9 @@ EXPORT void rgrid_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, 
   
 #ifdef USE_CUDA
   if(cuda_status()) {
-    cuda_remove_block(gridb->value, 1);
-    cuda_remove_block(grida->value, 1);
-    cuda_remove_block(gridc->value, 0);
+    if(gridc != gridb && gridc != grida) cuda_remove_block(cvalue, 0);
+    cuda_remove_block(bvalue, 1);
+    if(grida != gridb) cuda_remove_block(avalue, 1);
   }
 #endif
 #pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,bvalue,cvalue,operator,params) private(ij,ijnz,k) default(none) schedule(runtime)
@@ -1056,10 +1066,10 @@ EXPORT void rgrid_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, 
  * Operate on two grids and place the result in third: gridc = O(grida, gridb).
  * where O is the operator.
  *
- * gridc    = destination grid (rgrid *).
- * grida    = 1s source grid (rgrid *).
- * gridb    = 2nd source grid (rgrid *).
- * operator = operator mapping grida and gridb (REAL (*)(REAL, REAL)).
+ * gridc    = destination grid (rgrid *; output).
+ * grida    = 1s source grid (rgrid *; input).
+ * gridb    = 2nd source grid (rgrid *; input).
+ * operator = operator mapping grida and gridb (REAL (*)(REAL, REAL); input).
  *
  * No return value.
  *
@@ -1078,9 +1088,9 @@ EXPORT void rgrid_operate_two(rgrid *gridc, rgrid *grida, rgrid *gridb, REAL (*o
   
 #ifdef USE_CUDA
   if(cuda_status()) {
-    cuda_remove_block(gridb->value, 1);
-    cuda_remove_block(grida->value, 1);
-    cuda_remove_block(gridc->value, 0);
+    if(gridc != gridb && gridc != grida) cuda_remove_block(cvalue, 0);
+    cuda_remove_block(bvalue, 1);
+    if(grida != gridb) cuda_remove_block(avalue, 1);
   }
 #endif
 #pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,bvalue,cvalue,operator) private(ij,ijnz,k) default(none) schedule(runtime)
@@ -1094,8 +1104,8 @@ EXPORT void rgrid_operate_two(rgrid *gridc, rgrid *grida, rgrid *gridb, REAL (*o
 /*
  * Operate on a grid by a given operator.
  *
- * grid     = grid to be operated (rgrid *).
- * operator = operator (void (*)(REAL *)).
+ * grid     = grid to be operated (rgrid *; input/output).
+ * operator = operator (void (*)(REAL *); input).
  * 
  * No return value.
  *
@@ -1109,7 +1119,7 @@ EXPORT void rgrid_transform_one(rgrid *grid, void (*operator)(REAL *a)) {
   REAL *value = grid->value;
   
 #ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
+  if(cuda_status()) cuda_remove_block(value, 1);
 #endif
 #pragma omp parallel for firstprivate(nxy,nz,nzz,value,operator) private(ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -1122,9 +1132,9 @@ EXPORT void rgrid_transform_one(rgrid *grid, void (*operator)(REAL *a)) {
 /*
  * Operate on two separate grids by a given operator.
  *
- * grida    = grid to be operated (rgrid *).
- * gridb    = grid to be operated (rgrid *).
- * operator = operator (void (*)(REAL *)).
+ * grida    = grid to be operated (rgrid *; input/output).
+ * gridb    = grid to be operated (rgrid *; input/output).
+ * operator = operator (void (*)(REAL *); input).
  * 
  * No return value.
  *
@@ -1140,8 +1150,8 @@ EXPORT void rgrid_transform_two(rgrid *grida, rgrid *gridb, void (*operator)(REA
   
 #ifdef USE_CUDA
   if(cuda_status()) {
-    cuda_remove_block(gridb->value, 1);
-    cuda_remove_block(grida->value, 1);
+    cuda_remove_block(bvalue, 1);
+    cuda_remove_block(avalue, 1);
   }
 #endif
 #pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,bvalue,operator) private(ij,ijnz,k) default(none) schedule(runtime)
@@ -1155,7 +1165,7 @@ EXPORT void rgrid_transform_two(rgrid *grida, rgrid *gridb, void (*operator)(REA
 /*
  * Integrate over a grid.
  *
- * grid = grid to be integrated (rgrid *).
+ * grid = grid to be integrated (rgrid *; input).
  *
  * Returns the integral value (REAL).
  *
@@ -1167,7 +1177,7 @@ EXPORT void rgrid_transform_two(rgrid *grida, rgrid *gridb, void (*operator)(REA
 EXPORT REAL rgrid_integral(rgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
-  REAL sum;
+  REAL sum, step = grid->step;
 
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_integral(grid, &sum)) return sum;
@@ -1179,22 +1189,22 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++)
 	sum += rgrid_value_at_index(grid, i, j, k);
-  if(nx > 1) sum *= grid->step;
-  if(ny > 1) sum *= grid->step;
+  if(nx > 1) sum *= step;
+  if(ny > 1) sum *= step;
   
-  return sum * grid->step;
+  return sum * step;
 }
 
 /*
  * Integrate over a grid with limits.
  *
- * grid = grid to be integrated (rgrid *).
- * xl   = lower limit for x (REAL).
- * xu   = upper limit for x (REAL).
- * yl   = lower limit for y (REAL).
- * yu   = upper limit for y (REAL).
- * zl   = lower limit for z (REAL).
- * zu   = upper limit for z (REAL).
+ * grid = grid to be integrated (rgrid *; input).
+ * xl   = lower limit for x (REAL; input).
+ * xu   = upper limit for x (REAL; input).
+ * yl   = lower limit for y (REAL; input).
+ * yu   = upper limit for y (REAL; input).
+ * zl   = lower limit for z (REAL; input).
+ * zu   = upper limit for z (REAL; input).
  *
  * Returns the integral value (REAL).
  *
@@ -1203,16 +1213,15 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
 EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL yu, REAL zl, REAL zu) {
 
   INT iu, il, i, ju, jl, j, ku, kl, k;
-  REAL sum;
-  REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
+  REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0, sum;
   REAL step = grid->step;
   
-  il = grid->nx/2 + (INT) ((xl + x0) / step);
-  iu = grid->nx/2 + (INT) ((xu + x0) / step);
-  jl = grid->ny/2 + (INT) ((yl + y0) / step);
-  ju = grid->ny/2 + (INT) ((yu + y0) / step);
-  kl = grid->nz/2 + (INT) ((zl + z0) / step);
-  ku = grid->nz/2 + (INT) ((zu + z0) / step);
+  il = grid->nx / 2 + (INT) ((xl + x0) / step);
+  iu = grid->nx / 2 + (INT) ((xu + x0) / step);
+  jl = grid->ny / 2 + (INT) ((yl + y0) / step);
+  ju = grid->ny / 2 + (INT) ((yu + y0) / step);
+  kl = grid->nz / 2 + (INT) ((zl + z0) / step);
+  ku = grid->nz / 2 + (INT) ((zu + z0) / step);
 
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_integral_region(grid, il, iu, jl, ju, kl, ku, &sum)) return sum;
@@ -1234,7 +1243,7 @@ EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL y
 /* 
  * Integrate over the grid squared (int grid^2).
  *
- * grid = grid to be integrated (rgrid *).
+ * grid = grid to be integrated (rgrid *; input).
  *
  * Returns the integral (REAL).
  *
@@ -1265,8 +1274,8 @@ EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
 /*
  * Calculate overlap between two grids (int grida gridb).
  *
- * grida = 1st grid (rgrid *).
- * gridb = 2nd grid (rgrid *).
+ * grida = 1st grid (rgrid *; input).
+ * gridb = 2nd grid (rgrid *; input).
  *
  * Returns the value of the overlap integral (REAL).
  *
@@ -1275,7 +1284,7 @@ EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
 EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 
   INT i, j, k, nx = grida->nx, ny = grida->ny, nz = grida->nz;
-  REAL sum;
+  REAL sum, step = grida->step;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_integral_of_product(grida, gridb, &sum)) return sum;
@@ -1288,18 +1297,18 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
       for (k = 0; k < nz; k++)
 	sum += rgrid_value_at_index(grida, i, j, k) * rgrid_value_at_index(gridb, i, j, k);
 
-  if(nx > 1) sum *= grida->step;
-  if(ny > 1) sum *= grida->step;
+  if(nx > 1) sum *= step;
+  if(ny > 1) sum *= step;
   
-  return sum * grida->step;
+  return sum * step;
 }
 
 /*
  * Calculate the expectation value of a grid over a grid.
  * (int gridb grida gridb = int grida gridb^2).
  *
- * grida = grid giving the probability (gridb^2) (rgrid *).
- * gridb = grid to be averaged (rgrid *).
+ * grida = grid giving the probability (gridb^2) (rgrid *; input).
+ * gridb = grid to be averaged (rgrid *; input).
  *
  * Returns the average value (REAL *).
  *
@@ -1308,7 +1317,7 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 EXPORT REAL rgrid_grid_expectation_value(rgrid *grida, rgrid *gridb) {
 
   INT i, j, k, nx = grida->nx, ny = grida->ny, nz = grida->nz;
-  REAL sum;
+  REAL sum, step = grida->step;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_grid_expectation_value(grida, gridb, &sum)) return sum;
@@ -1321,19 +1330,19 @@ EXPORT REAL rgrid_grid_expectation_value(rgrid *grida, rgrid *gridb) {
       for (k = 0; k < nz; k++)
 	sum += sqnorm(rgrid_value_at_index(grida, i, j, k)) * rgrid_value_at_index(gridb, i, j, k);
 
-  if(nx > 1) sum *= grida->step;
-  if(ny > 1) sum *= grida->step;
+  if(nx > 1) sum *= step;
+  if(ny > 1) sum *= step;
   
-  return sum * grida->step;
+  return sum * step;
 }
  
 /*
  * Calculate the expectation value of a function over a grid.
  * (int grida func grida = int func grida^2).
  *
- * func  = function to be averaged (REAL (*)(void *, REAL, REAL, REAL, REAL)).
+ * func  = function to be averaged (REAL (*)(void *, REAL, REAL, REAL, REAL); input).
  *         The arguments are: optional arg, grida(x,y,z), x, y, z.
- * grida = grid giving the probability (grida^2) (rgrid *).
+ * grida = grid giving the probability (grida^2) (rgrid *; input).
  *
  * Returns the average value (REAL).
  *
@@ -1370,9 +1379,9 @@ EXPORT REAL rgrid_grid_expectation_value_func(void *arg, REAL (*func)(void *arg,
 /* 
  * Integrate over the grid multiplied by weighting function (int grid w(x)).
  *
- * grid   = grid to be integrated over (rgrid *).
- * weight = function defining the weight (REAL (*)(REAL, REAL, REAL)). The arguments are (x,y,z) coordinates.
- * farg   = argument to the weight function (void *).
+ * grid   = grid to be integrated over (rgrid *; input).
+ * weight = function defining the weight (REAL (*)(REAL, REAL, REAL); input). The arguments are (x,y,z) coordinates.
+ * farg   = argument to the weight function (void *; input).
  *
  * Returns the value of the integral (REAL).
  *
@@ -1408,10 +1417,10 @@ EXPORT REAL rgrid_weighted_integral(rgrid *grid, REAL (*weight)(void *farg, REAL
 /* 
  * Integrate over square of the grid multiplied by weighting function (int grid^2 w(x)).
  *
- * grid   = grid to be integrated over (rgrid *).
- * weight = function defining the weight (REAL (*)(REAL, REAL, REAL)).
+ * grid   = grid to be integrated over (rgrid *; input).
+ * weight = function defining the weight (REAL (*)(REAL, REAL, REAL); input).
  *          The arguments are (x, y, z) coordinates.
- * farg   = argument to the weight function (void *).
+ * farg   = argument to the weight function (void *; input).
  *
  * Returns the value of the integral (REAL).
  *
@@ -1447,8 +1456,8 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
 /* 
  * Differentiate a grid with respect to x (central difference).
  *
- * grid     = grid to be differentiated (rgrid *).
- * gradient = differentiated grid output (rgrid *).
+ * grid     = grid to be differentiated (rgrid *; input).
+ * gradient = differentiated grid output (rgrid *; output).
  * 
  * No return value.
  *
@@ -1457,12 +1466,11 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
 EXPORT void rgrid_fd_gradient_x(rgrid *grid, rgrid *gradient) {
 
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta = 1.0 / (2.0 * grid->step);
-  REAL *lvalue = gradient->value;
+  REAL inv_delta = 1.0 / (2.0 * grid->step), *lvalue = gradient->value;
   
   if(grid == gradient) {
     fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_x().\n");
-    return;
+    abort();
   }
 
 #ifdef USE_CUDA
@@ -1475,7 +1483,7 @@ EXPORT void rgrid_fd_gradient_x(rgrid *grid, rgrid *gradient) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i+1, j, k) - rgrid_value_at_index(grid, i-1, j, k));
+      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i + 1, j, k) - rgrid_value_at_index(grid, i - 1, j, k));
   }
 }
 
@@ -1492,12 +1500,11 @@ EXPORT void rgrid_fd_gradient_x(rgrid *grid, rgrid *gradient) {
 EXPORT void rgrid_fd_gradient_y(rgrid *grid, rgrid *gradient) {
 
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta = 1.0 / (2.0 * grid->step);
-  REAL *lvalue = gradient->value;
+  REAL inv_delta = 1.0 / (2.0 * grid->step), *lvalue = gradient->value;
   
   if(grid == gradient) {
     fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_y().\n");
-    return;
+    abort();
   }
 
 #ifdef USE_CUDA
@@ -1510,15 +1517,15 @@ EXPORT void rgrid_fd_gradient_y(rgrid *grid, rgrid *gradient) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i, j+1, k) - rgrid_value_at_index(grid, i, j-1, k));
+      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i, j + 1, k) - rgrid_value_at_index(grid, i, j - 1, k));
   }
 }
 
 /* 
  * Differentiate a grid with respect to z.
  *
- * grid     = grid to be differentiated (rgrid *).
- * gradient = differentiated grid output (rgrid *).
+ * grid     = grid to be differentiated (rgrid *; input).
+ * gradient = differentiated grid output (rgrid *; output).
  * 
  * No return value.
  *
@@ -1527,12 +1534,11 @@ EXPORT void rgrid_fd_gradient_y(rgrid *grid, rgrid *gradient) {
 EXPORT void rgrid_fd_gradient_z(rgrid *grid, rgrid *gradient) {
 
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta = 1.0 / (2.0 * grid->step);
-  REAL *lvalue = gradient->value;
+  REAL inv_delta = 1.0 / (2.0 * grid->step), *lvalue = gradient->value;
   
   if(grid == gradient) {
     fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_z().\n");
-    return;
+    abort();
   }
 
 #ifdef USE_CUDA
@@ -1545,17 +1551,17 @@ EXPORT void rgrid_fd_gradient_z(rgrid *grid, rgrid *gradient) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i, j, k+1) - rgrid_value_at_index(grid, i, j, k-1));
+      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i, j, k + 1) - rgrid_value_at_index(grid, i, j, k - 1));
   }
 }
  
 /*
  * Calculate gradient of a grid.
  *
- * grid       = grid to be differentiated twice (rgrid *).
- * gradient_x = x output grid for the operation (rgrid *).
- * gradient_y = y output grid for the operation (rgrid *).
- * gradient_z = z output grid for the operation (rgrid *).
+ * grid       = grid to be differentiated twice (rgrid *; input).
+ * gradient_x = x output grid for the operation (rgrid *; output).
+ * gradient_y = y output grid for the operation (rgrid *; output).
+ * gradient_z = z output grid for the operation (rgrid *; output).
  *
  * No return value.
  *
@@ -1571,8 +1577,8 @@ EXPORT void rgrid_fd_gradient(rgrid *grid, rgrid *gradient_x, rgrid *gradient_y,
 /*
  * Calculate laplacian of the grid.
  *
- * grid    = source grid (rgrid *).
- * laplace = output grid for the operation (rgrid *).
+ * grid    = source grid (rgrid *; input).
+ * laplace = output grid for the operation (rgrid *; output).
  *
  * No return value.
  *
@@ -1583,6 +1589,11 @@ EXPORT void rgrid_fd_laplace(rgrid *grid, rgrid *laplace) {
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
   REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplace->value;
   
+  if(grid == laplace) {
+    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace().\n");
+    abort();
+  }
+
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_fd_laplace(grid, laplace, inv_delta2)) return;
 #endif
@@ -1593,18 +1604,18 @@ EXPORT void rgrid_fd_laplace(rgrid *grid, rgrid *laplace) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-6.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k+1)
-				       + rgrid_value_at_index(grid, i, j, k-1) + rgrid_value_at_index(grid, i, j+1, k) 
-				       + rgrid_value_at_index(grid, i, j-1, k) + rgrid_value_at_index(grid,i+1,j,k) 
-				       + rgrid_value_at_index(grid,i-1,j,k));
+      lvalue[ijnz + k] = inv_delta2 * (-6.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k + 1)
+				       + rgrid_value_at_index(grid, i, j, k - 1) + rgrid_value_at_index(grid, i, j + 1, k) 
+				       + rgrid_value_at_index(grid, i, j - 1, k) + rgrid_value_at_index(grid,i + 1, j, k)
+				       + rgrid_value_at_index(grid,i - 1, j, k));
   }
 }
 
 /*
  * Calculate vector laplacian of the grid (x component). This is the second derivative with respect to x.
  *
- * grid     = source grid (rgrid *).
- * laplacex = output grid for the operation (rgrid *).
+ * grid     = source grid (rgrid *; input).
+ * laplacex = output grid for the operation (rgrid *; output).
  *
  * No return value.
  *
@@ -1615,6 +1626,11 @@ EXPORT void rgrid_fd_laplace_x(rgrid *grid, rgrid *laplacex) {
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
   REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplacex->value;
   
+  if(grid == laplacex) {
+    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace_x().\n");
+    abort();
+  }
+
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_fd_laplace_x(grid, laplacex, inv_delta2)) return;
 #endif
@@ -1625,15 +1641,16 @@ EXPORT void rgrid_fd_laplace_x(rgrid *grid, rgrid *laplacex) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i+1, j, k) + rgrid_value_at_index(grid, i-1, j, k));
+      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i + 1, j, k) 
+                                        + rgrid_value_at_index(grid, i - 1, j, k));
   }
 }
 
 /*
  * Calculate vector laplacian of the grid (y component). This is the second derivative with respect to y.
  *
- * grid     = source grid (rgrid *).
- * laplacey = output grid for the operation (rgrid *).
+ * grid     = source grid (rgrid *; input).
+ * laplacey = output grid for the operation (rgrid *; output).
  *
  * No return value.
  *
@@ -1644,6 +1661,11 @@ EXPORT void rgrid_fd_laplace_y(rgrid *grid, rgrid *laplacey) {
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
   REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplacey->value;
   
+  if(grid == laplacey) {
+    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace_y().\n");
+    abort();
+  }
+
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_fd_laplace_y(grid, laplacey, inv_delta2)) return;
 #endif
@@ -1654,15 +1676,16 @@ EXPORT void rgrid_fd_laplace_y(rgrid *grid, rgrid *laplacey) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j+1, k) + rgrid_value_at_index(grid, i, j-1, k));
+      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j + 1, k) 
+                                        + rgrid_value_at_index(grid, i, j - 1, k));
   }
 }
 
 /*
  * Calculate vector laplacian of the grid (z component). This is the second derivative with respect to z.
  *
- * grid     = source grid (rgrid *).
- * laplacez = output grid for the operation (rgrid *).
+ * grid     = source grid (rgrid *; input).
+ * laplacez = output grid for the operation (rgrid *; output).
  *
  * No return value.
  *
@@ -1673,6 +1696,11 @@ EXPORT void rgrid_fd_laplace_z(rgrid *grid, rgrid *laplacez) {
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
   REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplacez->value;
   
+  if(grid == laplacez) {
+    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace_z().\n");
+    abort();
+  }
+
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_fd_laplace_z(grid, laplacez, inv_delta2)) return;
 #endif
@@ -1683,15 +1711,16 @@ EXPORT void rgrid_fd_laplace_z(rgrid *grid, rgrid *laplacez) {
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k+1) + rgrid_value_at_index(grid, i, j, k-1));
+      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k + 1) 
+                                       + rgrid_value_at_index(grid, i, j, k - 1));
   }
 }
 
 /*
  * Calculate dot product of the gradient of the grid.
  *
- * grid          = source grid for the operation (rgrid *).
- * grad_dot_grad = destination grid (rgrid *).
+ * grid          = source grid for the operation (rgrid *; input).
+ * grad_dot_grad = destination grid (rgrid *; output).
  *
  * No return value.
  *
@@ -1704,6 +1733,11 @@ EXPORT void rgrid_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad) {
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
   REAL inv_2delta2 = 1.0 / (2.0 * grid->step * 2.0 * grid->step), *gvalue = grad_dot_grad->value;
   
+  if(grid == grad_dot_grad) {
+    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_dot_gradient().\n");
+    abort();
+  }
+
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_fd_gradient_dot_gradient(grid, grad_dot_grad, inv_2delta2)) return;
 #endif
@@ -1716,16 +1750,17 @@ EXPORT void rgrid_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad) {
     j = ij % ny;
     for(k = 0; k < nz; k++)
       gvalue[ijnz + k] = inv_2delta2 * 
-	(sqnorm(rgrid_value_at_index(grid, i, j, k+1) - rgrid_value_at_index(grid, i, j, k-1)) + sqnorm(rgrid_value_at_index(grid, i, j+1, k) - rgrid_value_at_index(grid, i, j-1, k))
-	 + sqnorm(rgrid_value_at_index(grid, i+1, j, k) - rgrid_value_at_index(grid, i-1, j, k)));
+	(sqnorm(rgrid_value_at_index(grid, i, j, k + 1) - rgrid_value_at_index(grid, i, j, k - 1)) 
+         + sqnorm(rgrid_value_at_index(grid, i, j + 1, k) - rgrid_value_at_index(grid, i, j - 1, k))
+	 + sqnorm(rgrid_value_at_index(grid, i + 1, j, k) - rgrid_value_at_index(grid, i - 1, j, k)));
   }
 }
 
 /*
  * Print the grid into file (ASCII format).
  *
- * grid = grid to be printed out (rgrid *).
- * out  = output file pointer (FILE *).
+ * grid = grid to be printed out (rgrid *; input).
+ * out  = output file pointer (FILE *; input).
  *
  * No return value.
  *
@@ -1752,12 +1787,12 @@ EXPORT void rgrid_print(rgrid *grid, FILE *out) {
 /*
  * Perform Fast Fourier Transformation of a grid.
  *
- * grid = grid to be Fourier transformed (input/output) (rgrid *).
+ * grid = grid to be Fourier transformed (input/output) (rgrid *; input/output).
  *
  * No return value.
  *
- * Note: The input grid is overwritten with the output.
- *       Also no normalization is performed.
+ * Notes: - The input grid is overwritten with the output.
+ *        - No normalization is performed.
  *
  */
 
@@ -1773,12 +1808,12 @@ EXPORT void rgrid_fft(rgrid *grid) {
 /*
  * Perform inverse Fast Fourier Transformation of a grid.
  *
- * grid = grid to be inverse Fourier transformed (input/output) (rgrid *).
+ * grid = grid to be inverse Fourier transformed (input/output) (rgrid *; input/output).
  *
  * No return value.
  *
- * Note: The input grid is overwritten with the output.
- *       No normalization.
+ * Notes: - The input grid is overwritten with the output.
+ *        - No normalization.
  *
  */
 
@@ -1794,8 +1829,8 @@ EXPORT void rgrid_inverse_fft(rgrid *grid) {
 /*
  * Perform scaled inverse Fast Fourier Transformation of a grid.
  *
- * grid = grid to be inverse Fourier transformed (input/output) (rgrid *).
- * c    = scaling factor (i.e. the output is multiplied by this constant) (REAL).
+ * grid = grid to be inverse Fourier transformed (input/output) (rgrid *; input/output).
+ * c    = scaling factor (i.e. the output is multiplied by this constant) (REAL; input).
  *
  * No return value.
  *
@@ -1812,7 +1847,7 @@ EXPORT void rgrid_scaled_inverse_fft(rgrid *grid, REAL c) {
 /*
  * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm.
  *
- * grid = grid to be inverse Fourier transformed (input/output) (rgrid *).
+ * grid = grid to be inverse Fourier transformed (rgrid *; input/output).
  *
  * No return value.
  *
@@ -1826,17 +1861,16 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
 }
 
 /*
- * Convolute FFT transformed grids (periodic). To apply this on two grids (grida and gridb)
- * and place the result in gridc:
+ * Convolute FFT transformed grids (periodic). To apply this on grids grida and gridb and place the result in gridc:
  * rgrid_fft(grida);
  * rgrid_fft(gridb);
  * rgrid_convolue(gridc, grida, gridb);
  * rgrid_inverse_fft(gridc);
  * gridc now contains the convolution of grida and gridb.
  *
- * grida = 1st grid to be convoluted (rgrid *).
- * gridb = 2nd grid to be convoluted (rgrid *).
- * gridc = output (rgrid *).
+ * grida = 1st grid to be convoluted (rgrid *; input).
+ * gridb = 2nd grid to be convoluted (rgrid *; input).
+ * gridc = output (rgrid *; output).
  *
  * No return value.
  *
@@ -1904,85 +1938,17 @@ EXPORT void rgrid_multiply_fft(rgrid *grid, REAL c) {
   }
 }
 
-/* 
- * Boundary condition routines.
- *
- */
-
-EXPORT REAL rgrid_value_outside_constantdirichlet(rgrid *grid, INT i, INT j, INT k) {
-
-  return *((REAL *) grid->outside_params_ptr);
-}
-
-/*
- * The symmetry point are i=0 and i=nx-1 for consistency with the FFT plan FFTW_REDFT00. 
- * If one wants to use REDFT01 the symmetry points are i=-0.5 and i=nx-0.5 
- */
-
-EXPORT REAL rgrid_value_outside_neumann(rgrid *grid, INT i, INT j, INT k) {
-
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nd;
-
-  nd = nx * 2;
-  if (i < 0) i = -i;
-  if (i >= nd) i %= nd;
-  if (i >= nx) i = nd - i;
-  
-  nd = ny * 2;
-  if (j < 0) j = -j;
-  if (j >= nd) j %= nd;
-  if (j >= ny) j = nd - j;
-  
-  nd = nz * 2;
-  if (k < 0) k = -k;
-  if (k >= nd) k %= nd;
-  if (k >= nz) k = nd - k;
-
-  return rgrid_value_at_index(grid, i, j, k);
-}
-
-EXPORT REAL rgrid_value_outside(rgrid *grid, INT i, INT j, INT k) {
-
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
-
-  i %= nx;
-  if (i < 0) i = nx + i;
-  j %= ny;
-  if (j < 0) j = ny + j;
-  k %= nz;
-  if (k < 0) k = nz + k;
-  
-  return rgrid_value_at_index(grid, i, j, k);
-}
-
-EXPORT REAL rgrid_value_outside_vortex(rgrid *grid, INT i, INT j, INT k) {
-
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
-
-  i %= nx;
-  if (i < 0) i = nx + i;
-  j %= ny;
-  if (j < 0) j = ny + j;
-  k %= nz;
-  if (k < 0) k = nz + k;
-  
-  return rgrid_value_at_index(grid, i, j, k);
-}
-
-/*
- * End boundary condition routines
- *
- */
-
 /*
  * Access grid point at given index (follows boundary condition).
  *
- * grid = grid to be accessed (rgrid *).
- * i    = index along x (INT).
- * j    = index along y (INT).
- * k    = index along z (INT).
+ * grid = grid to be accessed (rgrid *; input).
+ * i    = index along x (INT; input).
+ * j    = index along y (INT; input).
+ * k    = index along z (INT; input).
  *
- * Returns grid value at index (i, j, k).
+ * Returns grid value at index (i, j, k) (REAL).
+ *
+ * NOTE: This is *very* slow on cuda as it transfers each element individually.
  *
  */
 
@@ -1994,23 +1960,25 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
 #ifdef USE_CUDA
   if(cuda_find_block(grid->value)) {
     REAL tmp;
-    cuda_get_element(grid->value, (size_t) ((i*grid->ny + j)*grid->nz2 + k), sizeof(REAL), &tmp);
+    cuda_get_element(grid->value, (size_t) ((i * grid->ny + j) * grid->nz2 + k), sizeof(REAL), &tmp);
     return tmp;
   } else
 #endif
-   return grid->value[(i*grid->ny + j)*grid->nz2 + k];
+   return grid->value[(i * grid->ny + j) * grid->nz2 + k];
 }
 
 /*
  * Set value to a grid point at given index.
  *
- * grid  = grid to be accessed (rgrid *).
- * i     = index along x (INT).
- * j     = index along y (INT).
- * k     = index along z (INT).
- * value = value to be set at (i, j, k).
+ * grid  = grid to be accessed (rgrid *; output).
+ * i     = index along x (INT; input).
+ * j     = index along y (INT; input).
+ * k     = index along z (INT; input).
+ * value = value to be set at (i, j, k) (REAL; input).
  *
  * No return value.
+ *
+ * NOTE: This is *very* slow on cuda as it transfers each element individually.
  *
  */
 
@@ -2020,21 +1988,23 @@ EXPORT inline void rgrid_value_to_index(rgrid *grid, INT i, INT j, INT k, REAL v
 
 #ifdef USE_CUDA
   if(cuda_find_block(grid->value))
-    cuda_set_element(grid->value, (size_t) ((i*grid->ny + j)*grid->nz2 + k), sizeof(REAL), &value);
+    cuda_set_element(grid->value, (size_t) ((i * grid->ny + j) * grid->nz2 + k), sizeof(REAL), &value);
   else
 #endif
-   grid->value[(i*grid->ny + j)*grid->nz2 + k] = value;
+   grid->value[(i * grid->ny + j) * grid->nz2 + k] = value;
 }
 
 /*
  * Access grid point in Fourier space at given index (follows boundary condition).
  *
- * grid = grid to be accessed (rgrid *).
- * i    = index along x (INT).
- * j    = index along y (INT).
- * k    = index along z (INT).
+ * grid = grid to be accessed (rgrid *; input).
+ * i    = index along x (INT; input).
+ * j    = index along y (INT; input).
+ * k    = index along z (INT; input).
  *
- * Returns grid value at index (i, j, k).
+ * Returns grid value at index (i, j, k) (REAL complex).
+ *
+ * NOTE: This is *very* slow on cuda as it transfers each element individually.
  *
  */
 
@@ -2049,26 +2019,23 @@ EXPORT inline REAL complex rgrid_cvalue_at_index(rgrid *grid, INT i, INT j, INT 
 #ifdef USE_CUDA
   if(cuda_find_block(grid->value)) {
     REAL complex tmp;
-    cuda_get_element(grid->value, (size_t) ((i*grid->ny + j)*nzz + k), sizeof(REAL complex), &tmp);
+    cuda_get_element(grid->value, (size_t) ((i * grid->ny + j) * nzz + k), sizeof(REAL complex), &tmp);
     return tmp;
   }
 #endif
   val = (REAL complex *) grid->value;
-  return val[(i*grid->ny + j)*nzz + k];
+  return val[(i * grid->ny + j) * nzz + k];
 }
 
 /*
- * Access grid point at given (x,y,z) point (with linear interpolation).
+ * Access grid point at given (x,y,z) point using linear interpolation.
  *
- * grid = grid to be accessed (rgrid *).
- * x    = x value (REAL).
- * y    = y value (REAL).
- * z    = z value (REAL).
+ * grid = grid to be accessed (rgrid *; input).
+ * x    = x value (REAL; input).
+ * y    = y value (REAL; input).
+ * z    = z value (REAL; input).
  *
- * Returns grid value at (x,y,z).
- *
- * (the most positive elements are missing - rolled over to negative; 
- *  periodic boundaries)
+ * Returns grid value at (x,y,z) (REAL).
  *
  */
 
@@ -2105,13 +2072,13 @@ EXPORT inline REAL rgrid_value(rgrid *grid, REAL x, REAL y, REAL z) {
    *          + x     y   (1-z) f(1,1,0) + x (1-y)   z   f(1,0,1) + (1-x) y   z   f(0,1,1) +   x     y   z f(1,1,1)
    */ 
   f000 = rgrid_value_at_index(grid, i, j, k);
-  f100 = rgrid_value_at_index(grid, i+1, j, k);
-  f010 = rgrid_value_at_index(grid, i, j+1, k);
-  f001 = rgrid_value_at_index(grid, i, j, k+1);
-  f110 = rgrid_value_at_index(grid, i+1, j+1, k);
-  f101 = rgrid_value_at_index(grid, i+1, j, k+1);
-  f011 = rgrid_value_at_index(grid, i, j+1, k+1);
-  f111 = rgrid_value_at_index(grid, i+1, j+1, k+1);
+  f100 = rgrid_value_at_index(grid, i + 1, j, k);
+  f010 = rgrid_value_at_index(grid, i, j + 1, k);
+  f001 = rgrid_value_at_index(grid, i, j, k + 1);
+  f110 = rgrid_value_at_index(grid, i + 1, j + 1, k);
+  f101 = rgrid_value_at_index(grid, i + 1, j, k + 1);
+  f011 = rgrid_value_at_index(grid, i, j + 1, k + 1);
+  f111 = rgrid_value_at_index(grid, i + 1, j + 1, k + 1);
   
   omx = 1.0 - x;
   omy = 1.0 - y;
@@ -2124,8 +2091,8 @@ EXPORT inline REAL rgrid_value(rgrid *grid, REAL x, REAL y, REAL z) {
 /*
  * Copy a real grid to a complex grid (to real part).
  *
- * dest   = destination grid (cgrid *).
- * source = source grid (rgrid *).
+ * dest   = destination grid (cgrid *; output).
+ * source = source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -2158,8 +2125,8 @@ EXPORT void grid_real_to_complex_re(cgrid *dest, rgrid *source) {
 /*
  * Copy a real grid to a complex grid (to imaginary part). Note that this zeroes the real part.
  *
- * dest   = destination grid (cgrid *).
- * source = source grid (rgrid *).
+ * dest   = destination grid (cgrid *; output).
+ * source = source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -2192,8 +2159,8 @@ EXPORT void grid_real_to_complex_im(cgrid *dest, rgrid *source) {
 /*
  * Add a real grid to a complex grid (to real part).
  *
- * dest   = destination grid (cgrid *).
- * source = source grid (rgrid *).
+ * dest   = destination grid (cgrid *; output).
+ * source = source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -2226,8 +2193,8 @@ EXPORT void grid_add_real_to_complex_re(cgrid *dest, rgrid *source) {
 /*
  * Add a real grid to a complex grid (to real part).
  *
- * dest   = destination grid (cgrid *).
- * source = source grid (rgrid *).
+ * dest   = destination grid (cgrid *; output).
+ * source = source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -2258,12 +2225,10 @@ EXPORT void grid_add_real_to_complex_im(cgrid *dest, rgrid *source) {
 }
 
 /*
- * Product of a real grid with a complex grid.
+ * Product of a real grid with a complex grid: dest(complex) = dest(complex) * source(real)
  *
- * dest   = destination grid (cgrid *).
- * source = source grid (rgrid *).
- *
- * "dest(complex) = dest(complex) * source(real)"
+ * dest   = destination grid (cgrid *; output).
+ * source = source grid (rgrid *; input).
  *
  * No return value.
  *
@@ -2296,8 +2261,8 @@ EXPORT void grid_product_complex_with_real(cgrid *dest, rgrid *source) {
 /*
  * Copy imaginary part of a complex grid to a real grid.
  *
- * dest   = destination grid (rgrid *).
- * source = source grid (cgrid *).
+ * dest   = destination grid (rgrid *; output).
+ * source = source grid (cgrid *; input).
  *
  * No return value.
  *
@@ -2331,8 +2296,8 @@ EXPORT void grid_complex_im_to_real(rgrid *dest, cgrid *source) {
 /*
  * Copy real part of a complex grid to a real grid.
  *
- * dest   = destination grid (rgrid *).
- * source = source grid (cgrid *).
+ * dest   = destination grid (rgrid *; output).
+ * source = source grid (cgrid *; input).
  *
  * No return value.
  *
@@ -2395,15 +2360,7 @@ EXPORT void rgrid_extrapolate(rgrid *dest, rgrid *src) {
 }
 
 /*
- * Gives the value from a grid rotated by a given angle (theta).
- * The grid and the angle is specified through the rotation structure,
- * passed as a void.
- * The angle is given as sin(theta) and cos(theta) for efficiency.
- *
- * arg is a rotation with the grid (either real or complex) and sin and cos
- * of the rotation angle.
- *
- * This is an internal function.
+ * Subroutine for rotating grid around z axis. See below.
  *
  */
 
@@ -2422,9 +2379,9 @@ REAL rgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
 /*
  * Rotate a grid by a given angle around the z-axis.
  *
- * in  = original grid (to be rotated) (rgrid *).
- * out = output grid (rotated) (rgrid *).
- * th  = rotation angle in radians (REAL).
+ * in  = original grid (to be rotated) (rgrid *; input).
+ * out = output grid (rotated) (rgrid *; output).
+ * th  = rotation angle in radians (REAL; input).
  *
  * Note: The grids in and out CANNOT be the same.
  *
@@ -2441,22 +2398,23 @@ EXPORT void rgrid_rotate_z(rgrid *out, rgrid *in, REAL th) {
     abort();
   }
 
-  r = malloc(sizeof(rotation));
+  if(!(r = malloc(sizeof(rotation)))) {
+    fprintf(stderr, "libgrid: cannot allocate rotation structure.\n");
+    abort();
+  }
   r->rgrid = in;
   r->sinth = SIN(-th);  // same direction of rotation as -wLz
   r->costh = COS(th);
-  
   rgrid_map(out, rgrid_value_rotate_z, (void *) r);
-
   free(r);
 }
 
 /*
  * Get the largest value contained in a grid.
  *
- * grid = Grid from which the largest value is to be searched from (rgrid *).
+ * grid = Grid from which the largest value is to be searched from (rgrid *; input).
  *
- * Return value: The largest value found (REAL).
+ * Returns the largest value found (REAL).
  *
  */
 
@@ -2481,9 +2439,9 @@ EXPORT REAL rgrid_max(rgrid *grid) {
 /*
  * Get the smallest value in a grid.
  *
- * grid = Grid from which the smallest value is to be searched from (rgrid *).
+ * grid = Grid from which the smallest value is to be searched from (rgrid *; input).
  *
- * Return value: The smallest value found (REAL).
+ * Returns the smallest value found (REAL).
  *
  */
 
@@ -2508,8 +2466,8 @@ EXPORT REAL rgrid_min(rgrid *grid) {
 /*
  * Add random noise to grid.
  *
- * grid  = Grid where the noise will be added (rgrid *).
- * scale = Scaling for random numbers [-1,+1[ (REAL).
+ * grid  = Grid where the noise will be added (rgrid *; input/output).
+ * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
  *
  */
 
@@ -2534,24 +2492,27 @@ EXPORT void rgrid_random(rgrid *grid, REAL scale) {
 }
 
 /*
- * Solve Poisson equation: Laplace f = u    (periodic boundaries)
- * Finite difference for Laplacian (7 point) and FFT in .
+ * Solve Poisson equation: Laplace f = u subject to periodic boundaries
+ * Uses finite difference for Laplacian (7 point) and FFT.
  *
- * grid = Function u specified over  grid (input) and function f (output) (rgrid *).
+ * grid = On entry function u specified over grid (input) 
+ *        and function f (output) on exit (rgrid *; input/output).
  *
  * No return value.
+ *
+ * TODO: CUDA implementation missing.
  *
  */
 
 EXPORT void rgrid_poisson(rgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx;
-  REAL step = grid->step, step2 = step * step, ilx = 2.0 * M_PI / ((REAL) nx), ily = 2.0 * M_PI / ((REAL) ny), ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
-  REAL norm = grid->fft_norm;
+  REAL step = grid->step, step2 = step * step, ilx = 2.0 * M_PI / ((REAL) nx), ily = 2.0 * M_PI / ((REAL) ny);
+  REAL norm = grid->fft_norm, ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
   REAL complex *val = (REAL complex *) grid->value;
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);  // TODO
+  cuda_remove_block(val, 1);
 #endif
   rgrid_fftw(grid);
   /* the folllowing is in Fourier space -> k = 0, nz */
@@ -2576,10 +2537,10 @@ EXPORT void rgrid_poisson(rgrid *grid) {
 /*
  * Calculate divergence of a vector field.
  *
- * div     = result (rgrid *).
- * fx      = x component of the field (rgrid *).
- * fy      = y component of the field (rgrid *).
- * fz      = z component of the field (rgrid *).
+ * div     = result (rgrid *; output).
+ * fx      = x component of the field (rgrid *; input).
+ * fy      = y component of the field (rgrid *; input).
+ * fz      = z component of the field (rgrid *; input).
  *
  * No return value.
  *
@@ -2591,8 +2552,13 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
   REAL inv_delta = 1.0 / (2.0 * div->step);
   REAL *lvalue = div->value;
   
+  if(div == fx || div == fy || div == fz) {
+    fprintf(stderr, "libgrid: Destination grid must be different from input grids in rgrid_div().\n");
+    abort();
+  }
+
 #ifdef USE_CUDA
-  cuda_remove_block(div->value, 0);
+  cuda_remove_block(lvalue, 0);
   cuda_remove_block(fx->value, 1);
   cuda_remove_block(fy->value, 1);
   cuda_remove_block(fz->value, 1);
@@ -2612,12 +2578,12 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
 /*
  * Calculate rot (curl; \Nabla\times) of a vector field f = (fx, fy, fz).
  *
- * rotx = x component of rot (rgrid *).
- * roty = y component of rot (rgrid *).
- * rotz = z component of rot (rgrid *).
- * fx   = x component of the field (rgrid *).
- * fy   = y component of the field (rgrid *).
- * fz   = z component of the field (rgrid *).
+ * rotx = x component of rot (rgrid *; output).
+ * roty = y component of rot (rgrid *; output).
+ * rotz = z component of rot (rgrid *; output).
+ * fx   = x component of the field (rgrid *; input).
+ * fy   = y component of the field (rgrid *; input).
+ * fz   = z component of the field (rgrid *; input).
  *
  * No return value.
  *
@@ -2629,10 +2595,14 @@ EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *f
   REAL inv_delta = 1.0 / (2.0 * rotx->step);
   REAL *lvaluex = rotx->value, *lvaluey = roty->value, *lvaluez = rotz->value;
   
+  if(rotx == fx || rotx == fy || rotx == fz || roty == fx || roty == fy || roty == fz || rotz == fx || rotz == fy || rotz == fz) {
+    fprintf(stderr, "libgrid: Source and destination grids must be different in rgrid_rot().\n");
+    abort();
+  }
 #ifdef USE_CUDA
-  cuda_remove_block(rotx->value, 0);
-  cuda_remove_block(roty->value, 0);
-  cuda_remove_block(rotz->value, 0);
+  cuda_remove_block(lvaluex, 0);
+  cuda_remove_block(lvaluey, 0);
+  cuda_remove_block(lvaluez, 0);
   cuda_remove_block(fx->value, 1);
   cuda_remove_block(fy->value, 1);
   cuda_remove_block(fz->value, 1);
@@ -2659,10 +2629,10 @@ EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *f
 /*
  * Calculate |rot| (|curl|; |\Nabla\times|) of a vector field (i.e., magnitude).
  *
- * rot = magnitude of rot (rgrid *).
- * fx   = x component of the field (rgrid *).
- * fy   = y component of the field (rgrid *).
- * fz   = z component of the field (rgrid *).
+ * rot = magnitude of rot (rgrid *; output).
+ * fx   = x component of the field (rgrid *; input).
+ * fy   = y component of the field (rgrid *; input).
+ * fz   = z component of the field (rgrid *; input).
  *
  * No return value.
  *
@@ -2674,6 +2644,10 @@ EXPORT void rgrid_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz) {
   REAL inv_delta = 1.0 / (2.0 * rot->step);
   REAL *lvalue = rot->value, tmp;
   
+  if(rot == fx || rot == fy || rot == fz) {
+    fprintf(stderr, "libgrid: Source and destination grids must be different in rgrid_abs_rot().\n");
+    abort();
+  }
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_abs_rot(rot, fx, fy, fz, inv_delta)) return;
 #endif
@@ -2704,9 +2678,11 @@ EXPORT void rgrid_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz) {
 /*
  * Raise grid to integer power (fast).
  *
- * dst = Destination grid (rgrid *).
- * src = Source grid (rgrid *).
- * exponent = Exponent to be used (INT). This can be negative.
+ * dst = Destination grid (rgrid *; output).
+ * src = Source grid (rgrid *; input).
+ * exponent = Exponent to be used (INT; input). This value can be negative.
+ *
+ * No return value.
  *
  */
 
@@ -2729,7 +2705,7 @@ EXPORT void rgrid_ipower(rgrid *dst, rgrid *src, INT exponent) {
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     for(k = 0; k < nz; k++)
-      bvalue[ijnz + k] = ipow(avalue[ijnz + k], exponent);  /* ipow() already compiled with the right precision */
+      bvalue[ijnz + k] = ipow(avalue[ijnz + k], exponent);
   }
 }
 
@@ -2737,11 +2713,13 @@ EXPORT void rgrid_ipower(rgrid *dst, rgrid *src, INT exponent) {
  * Set a value to given grid based on upper/lower limit thresholds of another grid (possibly the same).
  *
  * dest = destination grid (rgrid *; input/output).
- * src  = source grid for evaluating the thresholds (rgrid *; input). May be equal to dest.
+ * src  = source grid for evaluating the thresholds (rgrid *; input).
  * ul   = upper limit threshold for the operation (REAL; input).
  * ll   = lower limit threshold for the operation (REAL; input).
  * uval = value to set when the upper limit was exceeded (REAL; input).
  * lval = value to set when the lower limit was exceeded (REAL; input).
+ *
+ * Source and destination may be the same.
  *
  * No return value.
  *
