@@ -357,8 +357,8 @@ EXPORT char rgrid_cuda_integral(rgrid *grid, REAL *value) {
   rgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
 
-  if(grid->nx > 1) *value *= grid->step;
-  if(grid->ny > 1) *value *= grid->step;
+  if(grid->nx != 1) *value *= grid->step;
+  if(grid->ny != 1) *value *= grid->step;
   *value *= grid->step;
 
   return 0;
@@ -376,8 +376,8 @@ EXPORT char rgrid_cuda_integral_region(rgrid *grid, INT il, INT iu, INT jl, INT 
   rgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
 
-  if(grid->nx > 1) *value *= grid->step;
-  if(grid->ny > 1) *value *= grid->step;
+  if(grid->nx != 1) *value *= grid->step;
+  if(grid->ny != 1) *value *= grid->step;
   *value *= grid->step;
 
   return 0;
@@ -395,8 +395,8 @@ EXPORT char rgrid_cuda_integral_of_square(rgrid *grid, REAL *value) {
   rgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
 
-  if(grid->nx > 1) *value *= grid->step;
-  if(grid->ny > 1) *value *= grid->step;
+  if(grid->nx != 1) *value *= grid->step;
+  if(grid->ny != 1) *value *= grid->step;
   *value *= grid->step;
 
   return 0;
@@ -414,8 +414,8 @@ EXPORT char rgrid_cuda_integral_of_product(rgrid *grida, rgrid *gridb, REAL *val
   rgrid_cuda_integral_of_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
 
-  if(grida->nx > 1) *value *= grida->step;
-  if(grida->ny > 1) *value *= grida->step;
+  if(grida->nx != 1) *value *= grida->step;
+  if(grida->ny != 1) *value *= grida->step;
   *value *= grida->step;
 
   return 0;
@@ -434,8 +434,8 @@ EXPORT char rgrid_cuda_grid_expectation_value(rgrid *grida, rgrid *gridb, REAL *
   rgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
 
-  if(grida->nx > 1) *value *= grida->step;
-  if(grida->ny > 1) *value *= grida->step;
+  if(grida->nx != 1) *value *= grida->step;
+  if(grida->ny != 1) *value *= grida->step;
   *value *= grida->step;
 
   return 0;

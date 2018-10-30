@@ -1189,9 +1189,9 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++)
 	sum += rgrid_value_at_index(grid, i, j, k);
-  if(nx > 1) sum *= step;
-  if(ny > 1) sum *= step;
   
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
 
@@ -1212,7 +1212,7 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
 
 EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL yu, REAL zl, REAL zu) {
 
-  INT iu, il, i, ju, jl, j, ku, kl, k;
+  INT iu, il, i, ju, jl, j, ku, kl, k, nx = grid->nx, ny = grid->ny;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0, sum;
   REAL step = grid->step;
   
@@ -1233,10 +1233,9 @@ EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL y
     for (j = jl; j <= ju; j++)
       for (k = kl; k <= ku; k++)
 	sum += rgrid_value_at_index(grid, i, j, k);
-
-  if(grid->nx > 1) sum *= step;
-  if(grid->ny > 1) sum *= step;
   
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
  
@@ -1252,7 +1251,7 @@ EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL y
 EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
-  REAL sum;
+  REAL sum, step = grid->step;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_integral_of_square(grid, &sum)) return sum;
@@ -1265,10 +1264,9 @@ EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
       for (k = 0; k < nz; k++)
 	sum += sqnorm(rgrid_value_at_index(grid, i, j, k));
 
-  if(nx > 1) sum *= grid->step;
-  if(ny > 1) sum *= grid->step;
-  
-  return sum * grid->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /*
@@ -1297,9 +1295,8 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
       for (k = 0; k < nz; k++)
 	sum += rgrid_value_at_index(grida, i, j, k) * rgrid_value_at_index(gridb, i, j, k);
 
-  if(nx > 1) sum *= step;
-  if(ny > 1) sum *= step;
-  
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
 
@@ -1330,9 +1327,8 @@ EXPORT REAL rgrid_grid_expectation_value(rgrid *grida, rgrid *gridb) {
       for (k = 0; k < nz; k++)
 	sum += sqnorm(rgrid_value_at_index(grida, i, j, k)) * rgrid_value_at_index(gridb, i, j, k);
 
-  if(nx > 1) sum *= step;
-  if(ny > 1) sum *= step;
-  
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
  
@@ -1370,9 +1366,8 @@ EXPORT REAL rgrid_grid_expectation_value_func(void *arg, REAL (*func)(void *arg,
     }
   }
 
-  if(nx > 1) sum *= step;
-  if(ny > 1) sum *= step;
-  
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
 
@@ -1408,9 +1403,8 @@ EXPORT REAL rgrid_weighted_integral(rgrid *grid, REAL (*weight)(void *farg, REAL
     }
   }
 
-  if(nx > 1) sum *= step;
-  if(ny > 1) sum *= step;
-  
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
 
@@ -1447,9 +1441,8 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
     }
   }
 
-  if(nx > 1) sum *= step;
-  if(ny > 1) sum *= step;
-  
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
   return sum * step;
 }
 

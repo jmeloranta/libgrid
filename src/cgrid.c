@@ -1254,8 +1254,8 @@ EXPORT void cgrid_transform_two(cgrid *grida, cgrid *gridb, void (*operator)(REA
 
 EXPORT REAL complex cgrid_integral(cgrid *grid) {
 
-  INT i, j, k, nx = grid->nx , ny =  grid->ny, nz = grid->nz;
-  REAL complex sum = 0.0;
+  INT i, j, k, nx = grid->nx, ny =  grid->ny, nz = grid->nz;
+  REAL complex sum = 0.0, step = grid->step;
   
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_integral(grid, &sum)) return sum;
@@ -1268,7 +1268,9 @@ EXPORT REAL complex cgrid_integral(cgrid *grid) {
 	sum += cgrid_value_at_index(grid, i, j, k);
   }
  
-  return sum * grid->step * grid->step * grid->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /*
@@ -1288,7 +1290,7 @@ EXPORT REAL complex cgrid_integral(cgrid *grid) {
 
 EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl, REAL yu, REAL zl, REAL zu) {
 
-  INT iu, il, i, ju, jl, j, ku, kl, k;
+  INT iu, il, i, ju, jl, j, ku, kl, k, nx = grid->nx, ny = grid->ny;
   REAL complex sum;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
   REAL step = grid->step;
@@ -1310,7 +1312,9 @@ EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl
     for (j = jl; j <= ju; j++)
       for (k = kl; k <= ku; k++)
 	sum += cgrid_value_at_index(grid, i, j, k);
- return sum * step * step * step; 
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
  
 /* 
@@ -1325,7 +1329,7 @@ EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl
 EXPORT REAL cgrid_integral_of_square(cgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
-  REAL sum = 0;
+  REAL sum = 0, step = grid->step;
   
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_integral_of_square(grid, &sum)) return sum;
@@ -1337,7 +1341,9 @@ EXPORT REAL cgrid_integral_of_square(cgrid *grid) {
       for (k = 0; k < nz; k++)
 	sum += sqnorm(cgrid_value_at_index(grid, i, j, k));
  
-  return sum * grid->step * grid->step * grid->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /*
@@ -1353,7 +1359,7 @@ EXPORT REAL cgrid_integral_of_square(cgrid *grid) {
 EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gridb) {
 
   INT i, j, k, nx = grida->nx, ny = grida->ny, nz = grida->nz;
-  REAL complex sum = 0.0;
+  REAL complex sum = 0.0, step = grida->step;
   
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_integral_of_conjugate_product(grida, gridb, &sum)) return sum;
@@ -1364,7 +1370,9 @@ EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gri
       for (k = 0; k < nz; k++)
 	sum += CONJ(cgrid_value_at_index(grida, i, j, k)) * cgrid_value_at_index(gridb, i, j, k);
 
-  return sum * grida->step * grida->step * grida->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /*
@@ -1381,7 +1389,7 @@ EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gri
 EXPORT REAL complex cgrid_grid_expectation_value(cgrid *grida, cgrid *gridb) {
 
   INT i, j, k, nx = grida->nx, ny = grida->ny , nz = grida->nz;
-  REAL complex sum = 0.0;
+  REAL complex sum = 0.0, step = grida->step;
 
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_grid_expectation_value(grida, gridb, &sum)) return sum;
@@ -1393,7 +1401,9 @@ EXPORT REAL complex cgrid_grid_expectation_value(cgrid *grida, cgrid *gridb) {
       for (k = 0; k < nz; k++)
 	sum += sqnorm(cgrid_value_at_index(grida, i, j, k)) * cgrid_value_at_index(gridb, i, j, k);
  
-  return sum * grida->step * grida->step * grida->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
  
 /*
@@ -1432,7 +1442,9 @@ EXPORT REAL complex cgrid_grid_expectation_value_func(void *arg, REAL complex (*
     }
   }
  
-  return sum * step * step * step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /* 
@@ -1469,7 +1481,9 @@ EXPORT REAL complex cgrid_weighted_integral(cgrid *grid, REAL complex (*weight)(
     }
   }
  
-  return sum * grid->step * grid->step * grid->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /* 
@@ -1507,7 +1521,9 @@ EXPORT REAL cgrid_weighted_integral_of_square(cgrid *grid, REAL (*weight)(void *
     }
   }
  
-  return sum * grid->step * grid->step * grid->step;
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  return sum * step;
 }
 
 /* 
@@ -1803,7 +1819,7 @@ EXPORT void cgrid_fd_gradient_dot_gradient(cgrid *grid, cgrid *grad_dot_grad) {
   INT i, j, k, ij, ijnz;
   INT ny = grid->ny, nz = grid->nz;
   INT nxy = grid->nx * grid->ny;
-  REAL inv_2delta2 = 1.0 / (2.0*grid->step * 2.0*grid->step);
+  REAL inv_2delta2 = 1.0 / (2.0 * grid->step * 2.0 * grid->step);
   REAL complex *gvalue = grad_dot_grad->value;
   
   if(grid == grad_dot_grad) {
