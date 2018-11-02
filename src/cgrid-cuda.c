@@ -64,8 +64,6 @@ EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in
  * grida = Source 1 (cgrid *; input).
  * gridb = Source 2 (cgrid *; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
@@ -86,8 +84,6 @@ EXPORT char cgrid_cuda_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * grida    = 1st source grid (cgrid *; input).
  * exponent = exponent to be used (REAL complex; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
@@ -107,8 +103,6 @@ EXPORT char cgrid_cuda_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
  * grida    = 1st source grid (cgrid *; input).
  * exponent = exponent to be used (REAL complex; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_power(cgrid *gridb, cgrid *grida, REAL exponent) {
@@ -126,8 +120,6 @@ EXPORT char cgrid_cuda_power(cgrid *gridb, cgrid *grida, REAL exponent) {
  *
  * grid = grid to be multiplied (cgrid *; input/output).
  * c    = multiplier (REAL complex; input).
- *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
  *
  */
 
@@ -151,8 +143,6 @@ EXPORT char cgrid_cuda_multiply(cgrid *grid, REAL complex c) {
  * grida = 1st of the grids to be added (cgrid *; input).
  * gridb = 2nd of the grids to be added (cgrid *; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_sum(cgrid *gridc, cgrid *grida, cgrid *gridb) {
@@ -172,8 +162,6 @@ EXPORT char cgrid_cuda_sum(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * gridc = destination grid (cgrid *; output).
  * grida = 1st of the grids to be added (cgrid *; input).
  * gridb = 2nd of the grids to be added (cgrid *; input).
- *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
  *
  */
 
@@ -195,8 +183,6 @@ EXPORT char cgrid_cuda_difference(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * grida = 1st source grid (cgrid *; input).
  * gridb = 2nd source grid (cgrid *; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
@@ -217,8 +203,6 @@ EXPORT char cgrid_cuda_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * grida = 1st source grid (cgrid *; input).
  * gridb = 2nd source grid (cgrid *; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_conjugate_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
@@ -238,10 +222,6 @@ EXPORT char cgrid_cuda_conjugate_product(cgrid *gridc, cgrid *grida, cgrid *grid
  * gridc = destination grid (cgrid *; output).
  * grida = 1st source grid (cgrid *; input).
  * gridb = 2nd source grid (cgrid *; input).
- *
- * No return value.
- *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
  *
  */
 
@@ -264,8 +244,6 @@ EXPORT char cgrid_cuda_division(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * gridb = 2nd source grid (cgrid *; input).
  * eps   = Epsilon (REAL; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_division_eps(cgrid *gridc, cgrid *grida, cgrid *gridb, REAL eps) {
@@ -284,8 +262,6 @@ EXPORT char cgrid_cuda_division_eps(cgrid *gridc, cgrid *grida, cgrid *gridb, RE
  *
  * grid = grid to be operated on (cgrid *; input/output).
  * c    = constant (REAL complex; input).
- *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
  *
  */
 
@@ -308,8 +284,6 @@ EXPORT char cgrid_cuda_add(cgrid *grid, REAL complex c) {
  * grid = grid to be operated (cgrid *; input/output).
  * cm   = multiplier (REAL complex; input).
  * ca   = constant to be added (REAL complex; input).
- *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
  *
  */
 
@@ -335,8 +309,6 @@ EXPORT char cgrid_cuda_multiply_and_add(cgrid *grid, REAL complex cm, REAL compl
  * ca   = constant to be added (REAL complex; input).
  * cm   = multiplier (REAL complex; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_add_and_multiply(cgrid *grid, REAL complex ca, REAL complex cm) {
@@ -361,8 +333,6 @@ EXPORT char cgrid_cuda_add_and_multiply(cgrid *grid, REAL complex ca, REAL compl
  * d     = multiplier for the operation (REAL complex; input).
  * grida = source grid for the operation (cgrid *; input).
  *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
- *
  */
 
 EXPORT char cgrid_cuda_add_scaled(cgrid *gridc, REAL complex d, cgrid *grida) {
@@ -386,8 +356,6 @@ EXPORT char cgrid_cuda_add_scaled(cgrid *gridc, REAL complex d, cgrid *grida) {
  * d     = constant multiplier (REAL complex; input).
  * grida = 1st source grid (cgrid *; input).
  * gridb = 2nd source grid (cgrid *; input).
- *
- * Return value: 0 = OK, -1 = cannot be done on GPU.
  *
  */
 
