@@ -8,22 +8,21 @@
 #include <cuda/device_launch_parameters.h>
 #include <cuda/cufft.h>
 #include "cuda-math.h"
+#include "rgrid_bc-cuda.h"
 
 extern void *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
 
-/********************************************************************************************************************/
-
 /*
- * Fourier space convolution device code. This cannot not be called directly.
  *
  * C = A * B but with alternating signs for FFT.
  *
  */
 
-__global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPLEX *b, CUREAL norm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPLEX *b, CUREAL norm, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -38,9 +37,9 @@ __global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPL
  * Multiplication in GPU memory: grid_gpu_mem[i] = grid_gpu_mem[i] * grid_gpu_mem[j] (with sign variation).
  * Note: this includes the sign variation needed for convolution as well as normalization!
  *
- * grida = 1st grid to be convoluted (CUCOMPLEX *).
- * gridb = 2nd grid to be convoluted (CUCOMPLEX *).
- * gridc = output (CUCOMPLEX *).
+ * grida = 1st grid to be convoluted (CUCOMPLEX *; input).
+ * gridb = 2nd grid to be convoluted (CUCOMPLEX *; input).
+ * gridc = output (CUCOMPLEX *; output).
  * norm  = FFT norm (REAL; input).
  * nx    = Grid dim x (INT; input).
  * ny    = Grid dim y (INT; input).
@@ -60,20 +59,16 @@ extern "C" void rgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CU
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Grid power device code. This cannot not be called directly.
  *
- * A = POW(B,x)
+ * A = POW(B,x) = B^x
  *
  */
 
-__global__ void rgrid_cuda_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT ny, INT nz, INT nzz) {
   
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -85,39 +80,35 @@ __global__ void rgrid_cuda_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT
 /*
  * Grid power.
  *
- * gridb    = Destination for operation (REAL *; output).
- * grida    = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination for operation (REAL *; output).
+ * gridb    = Source for operation (REAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_powerW(CUREAL *gridb, CUREAL *grida, CUREAL exponent, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_power_gpu<<<blocks,threads>>>(gridb, grida, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_power_gpu<<<blocks,threads>>>(grida, gridb, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Grid power device code. This cannot not be called directly.
  *
- * A = POW(|B|,x)
+ * A = POW(|B|,x) = |B|^x
  *
  */
 
-__global__ void rgrid_cuda_abs_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_abs_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -129,37 +120,32 @@ __global__ void rgrid_cuda_abs_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx,
 /*
  * Grid abs power.
  *
- * gridb    = Destination for operation (REAL *; output).
- * grida    = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination for operation (REAL *; output).
+ * gridb    = Source for operation (REAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_abs_powerW(CUREAL *gridb, CUREAL *grida, CUREAL exponent, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_abs_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_abs_power_gpu<<<blocks,threads>>>(gridb, grida, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_abs_power_gpu<<<blocks,threads>>>(grida, gridb, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Multiply grid by constant device code. This cannot not be called directly.
  *
  * A = C * A
  *
  */
 
-__global__ void rgrid_cuda_multiply_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_multiply_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
 
@@ -172,10 +158,10 @@ __global__ void rgrid_cuda_multiply_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT
  * Multiply grid by a constant.
  *
  * grid     = Grid to be operated on (CUREAL *; input/output).
- * c        = Multiplying constant (CUREAL).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * c        = Multiplying constant (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -190,20 +176,16 @@ extern "C" void rgrid_cuda_multiplyW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Multiply (complex) grid by constant device code. This cannot not be called directly.
  *
- * A = C * A
+ * A = C * A (in FFT space)
  *
  */
 
-__global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *a, CUREAL c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *a, CUREAL c, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -213,12 +195,13 @@ __global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *a, CUREAL c, INT nx, INT 
 }
 
 /*
- * Multiply (complex) grid by a constant.
+ * Multiply (complex) grid by a constant (in FFT space).
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * c        = Multiplying constant (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -234,20 +217,16 @@ extern "C" void rgrid_cuda_multiply_fftW(CUCOMPLEX *grid, CUREAL c, INT nx, INT 
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Sum of two grids.
  *
  * A = B + C
  *
  */
 
-__global__ void rgrid_cuda_sum_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_sum_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -259,40 +238,36 @@ __global__ void rgrid_cuda_sum_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT 
 /*
  * Sum of two grids.
  *
- * gridc    = Destination grid (CUREAL *; output).
- * grida    = Input grid 1 (CUREAL *; input).
- * gridb    = Input grid 2 (CUREAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination grid (CUREAL *; output).
+ * gridb    = Input grid 1 (CUREAL *; input).
+ * gridc    = Input grid 2 (CUREAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_sumW(CUREAL *gridc, CUREAL *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_sumW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_sum_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_sum_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Subtract of two grids.
  *
  * A = B - C
  *
  */
 
-__global__ void rgrid_cuda_difference_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_difference_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -304,40 +279,36 @@ __global__ void rgrid_cuda_difference_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT n
 /*
  * Subtract two grids.
  *
- * gridc    = Destination grid (CUREAL *; output).
- * grida    = Input grid 1 (CUREAL *; input).
- * gridb    = Input grid 2 (CUREAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination grid (CUREAL *; output).
+ * gridb    = Input grid 1 (CUREAL *; input).
+ * gridc    = Input grid 2 (CUREAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_differenceW(CUREAL *gridc, CUREAL *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_differenceW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_difference_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_difference_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Product of two grids.
  *
  * A = B * C.
  *
  */
 
-__global__ void rgrid_cuda_product_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_product_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -349,40 +320,36 @@ __global__ void rgrid_cuda_product_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, 
 /*
  * Product of two grids.
  *
- * gridc    = Destination grid (CUREAL *; output).
- * grida    = Source grid 1 (CUREAL *; input).
- * gridb    = Source grid 2 (CUREAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination grid (CUREAL *; output).
+ * gridb    = Source grid 1 (CUREAL *; input).
+ * gridc    = Source grid 2 (CUREAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_productW(CUREAL *gridc, CUREAL *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_productW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_product_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_product_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Division of two grids.
  *
  * A = B / C.
  *
  */
 
-__global__ void rgrid_cuda_division_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_division_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -394,40 +361,36 @@ __global__ void rgrid_cuda_division_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx,
 /*
  * Division of two grids.
  *
- * gridc    = Destination grid (CUREAL *; output).
- * grida    = Source grid 1 (CUREAL *; input).
- * gridb    = Source grid 2 (CUREAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination grid (CUREAL *; output).
+ * gridb    = Source grid 1 (CUREAL *; input).
+ * gridc    = Source grid 2 (CUREAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_divisionW(CUREAL *gridc, CUREAL *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_divisionW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_division_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_division_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Safe division of two grids.
  *
  * A = B / (C + eps).
  *
  */
 
-__global__ void rgrid_cuda_division_eps_gpu(CUREAL *a, CUREAL *b, CUREAL *c, CUREAL eps, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_division_eps_gpu(CUREAL *a, CUREAL *b, CUREAL *c, CUREAL eps, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -439,41 +402,37 @@ __global__ void rgrid_cuda_division_eps_gpu(CUREAL *a, CUREAL *b, CUREAL *c, CUR
 /*
  * Division of two grids.
  *
- * gridc    = Destination grid (CUREAL *; output).
- * grida    = Source grid 1 (CUREAL *; input).
- * gridb    = Source grid 2 (CUREAL *; input).
- * eps      = Epsilon (CUREAL).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination grid (CUREAL *; output).
+ * gridb    = Source grid 1 (CUREAL *; input).
+ * gridc    = Source grid 2 (CUREAL *; input).
+ * eps      = Epsilon (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_division_epsW(CUREAL *gridc, CUREAL *grida, CUREAL *gridb, CUREAL eps, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_division_epsW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, CUREAL eps, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_division_eps_gpu<<<blocks,threads>>>(gridc, grida, gridb, eps, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_division_eps_gpu<<<blocks,threads>>>(grida, gridb, gridc, eps, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Add constant to grid device code. This cannot not be called directly.
  *
  * A = A + c
  *
  */
 
-__global__ void rgrid_cuda_add_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_add_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -486,10 +445,10 @@ __global__ void rgrid_cuda_add_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, 
  * Add constant to grid.
  *
  * grid     = Grid to be operated on (CUREAL *; input/output).
- * c        = Constant (CUREAL).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * c        = Constant (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -504,20 +463,16 @@ extern "C" void rgrid_cuda_addW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT nz) 
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Add multiply and add device code. This cannot not be called directly.
  *
  * A = cm * A + ca
  *
  */
 
-__global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *a, CUREAL cm, CUREAL ca, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *a, CUREAL cm, CUREAL ca, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -530,11 +485,11 @@ __global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *a, CUREAL cm, CUREAL ca,
  * Grid multiply and add.
  *
  * grid     = Grid to be operated on (CUREAL *; input/output).
- * cm       = Multiplier (CUREAL).
- * ca       = Additive constant (CUREAL).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * cm       = Multiplier (CUREAL; input).
+ * ca       = Additive constant (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -549,20 +504,16 @@ extern "C" void rgrid_cuda_multiply_and_addW(CUREAL *grid, CUREAL cm, REAL ca, I
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Add multiply and add device code. This cannot not be called directly.
  *
  * A = cm * (A + ca)
  *
  */
 
-__global__ void rgrid_cuda_add_and_multiply_gpu(CUREAL *a, CUREAL ca, CUREAL cm, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_add_and_multiply_gpu(CUREAL *a, CUREAL ca, CUREAL cm, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -575,11 +526,11 @@ __global__ void rgrid_cuda_add_and_multiply_gpu(CUREAL *a, CUREAL ca, CUREAL cm,
  * Grid multiply and add.
  *
  * grid     = Grid to be operated on (CUREAL *; input/output).
- * cm       = Multiplier (CUREAL).
- * ca       = Additive constant (CUREAL).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * cm       = Multiplier (CUREAL; input).
+ * ca       = Additive constant (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -594,111 +545,99 @@ extern "C" void rgrid_cuda_add_and_multiplyW(CUREAL *grid, CUREAL ca, CUREAL cm,
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Add scaled grid device code. This cannot not be called directly.
  *
  * A = A + d * B
  *
  */
 
-__global__ void rgrid_cuda_add_scaled_gpu(CUREAL *a, CUREAL d, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_add_scaled_gpu(CUREAL *a, CUREAL d, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  a[idx] += b[idx] * d;
+  a[idx] = a[idx] + b[idx] * d;
 }
 
 /*
  * Scaled add grid.
  *
- * gridc    = Destination for operation (REAL *; output).
- * d        = Scaling factor (REAL).
- * grida    = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination for operation (REAL *; output).
+ * d        = Scaling factor (REAL; input).
+ * gridb    = Source for operation (REAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_add_scaledW(CUREAL *gridc, CUREAL d, CUREAL *grida, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_add_scaledW(CUREAL *grida, CUREAL d, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(gridc, d, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(grida, d, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Add scaled product grid device code. This cannot not be called directly.
  *
  * A = A + d * B * C
  *
  */
 
-__global__ void rgrid_cuda_add_scaled_product_gpu(CUREAL *a, CUREAL d, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_add_scaled_product_gpu(CUREAL *a, CUREAL d, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  a[idx] += d * b[idx] * c[idx];
+  a[idx] = a[idx] + d * b[idx] * c[idx];
 }
 
 /*
  * Add scaled product.
  *
- * gridc    = Destination for operation (REAL *; output).
- * d        = Scaling factor (REAL).
- * grida    = Source for operation (REAL *; input).
+ * grida    = Destination for operation (REAL *; output).
+ * d        = Scaling factor (REAL; input).
  * gridb    = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * gridc    = Source for operation (REAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_add_scaled_productW(CUREAL *gridc, CUREAL d, CUREAL *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_add_scaled_productW(CUREAL *grida, CUREAL d, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_add_scaled_product_gpu<<<blocks,threads>>>(gridc, d, grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_add_scaled_product_gpu<<<blocks,threads>>>(grida, d, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Set A to constant.
  *
  * A = c
  *
  */
 
-__global__ void rgrid_cuda_constant_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_constant_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -711,10 +650,10 @@ __global__ void rgrid_cuda_constant_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT
  * Set grid to constant.
  *
  * grid     = Destination for operation (REAL *; output).
- * c        = Constant (REAL).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * c        = Constant (REAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -728,8 +667,6 @@ extern "C" void rgrid_cuda_constantW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT
   rgrid_cuda_constant_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
 
 /*
  * Block init.
@@ -756,17 +693,15 @@ __global__ void rgrid_cuda_block_reduce(CUREAL *blocks, INT nblocks) {
     blocks[0] += blocks[i];  // reduce blocks
 }
 
-/********************************************************************************************************************/
-
 /*
  * Integrate over A.
  *
  */
 
-__global__ void rgrid_cuda_integral_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_integral_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUREAL els[];
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -795,11 +730,11 @@ __global__ void rgrid_cuda_integral_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT n
  * Integrate over grid.
  *
  * grid     = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -820,19 +755,15 @@ extern "C" void rgrid_cuda_integralW(CUREAL *grid, INT nx, INT ny, INT nz) {
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Integrate over A with limits.
  *
  */
 
-__global__ void rgrid_cuda_integral_region_gpu(CUREAL *a, CUREAL *blocks, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_integral_region_gpu(CUREAL *a, CUREAL *blocks, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUREAL els[];
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -868,11 +799,11 @@ __global__ void rgrid_cuda_integral_region_gpu(CUREAL *a, CUREAL *blocks, INT il
  * ju       = Upper index for y (INT; input).
  * kl       = Lower index for z (INT; input).
  * ku       = Upper index for z (INT; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -899,19 +830,15 @@ extern "C" void rgrid_cuda_integral_regionW(CUREAL *grid, INT il, INT iu, INT jl
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Integrate of A^2.
  *
  */
 
-__global__ void rgrid_cuda_integral_of_square_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_integral_of_square_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUREAL els[];
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -940,11 +867,11 @@ __global__ void rgrid_cuda_integral_of_square_gpu(CUREAL *a, CUREAL *blocks, INT
  * Integral of square.
  *
  * grid     = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -964,19 +891,15 @@ extern "C" void rgrid_cuda_integral_of_squareW(CUREAL *grid, INT nx, INT ny, INT
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Integrate A * B.
  *
  */
 
-__global__ void rgrid_cuda_integral_of_product_gpu(CUREAL *a, CUREAL *b, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_integral_of_product_gpu(CUREAL *a, CUREAL *b, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUREAL els[];
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1006,11 +929,11 @@ __global__ void rgrid_cuda_integral_of_product_gpu(CUREAL *a, CUREAL *b, CUREAL 
  *
  * grid1    = Source 1 for operation (REAL *; input).
  * grid2    = Source 2 for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -1031,19 +954,15 @@ extern "C" void rgrid_cuda_integral_of_productW(CUREAL *grid1, CUREAL *grid2, IN
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Integrate A * B^2.
  *
  */
 
-__global__ void rgrid_cuda_grid_expectation_value_gpu(CUREAL *a, CUREAL *b, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_grid_expectation_value_gpu(CUREAL *a, CUREAL *b, CUREAL *blocks, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUREAL els[];
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1073,11 +992,11 @@ __global__ void rgrid_cuda_grid_expectation_value_gpu(CUREAL *a, CUREAL *b, CURE
  *
  * grid1    = Source 1 (a) for operation (REAL *; input).
  * grid2    = Source 2 (b) for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -1097,25 +1016,21 @@ extern "C" void rgrid_cuda_grid_expectation_valueW(CUREAL *grid1, CUREAL *grid2,
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = FD_X(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_X(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_gradient_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_gradient_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  if(i == 0 || i == nx-1) b[idx] = 0.0;
-  else b[idx] = inv_delta * (a[((i+1)*ny + j)*nzz + k] - a[((i-1)*ny + j)*nzz + k]);
+  b[idx] = inv_delta * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
 }
 
 /*
@@ -1123,44 +1038,40 @@ __global__ void rgrid_cuda_fd_gradient_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_de
  *
  * grida    = Source for operation (REAL *; input).
  * gridb    = Destination for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
- *
- * Returns the value of integral.
+ * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc       = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_fd_gradient_xW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_gradient_xW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = FD_Y(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_Y(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_gradient_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_gradient_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  if(j == 0 || j == ny-1) b[idx] = 0.0;
-  else b[idx] = inv_delta * (a[(i*ny + j + 1)*nzz + k] - a[(i*ny + j - 1)*nzz + k]);
+  b[idx] = inv_delta * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
 }
 
 /*
@@ -1168,44 +1079,40 @@ __global__ void rgrid_cuda_fd_gradient_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_de
  *
  * grida    = Source for operation (REAL *; input).
  * gridb    = Destination for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
- *
- * Returns the value of integral.
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_fd_gradient_yW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_gradient_yW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = FD_Z(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_Z(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_gradient_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_gradient_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  if(k == 0 || k == nz-1) b[idx] = 0.0;
-  else b[idx] = inv_delta * (a[(i*ny + j)*nzz + k + 1] - a[(i*ny + j)*nzz + k - 1]);
+  b[idx] = inv_delta * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
 }
 
 /*
@@ -1213,258 +1120,212 @@ __global__ void rgrid_cuda_fd_gradient_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_de
  *
  * grida    = Source for operation (REAL *; input).
  * gridb    = Destination for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
- *
- * Returns the value of integral.
+ * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc       = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_fd_gradient_zW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_gradient_zW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = LAPLACE(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_laplace_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_laplace_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUREAL xp, xm, yp, ym, zp, zm;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  // Neumann BC
-  if(i == nx-1) xp = a[j * nzz + k]; // x -> 0, i = 0
-  else xp = a[((i+1) * ny + j) * nzz + k];
-
-  if(i == 0) xm = a[((nx-1) * ny + j) * nzz + k]; // x -> (nx-1) * step, i = nx-1
-  else xm = a[((i - 1) * ny + j) * nzz + k];
-
-  if(j == ny-1) yp = a[i * ny * nzz + k]; // y -> 0, j = 0
-  else yp = a[(i * ny + j + 1) * nzz + k];
-
-  if(j == 0) ym = a[(i * ny + ny - 1) * nzz + k]; // y -> (ny-1) * step, j = ny-1
-  else ym = a[(i * ny + j - 1) * nzz + k];
-
-  if(k == nz-1) zp = a[(i * ny + j) * nzz]; // z -> 0, k = 0
-  else zp = a[(i * ny + j) * nzz + k + 1];
-
-  if(k == 0) zm = a[(i * ny + j) * nzz + nz - 1]; // z -> (nz-1) * step, k = nz-1
-  else zm = a[(i * ny + j) * nzz + k - 1];
-
-  b[idx] = inv_delta2 * (xp + xm + yp + ym + zp + zm - 6.0 * a[idx]);
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
+                         + rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
+                         + rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 6.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE(A)
  *
- * grid1    = Source 1 (a) for operation (REAL *; input).
- * grid2    = Source 2 (b) for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grid1      = Source 1 (a) for operation (REAL *; input).
+ * grid2      = Source 2 (b) for operation (REAL *; input).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
  * Returns the value of integral.
  *
  */
 
-extern "C" void rgrid_cuda_fd_laplaceW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_laplaceW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = LAPLACE_X(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE_X(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_laplace_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_laplace_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUREAL xp, xm;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  // Neumann BC
-  if(i == nx-1) xp = a[j * nzz + k]; // x -> 0, i = 0
-  else xp = a[((i+1) * ny + j) * nzz + k];
-
-  if(i == 0) xm = a[((nx-1) * ny + j) * nzz + k]; // x -> (nx-1) * step, i = nx-1
-  else xm = a[((i - 1) * ny + j) * nzz + k];
-
-  b[idx] = inv_delta2 * (xp + xm - 2.0 * a[idx]);
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE_X(A)
  *
- * grid1    = Source 1 (a) for operation (REAL *; input).
- * grid2    = Source 2 (b) for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL *; input).
+ * gridb      = Destination for operation (REAL *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns laplace in gridb.
  *
  */
 
-extern "C" void rgrid_cuda_fd_laplace_xW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_laplace_xW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = LAPLACE_Y(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE_Y(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_laplace_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_laplace_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUREAL yp, ym;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  // Neumann BC
-
-  if(j == ny-1) yp = a[i * ny * nzz + k]; // y -> 0, j = 0
-  else yp = a[(i * ny + j + 1) * nzz + k];
-
-  if(j == 0) ym = a[(i * ny + ny - 1) * nzz + k]; // y -> (ny-1) * step, j = ny-1
-  else ym = a[(i * ny + j - 1) * nzz + k];
-
-  b[idx] = inv_delta2 * (yp + ym - 2.0 * a[idx]);
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE_Y(A)
  *
- * grid1    = Source 1 (a) for operation (REAL *; input).
- * grid2    = Source 2 (b) for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL *; input).
+ * gridb      = Destination for operation (REAL *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns laplace in gridb.
  *
  */
 
-extern "C" void rgrid_cuda_fd_laplace_yW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_laplace_yW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = LAPLACE_Z(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE_Z(A).
  *
  */
 
-__global__ void rgrid_cuda_fd_laplace_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_laplace_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUREAL zp, zm;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  // Neumann BC
-  if(k == nz-1) zp = a[(i * ny + j) * nzz]; // z -> 0, k = 0
-  else zp = a[(i * ny + j) * nzz + k + 1];
-
-  if(k == 0) zm = a[(i * ny + j) * nzz + nz - 1]; // z -> (nz-1) * step, k = nz-1
-  else zm = a[(i * ny + j) * nzz + k - 1];
-
-  b[idx] = inv_delta2 * (zp + zm - 2.0 * a[idx]);
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE_Z(A)
  *
- * grid1    = Source 1 (a) for operation (REAL *; input).
- * grid2    = Source 2 (b) for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL *; input).
+ * gridb      = Destination for operation (REAL *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns laplace in gridb.
  *
  */
 
-extern "C" void rgrid_cuda_fd_laplace_zW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_laplace_zW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2. Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
  *
  */
 
-__global__ void rgrid_cuda_fd_gradient_dot_gradient_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fd_gradient_dot_gradient_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUREAL tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1472,59 +1333,52 @@ __global__ void rgrid_cuda_fd_gradient_dot_gradient_gpu(CUREAL *a, CUREAL *b, CU
   idx = (i * ny + j) * nzz + k;
 
   b[idx] = 0.0;
-  if(i != 0 && i != nx-1) {
-    tmp = inv_delta * (a[((i+1)*ny + j)*nzz + k] - a[((i-1)*ny + j)*nzz + k]);
-    b[idx] += tmp * tmp;
-  }
-  if(j != 0 && j != ny-1) {
-    tmp = inv_delta * (a[(i*ny + j + 1)*nzz + k] - a[(i*ny + j - 1)*nzz + k]);
-    b[idx] += tmp * tmp;
-  }
-  if(k != 0 && k != nz-1) {
-    tmp = inv_delta * (a[(i*ny + j)*nzz + k + 1] - a[(i*ny + j)*nzz + k - 1]);
-    b[idx] += tmp * tmp;
-  }
+
+  tmp = inv_delta * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = b[idx] + tmp * tmp;
+
+  tmp = inv_delta * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = b[idx] + tmp * tmp;
+
+  tmp = inv_delta * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = b[idx] + tmp * tmp;
 }
 
 /*
  * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
  *
- * grid1    = Source 1 (a) for operation (REAL *; input).
- * grid2    = Source 2 (b) for operation (REAL *; input).
- * inv_delta2 = 1/(4h^2) (REAL; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
- *
- * Returns the value of integral.
+ * grida      = Source for operation (REAL *; input).
+ * gridb      = Destination for operation (REAL *; output).
+ * inv_delta2 = 1 / (4 * step * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_fd_gradient_dot_gradientW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fd_gradient_dot_gradientW(CUREAL *grida, CUREAL *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Real to complex_re.
  *
- * A.re = B(real).
+ * A.re = B(real). (zeroes the imag part)
  *
  */
 
-__global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -1537,39 +1391,36 @@ __global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx
 /*
  * Real to complex_re
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL complex *; output).
+ * gridb   = Source for operation (REAL *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_real_to_complex_reW(CUCOMPLEX *gridb, CUREAL *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_real_to_complex_reW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_real_to_complex_re_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_real_to_complex_re_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Real to complex_im.
  *
- * A.im = B(real).
+ * A.im = B(real). (zeroes the real part)
  *
  */
 
-__global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -1582,28 +1433,24 @@ __global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx
 /*
  * Real to complex_im
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL complex *; output).
+ * gridb   = Source for operation (REAL *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_real_to_complex_imW(CUCOMPLEX *gridb, CUREAL *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_real_to_complex_imW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_real_to_complex_im_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_real_to_complex_im_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Add real to complex_re.
@@ -1612,43 +1459,40 @@ extern "C" void grid_cuda_real_to_complex_imW(CUCOMPLEX *gridb, CUREAL *grida, I
  *
  */
 
-__global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   idx2 = (i * ny + j) * nzz + k;
 
-  a[idx].x += b[idx2];
+  a[idx].x = CUCREAL(a[idx]) + b[idx2];
 }
 
 /*
  * Add real to complex.re
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL complex *; output).
+ * gridb   = Source for operation (REAL *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_add_real_to_complex_reW(CUCOMPLEX *gridb, CUREAL *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_add_real_to_complex_reW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_add_real_to_complex_re_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_add_real_to_complex_re_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Add real to complex_im.
@@ -1657,43 +1501,40 @@ extern "C" void grid_cuda_add_real_to_complex_reW(CUCOMPLEX *gridb, CUREAL *grid
  *
  */
 
-__global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   idx2 = (i * ny + j) * nzz + k;
 
-  a[idx].y += b[idx2];
+  a[idx].y = CUCIMAG(a[idx]) + b[idx2];
 }
 
 /*
  * Add real to complex_im
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL complex *; output).
+ * gridb   = Source for operation (REAL *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_add_real_to_complex_imW(CUCOMPLEX *gridb, CUREAL *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_add_real_to_complex_imW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_add_real_to_complex_im_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_add_real_to_complex_im_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Product A(complex) and B(real).
@@ -1702,9 +1543,10 @@ extern "C" void grid_cuda_add_real_to_complex_imW(CUCOMPLEX *gridb, CUREAL *grid
  *
  */
 
-__global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -1717,28 +1559,24 @@ __global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *a, CUREAL *b,
 /*
  * Product A(complex) with B(real).
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL complex *; output).
+ * gridb   = Source for operation (REAL *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_product_complex_with_realW(CUCOMPLEX *gridb, CUREAL *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_product_complex_with_realW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_product_complex_with_real_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_product_complex_with_real_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Imag. part to real grid.
@@ -1747,43 +1585,40 @@ extern "C" void grid_cuda_product_complex_with_realW(CUCOMPLEX *gridb, CUREAL *g
  *
  */
 
-__global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   idx2 = (i * ny + j) * nzz + k;
 
-  a[idx2] = b[idx].y;
+  a[idx2] = CUCIMAG(b[idx]);
 }
 
 /*
  * Imag. part of B to real A.
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL *; output).
+ * gridb   = Source for operation (REAL complex *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_complex_im_to_realW(CUREAL *gridb, CUCOMPLEX *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_complex_im_to_realW(CUREAL *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_complex_im_to_real_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_complex_im_to_real_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Real part to real grid.
@@ -1792,52 +1627,47 @@ extern "C" void grid_cuda_complex_im_to_realW(CUREAL *gridb, CUCOMPLEX *grida, I
  *
  */
 
-__global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   idx2 = (i * ny + j) * nzz + k;
 
-  a[idx2] = b[idx].x;
+  a[idx2] = CUCREAL(b[idx]);
 }
 
 /*
  * Real part of B to real A.
  *
- * dest    = Destination for operation (REAL complex *; output).
- * source  = Source for operation (REAL *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * grida   = Destination for operation (REAL *; output).
+ * gridb   = Source for operation (REAL complex *; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_complex_re_to_realW(CUREAL *gridb, CUCOMPLEX *grida, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_complex_re_to_realW(CUREAL *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_complex_re_to_real_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz, 2 * (nz / 2 + 1));
+  grid_cuda_complex_re_to_real_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Maximum value in a grid.
  *
- * No need to run in parallel. Implemented only to avoid memory copy.
- *
  */
 
-__global__ void grid_cuda_max_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_max_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT nz, INT nzz) {
 
   /* blockIdx.x = i, threadIdx.x = j */
   INT i, j, k, idx;
@@ -1855,9 +1685,11 @@ __global__ void grid_cuda_max_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT nz
  * Maximum value contained in a grid. (not parallel)
  *
  * grid    = Source for operation (REAL complex *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
+ *
+ * Returns maximum value in grid_gpu_mem[0].
  *
  */
 
@@ -1867,18 +1699,12 @@ extern "C" void grid_cuda_maxW(CUREAL *grid, INT nx, INT ny, INT nz) {
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Minimum value in a grid.
  *
- * No need to run in parallel. Implemented only to avoid memory copy.
- *
  */
 
-__global__ void grid_cuda_min_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_min_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT nz, INT nzz) {
 
   /* blockIdx.x = i, threadIdx.x = j */
   INT i, j, k, idx;
@@ -1896,9 +1722,11 @@ __global__ void grid_cuda_min_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT nz
  * Minimum value contained in a grid. (not parallel)
  *
  * grid    = Source for operation (REAL complex *; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
+ *
+ * Returns minimum value in grid_gpu_mem[0].
  *
  */
 
@@ -1908,81 +1736,73 @@ extern "C" void grid_cuda_minW(CUREAL *grid, INT nx, INT ny, INT nz) {
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * |rot|
  *
  */
 
-__global__ void rgrid_cuda_abs_rot_gpu(CUREAL *rot, CUREAL *fx, CUREAL *fy, CUREAL *fz, INT nx, INT ny, INT nz, INT nzz, CUREAL inv_delta) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_abs_rot_gpu(CUREAL *rot, CUREAL *fx, CUREAL *fy, CUREAL *fz, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz, INT nzz) { 
  
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUREAL tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nzz + k;
 
-  if(i == 0 || i == nx-1 || j == 0 || j == ny-1 || k == 0 || k == nz-1) rot[idx] = 0.0;
-  else {
-    /* x: (d/dy) fz - (d/dz) fy */
-    tmp = inv_delta * ((fz[(i * ny + j + 1) * nzz + k] - fz[(i * ny + j - 1)*nzz + k]) 
-                      - (fy[(i * ny + j)*nzz + k + 1] - fy[(i * ny + j)*nzz + k - 1]));
-    rot[idx] = tmp * tmp;
-    /* y: (d/dz) fx - (d/dx) fz */
-    tmp = inv_delta * ((fx[(i * ny + j) * nzz + k + 1] - fx[(i * ny + j)*nzz + k - 1]) 
-                      - (fz[((i + 1) * ny + j)*nzz + k] - fz[((i - 1) * ny + j)*nzz + k]));
-    rot[idx] += tmp * tmp;
-    /* z: (d/dx) fy - (d/dy) fx */
-    tmp = inv_delta * ((fy[((i + 1) * ny + j) * nzz + k] - fy[((i - 1) * ny + j)*nzz + k]) 
-                     - (fx[(i * ny + j + 1)*nzz + k] - fx[(i * ny + j - 1)*nzz + k]));
-    rot[idx] += tmp * tmp;
-    rot[idx] = SQRT(rot[idx]);
-  }
+  /* x: (d/dy) fz - (d/dz) fy */
+  tmp = inv_delta * (rgrid_cuda_bc_y_plus(fz, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(fz, bc, i, j, k, nx, ny, nz)
+                     - rgrid_cuda_bc_z_plus(fy, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(fy, bc, i, j, k, nx, ny, nz));
+  rot[idx] = tmp * tmp;
+
+  /* y: (d/dz) fx - (d/dx) fz */
+  tmp = inv_delta * (rgrid_cuda_bc_z_plus(fx, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(fx, bc, i, j, k, nx, ny, nz)
+                     - rgrid_cuda_bc_x_plus(fz, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(fz, bc, i, j, k, nx, ny, nz));
+  rot[idx] = rot[idx] + tmp * tmp;
+
+  /* z: (d/dx) fy - (d/dy) fx */
+  tmp = inv_delta * (rgrid_cuda_bc_x_plus(fy, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(fy, bc, i, j, k, nx, ny, nz)
+                     - rgrid_cuda_bc_y_plus(fx, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(fx, bc, i, j, k, nx, ny, nz));
+  rot[idx] = rot[idx] + tmp * tmp;
+  rot[idx] = SQRT(rot[idx]);
 }
 
 /*
  * |rot|
  *
- * rot     = Grid to be operated on (CUREAL *; input/output).
- * fx      = x component of the field (rgrid *).
- * fy      = y component of the field (rgrid *).
- * fz      = z component of the field (rgrid *).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * rot       = Grid to be operated on (CUREAL *; input/output).
+ * fx        = x component of the field (rgrid *; input).
+ * fy        = y component of the field (rgrid *; input).
+ * fz        = z component of the field (rgrid *; input).
+ * inv_delta = 1 / (2 * step) (CUREAL; input).
+ * bc        = Boundary condition (char; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_abs_rotW(CUREAL *rot, CUREAL *fx, CUREAL *fy, CUREAL *fz, INT nx, INT ny, INT nz, CUREAL inv_delta) {
+extern "C" void rgrid_cuda_abs_rotW(CUREAL *rot, CUREAL *fx, CUREAL *fy, CUREAL *fz, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_abs_rot_gpu<<<blocks,threads>>>(rot, fx, fy, fz, nx, ny, nz, 2 * (nz / 2 + 1), inv_delta);
+  rgrid_cuda_abs_rot_gpu<<<blocks,threads>>>(rot, fx, fy, fz, inv_delta, bc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
- * Grid integer power device code. This cannot not be called directly.
- *
- * A = POW(B,n) but with n integer.
+ * A = POW(B,n) with n integer.
  *
  */
 
-__global__ void rgrid_cuda_ipower_gpu(CUREAL *a, CUREAL *b, INT n, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_ipower_gpu(CUREAL *a, CUREAL *b, INT n, INT nx, INT ny, INT nz, INT nzz) {
   
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  INT ii, sig;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx, ii, sig;
   CUREAL value = 1.0;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -2016,37 +1836,34 @@ __global__ void rgrid_cuda_ipower_gpu(CUREAL *a, CUREAL *b, INT n, INT nx, INT n
 /*
  * Grid integer power.
  *
- * gridb    = Destination for operation (REAL *; output).
- * grida    = Source for operation (REAL *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida    = Destination for operation (REAL *; output).
+ * gridb    = Source for operation (REAL *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_ipowerW(CUREAL *gridb, CUREAL *grida, INT exponent, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_ipowerW(CUREAL *grida, CUREAL *gridb, INT exponent, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_ipower_gpu<<<blocks,threads>>>(gridb, grida, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
+  rgrid_cuda_ipower_gpu<<<blocks,threads>>>(grida, gridb, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Grid threshold clear device code.
  *
  */
 
-__global__ void rgrid_cuda_threshold_clear_gpu(CUREAL *dest, CUREAL *src, CUREAL ul, CUREAL ll, CUREAL uval, CUREAL lval, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_threshold_clear_gpu(CUREAL *dest, CUREAL *src, CUREAL ul, CUREAL ll, CUREAL uval, CUREAL lval, INT nx, INT ny, INT nz, INT nzz) {
   
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -2065,9 +1882,9 @@ __global__ void rgrid_cuda_threshold_clear_gpu(CUREAL *dest, CUREAL *src, CUREAL
  * ll      = lower limit threshold for the operation (REAL; input).
  * uval    = value to set when the upper limit was exceeded (REAL; input).
  * lval    = value to set when the lower limit was exceeded (REAL; input).
- * nx      = # of points along x (INT).
- * ny      = # of points along y (INT).
- * nz      = # of points along z (INT).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
  *
  */
 
@@ -2081,5 +1898,3 @@ extern "C" void rgrid_cuda_threshold_clearW(CUREAL *dest, CUREAL *src, CUREAL ul
   rgrid_cuda_threshold_clear_gpu<<<blocks,threads>>>(dest, src, ul, ll, uval, lval, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
-
-/********************************************************************************************************************/

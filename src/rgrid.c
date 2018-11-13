@@ -18,6 +18,19 @@
 #include <cuda.h>
 #endif
 
+#ifdef USE_CUDA
+static char rgrid_bc_conv(rgrid *grid) {
+
+  if(grid->value_outside == RGRID_DIRICHLET_BOUNDARY) return 0;
+  else if(grid->value_outside == RGRID_NEUMANN_BOUNDARY) return 1;
+  else if(grid->value_outside == RGRID_PERIODIC_BOUNDARY) return 2;
+  else {
+    fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
+    exit(1);
+  }
+}
+#endif
+
 /*
  * Allocate real grid.
  *
@@ -792,7 +805,7 @@ EXPORT void rgrid_division(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * "Safely" divide two grids: gridc = grida / gridb
+ * "Safely" divide two grids: gridc = grida / (gridb + eps)
  *
  * gridc = destination grid (rgrid *; output).
  * grida = 1st source grid (rgrid *; input).
@@ -1467,7 +1480,7 @@ EXPORT void rgrid_fd_gradient_x(rgrid *grid, rgrid *gradient) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_x(grid, gradient, inv_delta)) return;
+  if(cuda_status() && !rgrid_cuda_fd_gradient_x(grid, gradient, inv_delta, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1483,8 +1496,8 @@ EXPORT void rgrid_fd_gradient_x(rgrid *grid, rgrid *gradient) {
 /* 
  * Differentiate a grid with respect to y.
  *
- * grid     = grid to be differentiated (rgrid *).
- * gradient = differentiated grid output (rgrid *).
+ * grid     = grid to be differentiated (rgrid *; input).
+ * gradient = differentiated grid output (rgrid *; output).
  * 
  * No return value.
  *
@@ -1501,7 +1514,7 @@ EXPORT void rgrid_fd_gradient_y(rgrid *grid, rgrid *gradient) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_y(grid, gradient, inv_delta)) return;
+  if(cuda_status() && !rgrid_cuda_fd_gradient_y(grid, gradient, inv_delta, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1535,7 +1548,7 @@ EXPORT void rgrid_fd_gradient_z(rgrid *grid, rgrid *gradient) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_z(grid, gradient, inv_delta)) return;
+  if(cuda_status() && !rgrid_cuda_fd_gradient_z(grid, gradient, inv_delta, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1588,7 +1601,7 @@ EXPORT void rgrid_fd_laplace(rgrid *grid, rgrid *laplace) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace(grid, laplace, inv_delta2)) return;
+  if(cuda_status() && !rgrid_cuda_fd_laplace(grid, laplace, inv_delta2, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1625,7 +1638,7 @@ EXPORT void rgrid_fd_laplace_x(rgrid *grid, rgrid *laplacex) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace_x(grid, laplacex, inv_delta2)) return;
+  if(cuda_status() && !rgrid_cuda_fd_laplace_x(grid, laplacex, inv_delta2, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1660,7 +1673,7 @@ EXPORT void rgrid_fd_laplace_y(rgrid *grid, rgrid *laplacey) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace_y(grid, laplacey, inv_delta2)) return;
+  if(cuda_status() && !rgrid_cuda_fd_laplace_y(grid, laplacey, inv_delta2, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1695,7 +1708,7 @@ EXPORT void rgrid_fd_laplace_z(rgrid *grid, rgrid *laplacez) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace_z(grid, laplacez, inv_delta2)) return;
+  if(cuda_status() && !rgrid_cuda_fd_laplace_z(grid, laplacez, inv_delta2, rgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1732,7 +1745,7 @@ EXPORT void rgrid_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_dot_gradient(grid, grad_dot_grad, inv_2delta2)) return;
+  if(cuda_status() && !rgrid_cuda_fd_gradient_dot_gradient(grid, grad_dot_grad, inv_2delta2, rgrid_bc_conv(grid))) return;
 #endif
 
 /*  grad f(x,y,z) dot grad f(x,y,z) = [ |f(+,0,0) - f(-,0,0)|^2 + |f(0,+,0) - f(0,-,0)|^2 + |f(0,0,+) - f(0,0,-)|^2 ] / (2h)^2 */
@@ -2622,7 +2635,7 @@ EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *f
 /*
  * Calculate |rot| (|curl|; |\Nabla\times|) of a vector field (i.e., magnitude).
  *
- * rot = magnitude of rot (rgrid *; output).
+ * rot  = magnitude of rot (rgrid *; output).
  * fx   = x component of the field (rgrid *; input).
  * fy   = y component of the field (rgrid *; input).
  * fz   = z component of the field (rgrid *; input).
@@ -2642,7 +2655,7 @@ EXPORT void rgrid_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz) {
     abort();
   }
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_abs_rot(rot, fx, fy, fz, inv_delta)) return;
+  if(cuda_status() && !rgrid_cuda_abs_rot(rot, fx, fy, fz, inv_delta, rgrid_bc_conv(rot))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k,tmp) default(none) schedule(runtime)

@@ -16,8 +16,6 @@
 extern void *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
 
-/********************************************************************************************************************/
-
 /*
  * Fourier space convolution device code.
  *
@@ -61,10 +59,6 @@ extern "C" void cgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CU
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Grid abs power device code. This cannot not be called directly.
  *
@@ -107,10 +101,6 @@ extern "C" void cgrid_cuda_abs_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Grid power device code. This cannot not be called directly.
  *
@@ -152,10 +142,6 @@ extern "C" void cgrid_cuda_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL exp
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Multiply grid by constant device code. This cannot not be called directly.
  *
@@ -195,10 +181,6 @@ extern "C" void cgrid_cuda_multiplyW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT n
   cgrid_cuda_multiply_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Sum of two grids.
@@ -241,10 +223,6 @@ extern "C" void cgrid_cuda_sumW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *g
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Subtract of two grids.
  *
@@ -285,10 +263,6 @@ extern "C" void cgrid_cuda_differenceW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOM
   cgrid_cuda_difference_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Product of two grids.
@@ -331,10 +305,6 @@ extern "C" void cgrid_cuda_productW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLE
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Conjugate product of two grids.
  *
@@ -375,10 +345,6 @@ extern "C" void cgrid_cuda_conjugate_productW(CUCOMPLEX *gridc, CUCOMPLEX *grida
   cgrid_cuda_conjugate_product_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Division of two grids.
@@ -421,10 +387,6 @@ extern "C" void cgrid_cuda_divisionW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPL
   cgrid_cuda_division_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Safe division of two grids.
@@ -471,10 +433,6 @@ extern "C" void cgrid_cuda_division_epsW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUC
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Add constant to grid device code. This cannot not be called directly.
  *
@@ -514,10 +472,6 @@ extern "C" void cgrid_cuda_addW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT ny, IN
   cgrid_cuda_add_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Add multiply and add device code. This cannot not be called directly.
@@ -560,10 +514,6 @@ extern "C" void cgrid_cuda_multiply_and_addW(CUCOMPLEX *grid, CUCOMPLEX cm, CUCO
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Add multiply and add device code.
  *
@@ -605,10 +555,6 @@ extern "C" void cgrid_cuda_add_and_multiplyW(CUCOMPLEX *grid, CUCOMPLEX ca, CUCO
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Add scaled grid device code.
  *
@@ -649,10 +595,6 @@ extern "C" void cgrid_cuda_add_scaledW(CUCOMPLEX *gridc, CUCOMPLEX d, CUCOMPLEX 
   cgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(gridc, d, grida, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Add scaled product grid device code.
@@ -696,10 +638,6 @@ extern "C" void cgrid_cuda_add_scaled_productW(CUCOMPLEX *gridc, CUCOMPLEX d, CU
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Set A to constant.
  *
@@ -740,8 +678,6 @@ extern "C" void cgrid_cuda_constantW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT n
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
 /*
  * Block init (zero elements).
  *
@@ -771,8 +707,6 @@ __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks, INT nblocks) {
 
   for(i = 1; i < nblocks; i++) blocks[0] = blocks[0] + blocks[i];
 }
-
-/********************************************************************************************************************/
 
 /*
  * Integrate over grid A.
@@ -834,10 +768,6 @@ extern "C" void cgrid_cuda_integralW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
   cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Integrate over A with limits.
@@ -914,10 +844,6 @@ extern "C" void cgrid_cuda_integral_regionW(CUCOMPLEX *grid, INT il, INT iu, INT
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Integrate of |A|^2.
  *
@@ -977,10 +903,6 @@ extern "C" void cgrid_cuda_integral_of_squareW(CUCOMPLEX *grid, INT nx, INT ny, 
   cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Integrate A^* X B (overlap).
@@ -1045,10 +967,6 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(CUCOMPLEX *grid1, CUCO
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Integrate A * |B|^2.
  *
@@ -1112,8 +1030,6 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(CUCOMPLEX *grid1, CUCOMPLEX *
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
 /*
  * B = FD_X(A).
  *
@@ -1153,10 +1069,6 @@ extern "C" void cgrid_cuda_fd_gradient_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CU
   cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * B = FD_Y(A).
@@ -1198,10 +1110,6 @@ extern "C" void cgrid_cuda_fd_gradient_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CU
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * B = FD_Z(A).
  *
@@ -1241,10 +1149,6 @@ extern "C" void cgrid_cuda_fd_gradient_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CU
   cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * B = LAPLACE(A).
@@ -1291,10 +1195,6 @@ extern "C" void cgrid_cuda_fd_laplaceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREA
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * B = LAPLACE_X(A).
  *
@@ -1337,10 +1237,6 @@ extern "C" void cgrid_cuda_fd_laplace_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUR
   cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * B = LAPLACE_Y(A).
@@ -1385,10 +1281,6 @@ extern "C" void cgrid_cuda_fd_laplace_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUR
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * B = LAPLACE_Z(A).
  *
@@ -1431,10 +1323,6 @@ extern "C" void cgrid_cuda_fd_laplace_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUR
   cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
@@ -1487,10 +1375,6 @@ extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(CUCOMPLEX *grida, CUCOMPLEX
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Complex conjugate.
  *
@@ -1530,10 +1414,6 @@ extern "C" void cgrid_cuda_conjugateW(CUCOMPLEX *gridb, CUCOMPLEX *grida, INT nx
   cgrid_cuda_conjugate_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * FFT gradient_x
@@ -1587,10 +1467,6 @@ extern "C" void cgrid_cuda_fft_gradient_xW(CUCOMPLEX *gradient_x, CUREAL norm, C
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * FFT gradient_y
  *
@@ -1643,10 +1519,6 @@ extern "C" void cgrid_cuda_fft_gradient_yW(CUCOMPLEX *gradient_y, CUREAL norm, C
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * FFT gradient_z
  *
@@ -1698,10 +1570,6 @@ extern "C" void cgrid_cuda_fft_gradient_zW(CUCOMPLEX *gradient_z, CUREAL norm, C
   cgrid_cuda_fft_gradient_z_gpu<<<blocks,threads>>>(gradient_z, norm, kz0, step, nx, ny, nz, nz2);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * FFT laplace.
@@ -1766,10 +1634,6 @@ extern "C" void cgrid_cuda_fft_laplaceW(CUCOMPLEX *laplace, CUREAL norm, CUREAL 
   cgrid_cuda_fft_laplace_gpu<<<blocks,threads>>>(laplace, norm, kx0, ky0, kz0, step, nx, ny, nz, nx2, ny2, nz2);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * FFT laplace expectation value.
@@ -1857,10 +1721,6 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(CUCOMPLEX *laplace, CU
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Zero real part.
  *
@@ -1901,10 +1761,6 @@ extern "C" void cgrid_cuda_zero_reW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
-
 /*
  * Zero imaginary part.
  *
@@ -1944,10 +1800,6 @@ extern "C" void cgrid_cuda_zero_imW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
   cgrid_cuda_zero_im_gpu<<<blocks,threads>>>(grid, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
-
-/********************************************************************************************************************/
 
 /*
  * Zero part of complex grid.
@@ -1990,5 +1842,3 @@ extern "C" void cgrid_cuda_zero_indexW(CUCOMPLEX *grid, INT lx, INT hx, INT ly, 
   cgrid_cuda_zero_index_gpu<<<blocks,threads>>>(grid, lx, hx, ly, hy, lz, hz, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/

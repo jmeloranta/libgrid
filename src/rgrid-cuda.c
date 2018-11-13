@@ -465,15 +465,16 @@ EXPORT char rgrid_cuda_grid_expectation_value(rgrid *grida, rgrid *gridb, REAL *
  * grid     = source for gradient (rgrid *; input).
  * gradient = destination for gradient (rgrid *; output).
  * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_x(rgrid *grid, rgrid *gradient, REAL inv_delta) {
+EXPORT char rgrid_cuda_fd_gradient_x(rgrid *grid, rgrid *gradient, REAL inv_delta, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, gradient->value, gradient->grid_len, gradient->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_gradient_xW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, 
+  rgrid_cuda_fd_gradient_xW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc,
                             grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -484,15 +485,16 @@ EXPORT char rgrid_cuda_fd_gradient_x(rgrid *grid, rgrid *gradient, REAL inv_delt
  * grid     = source for gradient (rgrid *; input).
  * gradient = destination for gradient (rgrid *; output).
  * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_y(rgrid *grid, rgrid *gradient, REAL inv_delta) {
+EXPORT char rgrid_cuda_fd_gradient_y(rgrid *grid, rgrid *gradient, REAL inv_delta, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, gradient->value, gradient->grid_len, gradient->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_gradient_yW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, 
+  rgrid_cuda_fd_gradient_yW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc,
                             grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -503,15 +505,16 @@ EXPORT char rgrid_cuda_fd_gradient_y(rgrid *grid, rgrid *gradient, REAL inv_delt
  * grid     = source for gradient (rgrid *; input).
  * gradient = destination for gradient (rgrid *; output).
  * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_z(rgrid *grid, rgrid *gradient, REAL inv_delta) {
+EXPORT char rgrid_cuda_fd_gradient_z(rgrid *grid, rgrid *gradient, REAL inv_delta, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, gradient->value, gradient->grid_len, gradient->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_gradient_zW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, 
+  rgrid_cuda_fd_gradient_zW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc,
                             grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -522,14 +525,15 @@ EXPORT char rgrid_cuda_fd_gradient_z(rgrid *grid, rgrid *gradient, REAL inv_delt
  * grid      = source for gradient (rgrid *; input).
  * laplace   = destination for gradient (rgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace(rgrid *grid, rgrid *laplace, REAL inv_delta2) {
+EXPORT char rgrid_cuda_fd_laplace(rgrid *grid, rgrid *laplace, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplace->value, laplace->grid_len, laplace->id, 0) < 0) return -1;
 
-  rgrid_cuda_fd_laplaceW(cuda_block_address(grid->value), cuda_block_address(laplace->value), inv_delta2, 
+  rgrid_cuda_fd_laplaceW(cuda_block_address(grid->value), cuda_block_address(laplace->value), inv_delta2, bc,
                          grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -540,15 +544,16 @@ EXPORT char rgrid_cuda_fd_laplace(rgrid *grid, rgrid *laplace, REAL inv_delta2) 
  * grid      = source for gradient (rgrid *; input).
  * laplacex  = destination for gradient (rgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace_x(rgrid *grid, rgrid *laplacex, REAL inv_delta2) {
+EXPORT char rgrid_cuda_fd_laplace_x(rgrid *grid, rgrid *laplacex, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplacex->value, laplacex->grid_len, laplacex->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplace_xW(cuda_block_address(grid->value), cuda_block_address(laplacex->value), inv_delta2, 
+  rgrid_cuda_fd_laplace_xW(cuda_block_address(grid->value), cuda_block_address(laplacex->value), inv_delta2, bc,
                            grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -559,15 +564,16 @@ EXPORT char rgrid_cuda_fd_laplace_x(rgrid *grid, rgrid *laplacex, REAL inv_delta
  * grid      = source for gradient (rgrid *; input).
  * laplacey  = destination for gradient (rgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace_y(rgrid *grid, rgrid *laplacey, REAL inv_delta2) {
+EXPORT char rgrid_cuda_fd_laplace_y(rgrid *grid, rgrid *laplacey, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplacey->value, laplacey->grid_len, laplacey->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplace_yW(cuda_block_address(grid->value), cuda_block_address(laplacey->value), inv_delta2, 
+  rgrid_cuda_fd_laplace_yW(cuda_block_address(grid->value), cuda_block_address(laplacey->value), inv_delta2, bc,
                            grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -578,15 +584,16 @@ EXPORT char rgrid_cuda_fd_laplace_y(rgrid *grid, rgrid *laplacey, REAL inv_delta
  * grid      = source for gradient (rgrid *; input).
  * laplacez  = destination for gradient (rgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc        = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace_z(rgrid *grid, rgrid *laplacez, REAL inv_delta2) {
+EXPORT char rgrid_cuda_fd_laplace_z(rgrid *grid, rgrid *laplacez, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplacez->value, laplacez->grid_len, laplacez->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplace_zW(cuda_block_address(grid->value), cuda_block_address(laplacez->value), inv_delta2, 
+  rgrid_cuda_fd_laplace_zW(cuda_block_address(grid->value), cuda_block_address(laplacez->value), inv_delta2, bc,
     grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -597,15 +604,16 @@ EXPORT char rgrid_cuda_fd_laplace_z(rgrid *grid, rgrid *laplacez, REAL inv_delta
  * grid           = source for gradient (rgrid *; input).
  * grad_dot_grad  = destination for gradient (rgrid *; output).
  * inv2_delta2    = 1 / (2.0 * step * 2.0 * step) (REAL; input).
+ * bc             = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad, REAL inv_2delta2) {
+EXPORT char rgrid_cuda_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad, REAL inv_2delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, grad_dot_grad->value, grad_dot_grad->grid_len, grad_dot_grad->id, 0) < 0) 
-    return -1;
+  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, grad_dot_grad->value, grad_dot_grad->grid_len, 
+                           grad_dot_grad->id, 0) < 0) return -1;
 
-  rgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(grid->value), cuda_block_address(grad_dot_grad->value), inv_2delta2, 
+  rgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(grid->value), cuda_block_address(grad_dot_grad->value), inv_2delta2, bc,
                                        grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -765,16 +773,17 @@ EXPORT REAL rgrid_cuda_min(rgrid *grid, REAL *value) {
  * fy        = Y component of the vector field (rgrid *; input).
  * fz        = Z component of the vector field (rgrid *; input).
  * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc       = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL inv_delta) {
+EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL inv_delta, char bc) {
 
   if(cuda_four_block_policy(rot->value, rot->grid_len, rot->id, 0, fx->value, fx->grid_len, fx->id, 1,
                             fy->value, fy->grid_len, fy->id, 1, fz->value, fz->grid_len, fz->id, 1) < 0) return -1;
 
   rgrid_cuda_abs_rotW(cuda_block_address(rot->value), cuda_block_address(fx->value), cuda_block_address(fy->value),
-                       cuda_block_address(fz->value), rot->nx, rot->ny, rot->nz, inv_delta);
+                       cuda_block_address(fz->value), inv_delta, bc, rot->nx, rot->ny, rot->nz);
   return 0;
 }
 
