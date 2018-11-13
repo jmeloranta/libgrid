@@ -160,8 +160,8 @@ EXPORT char cgrid_cuda_sum(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * Subtract two grids: gridc = grida - gridb
  *
  * gridc = destination grid (cgrid *; output).
- * grida = 1st of the grids to be added (cgrid *; input).
- * gridb = 2nd of the grids to be added (cgrid *; input).
+ * grida = 1st of the grids for subtraction (cgrid *; input).
+ * gridb = 2nd of the grids for subtraction (cgrid *; input).
  *
  */
 
@@ -200,7 +200,7 @@ EXPORT char cgrid_cuda_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * Calculate conjugate product of two grids: gridc = grida^* X gridb
  *
  * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
+ * grida = 1st source grid (complex conjugated) (cgrid *; input).
  * gridb = 2nd source grid (cgrid *; input).
  *
  */
@@ -387,6 +387,7 @@ EXPORT char cgrid_cuda_copy(cgrid *copy, cgrid *grid) {
   if(cuda_copy_policy(copy->value, copy->grid_len, copy->id, grid->value, grid->grid_len, grid->id) < 0) return -1;
 
   cuda_gpu2gpu(cuda_find_block(copy->value), cuda_find_block(grid->value), 0);
+
   return 0;
 }
 
@@ -536,15 +537,16 @@ EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL c
  * grid     = source grid (cgrid *; input).
  * gradient = destination grid (cgrid *; output).
  * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_x(cgrid *grid, cgrid *gradient, REAL inv_delta) {
+EXPORT char cgrid_cuda_fd_gradient_x(cgrid *grid, cgrid *gradient, REAL inv_delta, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, gradient->value, gradient->grid_len, gradient->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_gradient_xW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, 
+  cgrid_cuda_fd_gradient_xW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc,
                             grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -555,15 +557,16 @@ EXPORT char cgrid_cuda_fd_gradient_x(cgrid *grid, cgrid *gradient, REAL inv_delt
  * grid     = source grid (cgrid *; input).
  * gradient = destination grid (cgrid *; output).
  * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_y(cgrid *grid, cgrid *gradient, REAL inv_delta) {
+EXPORT char cgrid_cuda_fd_gradient_y(cgrid *grid, cgrid *gradient, REAL inv_delta, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, gradient->value, gradient->grid_len, gradient->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_gradient_yW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, 
+  cgrid_cuda_fd_gradient_yW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc,
                             grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -574,15 +577,16 @@ EXPORT char cgrid_cuda_fd_gradient_y(cgrid *grid, cgrid *gradient, REAL inv_delt
  * grid     = source grid (cgrid *; input).
  * gradient = destination grid (cgrid *; output).
  * inv_delta= 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_z(cgrid *grid, cgrid *gradient, REAL inv_delta) {
+EXPORT char cgrid_cuda_fd_gradient_z(cgrid *grid, cgrid *gradient, REAL inv_delta, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, gradient->value, gradient->grid_len, gradient->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_gradient_zW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, 
+  cgrid_cuda_fd_gradient_zW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, 
                             grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -593,15 +597,16 @@ EXPORT char cgrid_cuda_fd_gradient_z(cgrid *grid, cgrid *gradient, REAL inv_delt
  * grid      = source grid (cgrid *; input).
  * laplace   = destination grid (cgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace(cgrid *grid, cgrid *laplace, REAL inv_delta2) {
+EXPORT char cgrid_cuda_fd_laplace(cgrid *grid, cgrid *laplace, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplace->value, laplace->grid_len, laplace->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplaceW(cuda_block_address(grid->value), cuda_block_address(laplace->value), inv_delta2, 
+  cgrid_cuda_fd_laplaceW(cuda_block_address(grid->value), cuda_block_address(laplace->value), inv_delta2, bc,
                          grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -612,15 +617,16 @@ EXPORT char cgrid_cuda_fd_laplace(cgrid *grid, cgrid *laplace, REAL inv_delta2) 
  * grid      = source grid (cgrid *; input).
  * laplacex  = destination grid (cgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace_x(cgrid *grid, cgrid *laplacex, REAL inv_delta2) {
+EXPORT char cgrid_cuda_fd_laplace_x(cgrid *grid, cgrid *laplacex, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplacex->value, laplacex->grid_len, laplacex->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplace_xW(cuda_block_address(grid->value), cuda_block_address(laplacex->value), inv_delta2, 
+  cgrid_cuda_fd_laplace_xW(cuda_block_address(grid->value), cuda_block_address(laplacex->value), inv_delta2, bc,
                            grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -631,15 +637,16 @@ EXPORT char cgrid_cuda_fd_laplace_x(cgrid *grid, cgrid *laplacex, REAL inv_delta
  * grid     = source grid (cgrid *; input).
  * laplacey = destination grid (cgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace_y(cgrid *grid, cgrid *laplacey, REAL inv_delta2) {
+EXPORT char cgrid_cuda_fd_laplace_y(cgrid *grid, cgrid *laplacey, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplacey->value, laplacey->grid_len, laplacey->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplace_yW(cuda_block_address(grid->value), cuda_block_address(laplacey->value), inv_delta2, 
+  cgrid_cuda_fd_laplace_yW(cuda_block_address(grid->value), cuda_block_address(laplacey->value), inv_delta2, bc,
                            grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -650,15 +657,16 @@ EXPORT char cgrid_cuda_fd_laplace_y(cgrid *grid, cgrid *laplacey, REAL inv_delta
  * grid     = source grid (cgrid *; input).
  * laplacez = destination grid (cgrid *; output).
  * inv_delta2= 1 / (step * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace_z(cgrid *grid, cgrid *laplacez, REAL inv_delta2) {
+EXPORT char cgrid_cuda_fd_laplace_z(cgrid *grid, cgrid *laplacez, REAL inv_delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplacez->value, laplacez->grid_len, laplacez->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplace_zW(cuda_block_address(grid->value), cuda_block_address(laplacez->value), inv_delta2, 
+  cgrid_cuda_fd_laplace_zW(cuda_block_address(grid->value), cuda_block_address(laplacez->value), inv_delta2, bc,
                            grid->nx, grid->ny, grid->nz);
   return 0;
 }
@@ -669,15 +677,16 @@ EXPORT char cgrid_cuda_fd_laplace_z(cgrid *grid, cgrid *laplacez, REAL inv_delta
  * grid          = source grid (cgrid *; input).
  * grad_dot_grad = destination grid (cgrid *; output).
  * inv2_delta2   = 1 / (2.0 * step * 2.0 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_dot_gradient(cgrid *grid, cgrid *grad_dot_grad, REAL inv_2delta2) {
+EXPORT char cgrid_cuda_fd_gradient_dot_gradient(cgrid *grid, cgrid *grad_dot_grad, REAL inv_2delta2, char bc) {
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, 
                            grad_dot_grad->value, grad_dot_grad->grid_len, grad_dot_grad->id, 0) < 0) return -1;
 
-  cgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(grid->value), cuda_block_address(grad_dot_grad->value), inv_2delta2, 
+  cgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(grid->value), cuda_block_address(grad_dot_grad->value), inv_2delta2, bc,
                                        grid->nx, grid->ny, grid->nz);
   return 0;
 }

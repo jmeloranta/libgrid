@@ -12,6 +12,19 @@
 #include "grid.h"
 #include "private.h"
 
+#ifdef USE_CUDA
+static char cgrid_bc_conv(cgrid *grid) {
+
+  if(grid->value_outside == CGRID_DIRICHLET_BOUNDARY) return 0;
+  else if(grid->value_outside == CGRID_NEUMANN_BOUNDARY) return 1;
+  else if(grid->value_outside == CGRID_PERIODIC_BOUNDARY) return 2;
+  else {
+    fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
+    exit(1);
+  }
+}
+#endif
+
 /*
  * Allocate complex grid.
  *
@@ -1548,7 +1561,7 @@ EXPORT void cgrid_fd_gradient_x(cgrid *grid, cgrid *gradient) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_gradient_x(grid, gradient, inv_delta)) return;
+  if(cuda_status() && !cgrid_cuda_fd_gradient_x(grid, gradient, inv_delta, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1583,7 +1596,7 @@ EXPORT void cgrid_fd_gradient_y(cgrid *grid, cgrid *gradient) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_gradient_y(grid, gradient, inv_delta)) return;
+  if(cuda_status() && !cgrid_cuda_fd_gradient_y(grid, gradient, inv_delta, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1618,7 +1631,7 @@ EXPORT void cgrid_fd_gradient_z(cgrid *grid, cgrid *gradient) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_gradient_z(grid, gradient, inv_delta)) return;
+  if(cuda_status() && !cgrid_cuda_fd_gradient_z(grid, gradient, inv_delta, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1674,7 +1687,7 @@ EXPORT void cgrid_fd_laplace(cgrid *grid, cgrid *laplace) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_laplace(grid, laplace, inv_delta2)) return;
+  if(cuda_status() && !cgrid_cuda_fd_laplace(grid, laplace, inv_delta2, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1714,7 +1727,7 @@ EXPORT void cgrid_fd_laplace_x(cgrid *grid, cgrid *laplacex) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_laplace_x(grid, laplacex, inv_delta2)) return;
+  if(cuda_status() && !cgrid_cuda_fd_laplace_x(grid, laplacex, inv_delta2, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1752,7 +1765,7 @@ EXPORT void cgrid_fd_laplace_y(cgrid *grid, cgrid *laplacey) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_laplace_y(grid, laplacey, inv_delta2)) return;
+  if(cuda_status() && !cgrid_cuda_fd_laplace_y(grid, laplacey, inv_delta2, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1790,7 +1803,7 @@ EXPORT void cgrid_fd_laplace_z(cgrid *grid, cgrid *laplacez) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_laplace_z(grid, laplacez, inv_delta2)) return;
+  if(cuda_status() && !cgrid_cuda_fd_laplace_z(grid, laplacez, inv_delta2, cgrid_bc_conv(grid))) return;
 #endif
 
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
@@ -1828,7 +1841,7 @@ EXPORT void cgrid_fd_gradient_dot_gradient(cgrid *grid, cgrid *grad_dot_grad) {
   }
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fd_gradient_dot_gradient(grid, grad_dot_grad, inv_2delta2)) return;
+  if(cuda_status() && !cgrid_cuda_fd_gradient_dot_gradient(grid, grad_dot_grad, inv_2delta2, cgrid_bc_conv(grid))) return;
 #endif
 
 /*  grad f(x,y,z) dot grad f(x,y,z) = [ |f(+,0,0) - f(-,0,0)|^2 + |f(0,+,0) - f(0,-,0)|^2 + |f(0,0,+) - f(0,0,-)|^2 ] / (2h)^2 */

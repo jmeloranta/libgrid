@@ -1,6 +1,9 @@
 /*
  * CUDA device code (REAL complex; cgrid).
  *
+ * blockDim = # of threads
+ * gridDim = # of blocks
+ *
  */
 
 #include <cuda/cuda_runtime_api.h>
@@ -8,6 +11,7 @@
 #include <cuda/device_launch_parameters.h>
 #include <cuda/cufft.h>
 #include "cuda-math.h"
+#include "cgrid_bc-cuda.h"
 
 extern void *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
@@ -15,7 +19,7 @@ extern "C" void cuda_error_check();
 /********************************************************************************************************************/
 
 /*
- * Fourier space convolution device code. This cannot not be called directly.
+ * Fourier space convolution device code.
  *
  * C = A * B but with alternating signs for FFT.
  *
@@ -23,21 +27,22 @@ extern "C" void cuda_error_check();
 
 __global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPLEX *b, CUREAL norm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z,
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   if((i + j + k) & 1) norm *= -1.0;
-  c[idx] = a[idx] * a[idx] * norm;
+  c[idx] = a[idx] * b[idx] * norm;
 }
 
 /*
  * Convolution in the Fourier space (data in GPU). Not called directly.
  *
- * grida = 1st grid to be convoluted (CUCOMPLEX *).
- * gridb = 2nd grid to be convoluted (CUCOMPLEX *).
- * gridc = output (CUCOMPLEX *).
+ * gridc = convolution output (CUCOMPLEX *; output).
+ * grida = 1st grid to be convoluted (CUCOMPLEX *; input).
+ * gridb = 2nd grid to be convoluted (CUCOMPLEX *; input).
  * norm  = FFT norm (REAL complex; input).
  * nx    = Grid dim x (INT; input).
  * ny    = Grid dim y (INT; input).
@@ -69,7 +74,8 @@ extern "C" void cgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CU
 
 __global__ void cgrid_cuda_abs_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z,
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -84,9 +90,9 @@ __global__ void cgrid_cuda_abs_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, I
  *
  * gridb    = Destination for operation (REAL complex *; output).
  * grida    = Source for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -114,7 +120,8 @@ extern "C" void cgrid_cuda_abs_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL
 
 __global__ void cgrid_cuda_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -128,9 +135,9 @@ __global__ void cgrid_cuda_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT n
  *
  * gridb    = Destination for operation (REAL complex *; output).
  * grida    = Source for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -158,7 +165,8 @@ extern "C" void cgrid_cuda_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL exp
 
 __global__ void cgrid_cuda_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -170,10 +178,10 @@ __global__ void cgrid_cuda_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT n
  * Multiply grid by a constant.
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
- * c        = Multiplying constant (CUCOMPLEX).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * c        = Multiplying constant (CUCOMPLEX; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -201,7 +209,8 @@ extern "C" void cgrid_cuda_multiplyW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT n
 
 __global__ void cgrid_cuda_sum_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -215,9 +224,9 @@ __global__ void cgrid_cuda_sum_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT
  * gridc    = Destination grid (CUCOMPLEX *; output).
  * grida    = Input grid 1 (CUCOMPLEX *; input).
  * gridb    = Input grid 2 (CUCOMPLEX *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -245,7 +254,8 @@ extern "C" void cgrid_cuda_sumW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *g
 
 __global__ void cgrid_cuda_difference_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -259,9 +269,9 @@ __global__ void cgrid_cuda_difference_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX 
  * gridc    = Destination grid (CUCOMPLEX *; output).
  * grida    = Input grid 1 (CUCOMPLEX *; input).
  * gridb    = Input grid 2 (CUCOMPLEX *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -289,7 +299,8 @@ extern "C" void cgrid_cuda_differenceW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOM
 
 __global__ void cgrid_cuda_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -303,9 +314,9 @@ __global__ void cgrid_cuda_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c,
  * gridc    = Destination grid (CUCOMPLEX *; output).
  * grida    = Source grid 1 (CUCOMPLEX *; input).
  * gridb    = Source grid 2 (CUCOMPLEX *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -333,7 +344,8 @@ extern "C" void cgrid_cuda_productW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLE
 
 __global__ void cgrid_cuda_conjugate_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -345,11 +357,11 @@ __global__ void cgrid_cuda_conjugate_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUC
  * Conjugate product of two grids.
  *
  * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Source grid 1 (CUCOMPLEX *; input).
+ * grida    = Source grid 1 (complex conjugated) (CUCOMPLEX *; input).
  * gridb    = Source grid 2 (CUCOMPLEX *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -373,11 +385,13 @@ extern "C" void cgrid_cuda_conjugate_productW(CUCOMPLEX *gridc, CUCOMPLEX *grida
  *
  * A = B / C.
  *
+ * Note: One should avoid division as it is slow.
  */
 
 __global__ void cgrid_cuda_division_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -391,9 +405,9 @@ __global__ void cgrid_cuda_division_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c
  * gridc    = Destination grid (CUCOMPLEX *; output).
  * grida    = Source grid 1 (CUCOMPLEX *; input).
  * gridb    = Source grid 2 (CUCOMPLEX *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -417,11 +431,14 @@ extern "C" void cgrid_cuda_divisionW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPL
  *
  * A = B / (C + eps).
  *
+ * Note: One should avoid division as it is slow.
+ *
  */
 
 __global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, CUREAL eps, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -436,10 +453,10 @@ __global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLE
  * gridc    = Destination grid (CUCOMPLEX *; output).
  * grida    = Source grid 1 (CUCOMPLEX *; input).
  * gridb    = Source grid 2 (CUCOMPLEX *; input).
- * eps      = Epsilon (CUCOMPLEX).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * eps      = Epsilon (CUCOMPLEX; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -467,7 +484,8 @@ extern "C" void cgrid_cuda_division_epsW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUC
 
 __global__ void cgrid_cuda_add_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -480,9 +498,9 @@ __global__ void cgrid_cuda_add_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, IN
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
  * c        = Constant (CUCOMPLEX).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -510,7 +528,8 @@ extern "C" void cgrid_cuda_addW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT ny, IN
 
 __global__ void cgrid_cuda_multiply_and_add_gpu(CUCOMPLEX *a, CUCOMPLEX cm, CUCOMPLEX ca, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -522,11 +541,11 @@ __global__ void cgrid_cuda_multiply_and_add_gpu(CUCOMPLEX *a, CUCOMPLEX cm, CUCO
  * Grid multiply and add.
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
- * cm       = Multiplier (CUCOMPLEX).
- * ca       = Additive constant (CUCOMPLEX).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * cm       = Multiplier (CUCOMPLEX; input).
+ * ca       = Additive constant (CUCOMPLEX; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -546,7 +565,7 @@ extern "C" void cgrid_cuda_multiply_and_addW(CUCOMPLEX *grid, CUCOMPLEX cm, CUCO
 /********************************************************************************************************************/
 
 /*
- * Add multiply and add device code. This cannot not be called directly.
+ * Add multiply and add device code.
  *
  * A = cm * (A + ca)
  *
@@ -554,7 +573,8 @@ extern "C" void cgrid_cuda_multiply_and_addW(CUCOMPLEX *grid, CUCOMPLEX cm, CUCO
 
 __global__ void cgrid_cuda_add_and_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX ca, CUCOMPLEX cm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -566,11 +586,11 @@ __global__ void cgrid_cuda_add_and_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX ca, CUCO
  * Grid multiply and add.
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
- * ca       = Additive constant (CUCOMPLEX).
- * cm       = Multiplier (CUCOMPLEX).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * ca       = Additive constant (CUCOMPLEX; input).
+ * cm       = Multiplier (CUCOMPLEX; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -590,7 +610,7 @@ extern "C" void cgrid_cuda_add_and_multiplyW(CUCOMPLEX *grid, CUCOMPLEX ca, CUCO
 /********************************************************************************************************************/
 
 /*
- * Add scaled grid device code. This cannot not be called directly.
+ * Add scaled grid device code.
  *
  * A = A + d * B
  *
@@ -598,7 +618,8 @@ extern "C" void cgrid_cuda_add_and_multiplyW(CUCOMPLEX *grid, CUCOMPLEX ca, CUCO
 
 __global__ void cgrid_cuda_add_scaled_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUCOMPLEX *b, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -610,11 +631,11 @@ __global__ void cgrid_cuda_add_scaled_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUCOMPLEX *
  * Scaled add grid.
  *
  * gridc    = Destination for operation (REAL complex *; output).
- * d        = Scaling factor (REAL complex).
+ * d        = Scaling factor (REAL complex; input).
  * grida    = Source for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -634,7 +655,7 @@ extern "C" void cgrid_cuda_add_scaledW(CUCOMPLEX *gridc, CUCOMPLEX d, CUCOMPLEX 
 /********************************************************************************************************************/
 
 /*
- * Add scaled product grid device code. This cannot not be called directly.
+ * Add scaled product grid device code.
  *
  * A = A + d * B * C
  *
@@ -642,7 +663,8 @@ extern "C" void cgrid_cuda_add_scaledW(CUCOMPLEX *gridc, CUCOMPLEX d, CUCOMPLEX 
 
 __global__ void cgrid_cuda_add_scaled_product_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -654,12 +676,12 @@ __global__ void cgrid_cuda_add_scaled_product_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUC
  * Add scaled product.
  *
  * gridc    = Destination for operation (REAL complex *; output).
- * d        = Scaling factor (REAL complex).
+ * d        = Scaling factor (REAL complex; input).
  * grida    = Source for operation (REAL complex *; input).
  * gridb    = Source for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -687,7 +709,8 @@ extern "C" void cgrid_cuda_add_scaled_productW(CUCOMPLEX *gridc, CUCOMPLEX d, CU
 
 __global__ void cgrid_cuda_constant_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
+      idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -699,10 +722,10 @@ __global__ void cgrid_cuda_constant_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT n
  * Set grid to constant.
  *
  * grid     = Destination for operation (REAL complex *; output).
- * c        = Constant (REAL complex).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * c        = Constant (REAL complex; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -720,7 +743,10 @@ extern "C" void cgrid_cuda_constantW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT n
 /********************************************************************************************************************/
 
 /*
- * Block init.
+ * Block init (zero elements).
+ *
+ * blocks  = Block table (CUCOMPLEX *; output).
+ * nblocks = Number of blocks in table (INT; input).
  *
  */
 
@@ -734,6 +760,9 @@ __global__ void cgrid_cuda_block_init(CUCOMPLEX *blocks, INT nblocks) {
 /*
  * Block reduction.
  *
+ * blocks  = Block list to reduce (CUCOMPLEX *; input/output). blocks[0] will contain the reduced value.
+ * nblocks = Number of blocks (INT; input).
+ *
  */
 
 __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks, INT nblocks) {
@@ -746,21 +775,17 @@ __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks, INT nblocks) {
 /********************************************************************************************************************/
 
 /*
- * Integrate over A.
- *
- */
-
-/*
- * blockDim = # of threads
- * gridDim = # of blocks
+ * Integrate over grid A.
  *
  */
 
 __global__ void cgrid_cuda_integral_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUCOMPLEX els[];
+
+  if(i >= nx || j >= ny || k >= nz) return;
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
@@ -785,11 +810,11 @@ __global__ void cgrid_cuda_integral_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, INT nx,
  * Integrate over grid.
  *
  * grid     = Source for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -821,9 +846,11 @@ extern "C" void cgrid_cuda_integralW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
 
 __global__ void cgrid_cuda_integral_region_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUCOMPLEX els[];
+
+  if(i >= nx || j >= ny || k >= nz) return;
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
@@ -856,11 +883,11 @@ __global__ void cgrid_cuda_integral_region_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, 
  * ju       = Upper index for y (INT; input).
  * kl       = Lower index for z (INT; input).
  * ku       = Upper index for z (INT; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -898,9 +925,11 @@ extern "C" void cgrid_cuda_integral_regionW(CUCOMPLEX *grid, INT il, INT iu, INT
 
 __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUREAL els2[];
+
+  if(i >= nx || j >= ny || k >= nz) return;
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
@@ -929,7 +958,7 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -954,15 +983,17 @@ extern "C" void cgrid_cuda_integral_of_squareW(CUCOMPLEX *grid, INT nx, INT ny, 
 /********************************************************************************************************************/
 
 /*
- * Integrate A^* X B.
+ * Integrate A^* X B (overlap).
  *
  */
 
 __global__ void cgrid_cuda_integral_of_conjugate_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *blocks, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   extern __shared__ CUCOMPLEX els[];
+
+  if(i >= nx || j >= ny || k >= nz) return;
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
@@ -985,15 +1016,15 @@ __global__ void cgrid_cuda_integral_of_conjugate_product_gpu(CUCOMPLEX *a, CUCOM
 }
 
 /*
- * Integral of conjugate product.
+ * Integral of conjugate product (overlap).
  *
  * grid1    = Source 1 for operation (REAL complex *; input).
  * grid2    = Source 2 for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -1025,10 +1056,12 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(CUCOMPLEX *grid1, CUCO
 
 __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *blocks, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   CUREAL tmp;
   extern __shared__ CUCOMPLEX els[];
+
+  if(i >= nx || j >= ny || k >= nz) return;
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
@@ -1053,13 +1086,13 @@ __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b
 /*
  * Integral A * |B|^2.
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grid1    = Source 1 (A) for operation (REAL complex *; input).
+ * grid2    = Source 2 (B) for operation (REAL complex *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral.
+ * Returns the value of integral in grid_gpu_mem[0].
  *
  */
 
@@ -1081,44 +1114,43 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(CUCOMPLEX *grid1, CUCOMPLEX *
 
 /********************************************************************************************************************/
 
-/********************************************************************************************************************/
-
 /*
- * B = FD_X(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_X(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  if(i == 0 || i == nx-1) b[idx].x = b[idx].y = 0.0;
-  else b[idx] = inv_delta * (a[((i+1)*ny + j)*nz + k] - a[((i-1)*ny + j)*nz + k]);
+  b[idx] = inv_delta * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
 }
 
 /*
  * B = FD_X(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida     = Source for operation (REAL complex *; input).
+ * gridb     = Destination for operation (REAL complex *; input).
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, nx, ny, nz);
+  cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1127,41 +1159,42 @@ extern "C" void cgrid_cuda_fd_gradient_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CU
 /********************************************************************************************************************/
 
 /*
- * B = FD_Y(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_Y(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  if(j == 0 || j == ny-1) b[idx].x = b[idx].y = 0.0;
-  else b[idx] = inv_delta * (a[(i*ny + j + 1)*nz + k] - a[(i*ny + j - 1)*nz + k]);
+  b[idx] = inv_delta * (cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
 }
 
 /*
  * B = FD_Y(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida     = Source for operation (REAL complex *; input).
+ * gridb     = Destination for operation (REAL complex *; input).
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, nx, ny, nz);
+  cgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1170,41 +1203,42 @@ extern "C" void cgrid_cuda_fd_gradient_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CU
 /********************************************************************************************************************/
 
 /*
- * B = FD_Z(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_Z(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  if(k == 0 || k == nz-1) b[idx].x = b[idx].y = 0.0;
-  else b[idx] = inv_delta * (a[(i*ny + j)*nz + k + 1] - a[(i*ny + j)*nz + k - 1]);
+  b[idx] = inv_delta * (cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
 }
 
 /*
  * B = FD_Z(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida     = Source for operation (REAL complex *; input).
+ * gridb     = Destination for operation (REAL complex *; input).
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, nx, ny, nz);
+  cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1213,74 +1247,47 @@ extern "C" void cgrid_cuda_fd_gradient_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CU
 /********************************************************************************************************************/
 
 /*
- * B = LAPLACE(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_laplace_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUCOMPLEX xp, xm, yp, ym, zp, zm;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  // Neumann BC
-  if(i == nx-1)
-    xp = a[j * nz + k];  // x -> 0, i = 0
-  else
-    xp = a[((i+1) * ny + j) * nz + k];
-
-  if(i == 0)
-    xm = a[((nx-1) * ny + j) * nz + k]; // x -> (nx-1) * step, i = nx-1
-  else
-    xm = a[((i - 1) * ny + j) * nz + k];
-
-  if(j == ny-1)
-    yp = a[i * ny * nz + k]; // y -> 0, j = 0
-  else
-    yp = a[(i * ny + j + 1) * nz + k];
-
-  if(j == 0)
-    ym = a[(i * ny + ny - 1) * nz + k]; // y -> (ny-1) * step, j = ny-1
-  else
-    ym = a[(i * ny + j - 1) * nz + k];
-
-  if(k == nz-1)
-    zp = a[(i * ny + j) * nz]; // z -> 0, k = 0
-  else
-    zp = a[(i * ny + j) * nz + k + 1];
-
-  if(k == 0)
-    zm = a[(i * ny + j) * nz + nz - 1]; // z -> (nz-1) * step, k = nz-1
-  else
-    zm = a[(i * ny + j) * nz + k - 1];
-
-  b[idx] = inv_delta2 * (xp + xm + yp + ym + zp + zm - (6.0 * a[idx]));
+  b[idx] = inv_delta2 * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
+                         + cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
+                         + cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 6.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL complex *; input).
+ * gridb      = Destination for operation (REAL complex *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
- * Returns laplace.
+ * Returns laplacian in grid.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplaceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplaceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz);
+  cgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1289,54 +1296,45 @@ extern "C" void cgrid_cuda_fd_laplaceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREA
 /********************************************************************************************************************/
 
 /*
- * B = LAPLACE_X(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE_X(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_laplace_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUCOMPLEX xp, xm;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  // Neumann BC
-  if(i == nx-1)
-    xp = a[j * nz + k]; // x -> 0, i = 0
-  else
-    xp = a[((i+1) * ny + j) * nz + k];
-
-  if(i == 0)
-    xm = a[((nx-1) * ny + j) * nz + k]; // x -> (nx-1) * step, i = nx-1
-  else
-    xm = a[((i - 1) * ny + j) * nz + k];
-
-  b[idx] = inv_delta2 * (xp + xm - (2.0 * a[idx]));
+  b[idx] = inv_delta2 * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE_X(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL complex *; input).
+ * gridb      = Destination for operation (REAL complex *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
- * Returns laplace.
+ * Returns laplace in gridb.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplace_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplace_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz);
+  cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1345,55 +1343,45 @@ extern "C" void cgrid_cuda_fd_laplace_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUR
 /********************************************************************************************************************/
 
 /*
- * B = LAPLACE_Y(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE_Y(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_laplace_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUCOMPLEX yp, ym;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  // Neumann BC
-
-  if(j == ny-1)
-    yp = a[i * ny * nz + k]; // y -> 0, j = 0
-  else
-    yp = a[(i * ny + j + 1) * nz + k];
-
-  if(j == 0)
-    ym = a[(i * ny + ny - 1) * nz + k]; // y -> (ny-1) * step, j = ny-1
-  else
-    ym = a[(i * ny + j - 1) * nz + k];
-
-  b[idx] = inv_delta2 * (yp + ym - (2.0 * a[idx]));
+  b[idx] = inv_delta2 * (cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE_Y(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL complex *; input).
+ * gridb      = Destination for operation (REAL complex *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
- * Returns laplace.
+ * Returns laplace in gridb.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplace_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplace_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz);
+  cgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1402,52 +1390,45 @@ extern "C" void cgrid_cuda_fd_laplace_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUR
 /********************************************************************************************************************/
 
 /*
- * B = LAPLACE_Z(A). Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = LAPLACE_Z(A).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_laplace_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUCOMPLEX zp, zm;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-
-  // Neumann BC
-  if(k == nz-1)
-    zp = a[(i * ny + j) * nz]; // z -> 0, k = 0
-  else
-    zp = a[(i * ny + j) * nz + k + 1];
-
-  if(k == 0)
-    zm = a[(i * ny + j) * nz + nz - 1]; // z -> (nz-1) * step, k = nz-1
-  else
-    zm = a[(i * ny + j) * nz + k - 1];
-
-  b[idx] = inv_delta2 * (zp + zm - (2.0 * a[idx]));
+  b[idx] = inv_delta2 * (cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * a[idx]);
 }
 
 /*
  * B = LAPLACE_Z(A)
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL complex *; input).
+ * gridb      = Destination for operation (REAL complex *; output).
+ * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
+ *
+ * Returns laplace in gridb.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplace_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplace_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz);
+  cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1456,13 +1437,14 @@ extern "C" void cgrid_cuda_fd_laplace_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUR
 /********************************************************************************************************************/
 
 /*
- * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2. Neumann BC. FIXME: This does not respect the BC of the original grid!
+ * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUCOMPLEX tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1470,40 +1452,38 @@ __global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *a, CUCOMPLEX 
   idx = (i * ny + j) * nz + k;
 
   b[idx] = CUMAKE(0.0, 0.0);
-  if(i != 0 && i != nx-1) {
-    tmp = inv_delta * (a[((i+1)*ny + j)*nz + k] - a[((i-1)*ny + j)*nz + k]);
-    b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
-  }
-  if(j != 0 && j != ny-1) {
-    tmp = inv_delta * (a[(i*ny + j + 1)*nz + k] - a[(i*ny + j - 1)*nz + k]);
-    b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
-  }
-  if(k != 0 && k != nz-1) {
-    tmp = inv_delta * (a[(i*ny + j)*nz + k + 1] - a[(i*ny + j)*nz + k - 1]);
-    b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
-  }
+
+  tmp = inv_delta * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
+
+  tmp = inv_delta * (cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
+
+  tmp = inv_delta * (cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
 }
 
 /*
  * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
  *
- * grid1    = Source 1 (a) for operation (REAL complex *; input).
- * grid2    = Source 2 (b) for operation (REAL complex *; input).
- * inv_delta2 = 1/(4h^2) (REAL complex; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * grida      = Source for operation (REAL complex *; input).
+ * gridb      = Destination for operation (REAL complex *; output).
+ * inv_delta2 = 1 / (4 * step * step) (REAL; input).
+ * bc         = Boundary condition (char; input).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, nx, ny, nz);
+  cgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -1518,9 +1498,10 @@ extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(CUCOMPLEX *grida, CUCOMPLEX
  *
  */
 
-__global__ void cgrid_cuda_conjugate_gpu(CUCOMPLEX *a, CUCOMPLEX *b, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_conjugate_gpu(CUCOMPLEX *a, CUCOMPLEX *b, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -1533,9 +1514,9 @@ __global__ void cgrid_cuda_conjugate_gpu(CUCOMPLEX *a, CUCOMPLEX *b, INT nx, INT
  *
  * gridb    = Destination for operation (REAL complex *; output).
  * grida    = Source for operation (REAL complex *; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -1561,9 +1542,10 @@ extern "C" void cgrid_cuda_conjugateW(CUCOMPLEX *gridb, CUCOMPLEX *grida, INT nx
  *
  */
 
-__global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL step, INT nx, INT ny, INT nz, INT nx2) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL step, INT nx, INT ny, INT nz, INT nx2) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUREAL kx;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1575,21 +1557,21 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   else 
     kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step) - kx0;
 
-  b[idx] = CUCMULI(b[idx], kx * norm);    // multiply by I * kx * norm
+  b[idx] = b[idx] * kx * norm;     // multiply by I * kx * norm
 }
 
 /*
  * FFT gradient_x
  *
  * gradient_x= Source/destination grid for operation (REAL complex *; input/output).
- * norm     = FFT norm (grid->fft_norm) (REAL; input).
- * kx0      = Momentum shift of origin along X (REAL; input).
- * step     = Spatial step length (REAL; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * norm      = FFT norm (grid->fft_norm) (REAL; input).
+ * kx0       = Momentum shift of origin along X (REAL; input).
+ * step      = Spatial step length (REAL; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
- * Only periodic boundaries!
+ * Only periodic boundaries (FFT)!
  *
  */
 
@@ -1616,9 +1598,10 @@ extern "C" void cgrid_cuda_fft_gradient_xW(CUCOMPLEX *gradient_x, CUREAL norm, C
  *
  */
 
-__global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL ky0, CUREAL step, INT nx, INT ny, INT nz, INT ny2) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL ky0, CUREAL step, INT nx, INT ny, INT nz, INT ny2) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUREAL ky;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1630,19 +1613,19 @@ __global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   else 
     ky = 2.0 * M_PI * ((CUREAL) (j - ny)) / (((CUREAL) ny) * step) - ky0;
 
-  b[idx] = CUCMULI(b[idx], ky * norm);    // multiply by I * ky * norm
+  b[idx] = b[idx] * ky * norm;    // multiply by I * ky * norm
 }
 
 /*
  * FFT gradient_y
  *
  * gradient_y= Source/destination grid for operation (REAL complex *; input/output).
- * norm     = FFT norm (grid->fft_norm) (REAL; input).
- * kx0      = Momentum shift of origin along X (REAL; input).
- * step     = Spatial step length (REAL; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * norm      = FFT norm (grid->fft_norm) (REAL; input).
+ * kx0       = Momentum shift of origin along X (REAL; input).
+ * step      = Spatial step length (REAL; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
  * Only periodic boundaries!
  *
@@ -1671,9 +1654,10 @@ extern "C" void cgrid_cuda_fft_gradient_yW(CUCOMPLEX *gradient_y, CUREAL norm, C
  *
  */
 
-__global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nz2) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nz2) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUREAL kz;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1685,19 +1669,19 @@ __global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   else 
     kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step) - kz0;
 
-  b[idx] = CUCMULI(b[idx], kz * norm);    // multiply by I * kz * norm
+  b[idx] = b[idx] * kz * norm;   // multiply by I * kz * norm
 }
 
 /*
  * FFT gradient_z
  *
  * gradient_z= Source/destination grid for operation (REAL complex *; input/output).
- * norm     = FFT norm (grid->fft_norm) (REAL; input).
- * kx0      = Momentum shift of origin along X (REAL; input).
- * step     = Spatial step length (REAL; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * norm      = FFT norm (grid->fft_norm) (REAL; input).
+ * kx0       = Momentum shift of origin along X (REAL; input).
+ * step      = Spatial step length (REAL; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
  *
  * Only periodic boundaries!
  *
@@ -1724,13 +1708,12 @@ extern "C" void cgrid_cuda_fft_gradient_zW(CUCOMPLEX *gradient_z, CUREAL norm, C
  *
  * B = B'' in Fourier space.
  *
- * Only periodic version implemented.
- *
  */
 
 __global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
   CUREAL kx, ky, kz;
 
   if(i >= nx || j >= ny || k >= nz) return;
@@ -1764,9 +1747,9 @@ __global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0
  * ky0      = Momentum shift of origin along Y (REAL; input).
  * kz0      = Momentum shift of origin along Z (REAL; input).
  * step     = Spatial step length (REAL; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  * Only periodic boundaries!
  *
@@ -1797,10 +1780,10 @@ extern "C" void cgrid_cuda_fft_laplaceW(CUCOMPLEX *laplace, CUREAL norm, CUREAL 
  *
  */
 
-__global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOMPLEX *blocks, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOMPLEX *blocks, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, t;
-  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   CUREAL kx, ky, kz;
   extern __shared__ CUREAL els2[];
 
@@ -1828,7 +1811,7 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
     kz = 2.0 * M_PI * ((REAL) (k - nz)) / (((REAL) nz) * step) - kz0;
 
   idx2 = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
-  els2[idx2] += -(kx*kx + ky*ky + kz*kz) * (b[idx].x * b[idx].x + b[idx].y * b[idx].y);
+  els2[idx2] += -(kx * kx + ky * ky + kz * kz) * (CUCREAL(b[idx]) * CUCREAL(b[idx]) + CUCIMAG(b[idx]) * CUCIMAG(b[idx]));
   __syncthreads();
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
@@ -1848,9 +1831,9 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
  * ky0      = Momentum shift of origin along Y (REAL; input).
  * kz0      = Momentum shift of origin along Z (REAL; input).
  * step     = Spatial step length (REAL; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  * sum      = Expectation value (REAL; output).
  *
  * Only periodic boundaries!
@@ -1885,9 +1868,10 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(CUCOMPLEX *laplace, CU
  *
  */
 
-__global__ void cgrid_cuda_zero_re_gpu(CUCOMPLEX *a, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_zero_re_gpu(CUCOMPLEX *a, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -1900,9 +1884,9 @@ __global__ void cgrid_cuda_zero_re_gpu(CUCOMPLEX *a, INT nx, INT ny, INT nz) {  
  * Zero real part.
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -1928,9 +1912,10 @@ extern "C" void cgrid_cuda_zero_reW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
  *
  */
 
-__global__ void cgrid_cuda_zero_im_gpu(CUCOMPLEX *a, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_zero_im_gpu(CUCOMPLEX *a, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -1943,9 +1928,9 @@ __global__ void cgrid_cuda_zero_im_gpu(CUCOMPLEX *a, INT nx, INT ny, INT nz) {  
  * Zero imaginary part.
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
@@ -1971,16 +1956,17 @@ extern "C" void cgrid_cuda_zero_imW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
  *
  */
 
-__global__ void cgrid_cuda_zero_index_gpu(CUCOMPLEX *a, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_zero_index_gpu(CUCOMPLEX *a, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
 
   if(i >= lx && i < hx && j >= ly && j < hy && k >= lz && k < hz)
-    a[idx].x = a[idx].y = 0.0;
+    a[idx] = CUMAKE(0.0, 0.0);
 }
 
 /*
@@ -1988,9 +1974,9 @@ __global__ void cgrid_cuda_zero_index_gpu(CUCOMPLEX *a, INT lx, INT hx, INT ly, 
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
  * lx, hx, ly, hy, lz, hz = limiting indices (INT; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
