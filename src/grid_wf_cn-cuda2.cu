@@ -1,6 +1,8 @@
 /*
  * CUDA device code (REAL complex; cgrid).
  *
+ * TODO: Should we use to BC routines rather than hard code the BCs below? (efficiency?)
+ *
  */
 
 #include <cuda/cuda_runtime_api.h>
@@ -15,10 +17,22 @@
 extern void *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
 
-/********************************************************************************************************************/
-
 /*
  * grid_wf_absorb cuda equivalent.
+ *
+ * i         = Index i (x) (INT; input).
+ * j         = Index j (y) (INT; input).
+ * k         = Index k (z) (INT; input).
+ * amp       = Ampltude for absorption (REAL; input).
+ * lx        = Lower limit index for i (x) (INT; input).
+ * hx        = Upper limit index for i (x) (INT; input).
+ * ly        = Lower limit index for j (y) (INT; input).
+ * hy        = Upper limit index for j (y) (INT; input).
+ * lz        = Lower limit index for k (z) (INT; input).
+ * hz        = Upper limit index for k (z) (INT; input).
+ * time_step = Time step (REAL complex; input).
+ * 
+ * Returns the (complex) time step to be applied.
  *
  */
 
@@ -42,8 +56,6 @@ __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp, INT lx
   t.y *= amp;
   return t * time_step;
 }
-
-/********************************************************************************************************************/
 
 /*
  * Propagate wf using CN along X.
@@ -72,20 +84,19 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
     if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
     else tim = tstep;
     cp = c / tim;
-    ind = i * nyz + j * nz + k;
+    ind = i * nyz + tid;
     /* Left-hand side (+) */
     /* (C + dx^2 laplace + CB V + C2 grad + C3 y grad) -- only C and laplace have diag elements */
     d[i] = cp - 2.0;  // -2 from Laplacian, C = cp = c / dt
-    if(pot) d[i] = d[i] + (cb * pot[ind]);
+    if(pot) d[i] = d[i] + cb * pot[ind];
     /* Right-hand side (-) */
     /* (C - dy^2 laplace - CB V - C2 grad - C3 y grad)psi */
-    b[i] = (cp - (psi[ind + nyz] - 2.0 * psi[ind] + psi[ind - nyz]) - c2 * (psi[ind + nyz] - psi[ind - nyz])
-           - c3 * y * (psi[ind + nyz] - psi[ind - nyz])) * psi[ind];
-    if(pot) b[i] = b[i] - pot[ind] * psi[ind] * cb;
+    b[i] = cp * psi[ind] - (psi[ind + nyz] - 2.0 * psi[ind] + psi[ind - nyz]) 
+             - c2 * (psi[ind + nyz] - psi[ind - nyz]) - c3 * y * (psi[ind + nyz] - psi[ind - nyz]);
+    if(pot) b[i] = b[i] - cb * pot[ind] * psi[ind];
   }
 
   // Boundary conditions
- 
   ind = j * nz + k; // i = 0 - left boundary
   if(amp != 0.0) tim = grid_cuda_wf_absorb(0, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
   else tim = tstep;
@@ -147,26 +158,26 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
 /*
  * Propagate wavefunction using Crank-Nicolson.
  *
- * nx         = # of points along x (INT).
- * ny         = # of points along y (INT).
- * nz         = # of points along z (INT).
- * tstep      = time step length (REAL).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
+ * tstep      = time step length (REAL; input).
  * wf         = Source/destination grid for operation (CUCOMPLEX *; input).
- * bc         = boundary condition (gwf->boundary) (char).
- * pot        = external potential (CUCOMPLEX *). May be NULL.
- * mass       = gwf mass (REAL).
- * step       = spatial step (REAL).
- * kx0        = base momentum along x (REAL).
- * omega      = rotation freq (REAL).
- * y0         = y0 grid spatial offset (REAL).
- * wrk        = Workspace (CUCOMPLEX *).
- * amp        = Absorbing amplitude (REAL).
- * lx         = Absorbing low boundary index x (INT).
- * hx         = Absorbing high boundary index x (INT).
- * ly         = Absorbing low boundary index y (INT).
- * hy         = Absorbing high boundary index y (INT).
- * lz         = Absorbing low boundary index z (INT).
- * hz         = Absorbing high boundary index z (INT).
+ * bc         = boundary condition (gwf->boundary) (char; input).
+ * pot        = external potential (CUCOMPLEX *; input). May be NULL.
+ * mass       = gwf mass (REAL; input).
+ * step       = spatial step (REAL; input).
+ * kx0        = base momentum along x (REAL; input).
+ * omega      = rotation freq (REAL; input).
+ * y0         = y0 grid spatial offset (REAL; input).
+ * wrk        = Workspace (CUCOMPLEX *; input).
+ * amp        = Absorbing amplitude (REAL; input). If equal to 0.0, constant time step is used.
+ * lx         = Absorbing low boundary index x (INT; input).
+ * hx         = Absorbing high boundary index x (INT; input).
+ * ly         = Absorbing low boundary index y (INT; input).
+ * hy         = Absorbing high boundary index y (INT; input).
+ * lz         = Absorbing low boundary index z (INT; input).
+ * hz         = Absorbing high boundary index z (INT; input).
  * 
  */
 
@@ -185,20 +196,14 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
    * where C = 4 i m dx^2 / (hbar dt), CB = -2m dx^2 / hbar^2, C2 = -i dx kx, C3 = m \omega i dx / hbar
    *
    */
-  c.x = 0.0;
-  c.y = 4.0 * mass * step * step / HBAR;
-  cb.x = -2.0 * mass * step * step / (HBAR * HBAR);  // diag element coefficient for the potential
-  cb.y = 0.0;
-  c2.x = 0.0;
-  c2.y = -step * kx0; // coeff for moving background
-  c3.x = 0.0;
-  c3.y = mass * omega * step / HBAR; // coeff for rotating liquid around Z
+  c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
+  cb = CUMAKE(-2.0 * mass * step * step / (HBAR * HBAR), 0.0);  // diag element coefficient for the potential
+  c2 = CUMAKE(0.0, -step * kx0); // coeff for moving background
+  c3 = CUMAKE(0.0, mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
   grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, gwf, bc, pot, wrk, c, cb, c2, c3, step, y0, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
 
 /*
  * Propagate wf using CN along Y.
@@ -216,14 +221,14 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
 
   if(i >= nx || k >= nz) return;
 
+  x = ((REAL) (i - nx2)) * step - x0;    
   tid = i * nz + k;
   d = &wrk[ny * (3 * tid + 0)];
   b = &wrk[ny * (3 * tid + 1)];
   pwrk = &wrk[ny * (3 * tid + 2)];
-  x = ((REAL) (i - nx2)) * step - x0;    
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
-  for(j = 1; i < ny - 1; j++) {
+  for(j = 1; j < ny - 1; j++) {
     if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
     else tim = tstep;
     cp = c / tim;
@@ -302,26 +307,26 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
 /*
  * Propagate wavefunction using Crank-Nicolson (Y).
  *
- * nx         = # of points along x (INT).
- * ny         = # of points along y (INT).
- * nz         = # of points along z (INT).
- * tstep      = time step length (REAL).
- * wf         = Source/destination grid for operation (CUCOMPLEX *; input).
- * bc         = boundary condition (gwf->boundary) (char).
- * pot        = external potential (CUCOMPLEX *). May be NULL.
- * mass       = gwf mass (REAL).
- * step       = spatial step (REAL).
- * ky0        = base momentum along y (REAL).
- * omega      = rotation freq (REAL).
- * x0         = x0 grid spatial offset (REAL).
- * wrk        = Workspace (CUCOMPLEX *).
- * amp        = Absorbing amplitude (REAL).
- * lx         = Absorbing low boundary index x (INT).
- * hx         = Absorbing high boundary index x (INT).
- * ly         = Absorbing low boundary index y (INT).
- * hy         = Absorbing high boundary index y (INT).
- * lz         = Absorbing low boundary index z (INT).
- * hz         = Absorbing high boundary index z (INT).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
+ * tstep      = time step length (REAL; input).
+ * wf         = Source/destination grid for operation (CUCOMPLEX *; input/output).
+ * bc         = boundary condition (gwf->boundary) (char; input).
+ * pot        = external potential (CUCOMPLEX *; input). May be NULL.
+ * mass       = gwf mass (REAL; input).
+ * step       = spatial step (REAL; input).
+ * ky0        = base momentum along y (REAL; input).
+ * omega      = rotation freq (REAL; input).
+ * x0         = x0 grid spatial offset (REAL; input).
+ * wrk        = Workspace (CUCOMPLEX *; scratch space).
+ * amp        = Absorbing amplitude (REAL; input). If equal to 0.0, constant time step is used.
+ * lx         = Absorbing low boundary index x (INT; input).
+ * hx         = Absorbing high boundary index x (INT; input).
+ * ly         = Absorbing low boundary index y (INT; input).
+ * hy         = Absorbing high boundary index y (INT; input).
+ * lz         = Absorbing low boundary index z (INT; input).
+ * hz         = Absorbing high boundary index z (INT; input).
  * 
  */
 
@@ -340,21 +345,15 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
    * where C = 4 i m dy^2 / (hbar dt), CB = -2m dy^2 / hbar^2, C2 = -i dy ky, C3 = -m \omega i dy / hbar
    *
    */
-
-  c.x = 0.0;
-  c.y = 4.0 * mass * step * step / HBAR;
-  cb.x = -2.0 * mass * step * step / (HBAR * HBAR);  // diag element coefficient for the potential
-  cb.y = 0.0;
-  c2.x = 0.0;
-  c2.y = -step * ky0; // coeff for moving background
-  c3.x = 0.0;
-  c3.y = -mass * omega * step / HBAR; // coeff for rotating liquid around Z
+ 
+  c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
+  cb = CUMAKE(-2.0 * mass * step * step / (HBAR * HBAR), 0.0);  // diag element coefficient for the potential
+  c2 = CUMAKE(0.0, -step * ky0); // coeff for moving background
+  c3 = CUMAKE(0.0, -mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
   grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, gwf, bc, pot, wrk, c, cb, c2, c3, step, x0, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
 
 /*
  * Propagate wf using CN along Z.
@@ -447,32 +446,32 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   }
 
   if(bc == WF_PERIODIC_BOUNDARY)
-    grid_cuda_solve_tridiagonal_system_cyclic2(nz, d, b, &psi[i * nxy + j * nz], c2, 1, pwrk);
+    grid_cuda_solve_tridiagonal_system_cyclic2(nz, d, b, &psi[i * nyz + j * nz], c2, 1, pwrk);
   else
-    grid_cuda_solve_tridiagonal_system2(nz, d, b, &psi[i * nxy + j * nz], c2, 1);
+    grid_cuda_solve_tridiagonal_system2(nz, d, b, &psi[i * nyz + j * nz], c2, 1);
 }
 
 /*
  * Propagate wavefunction using Crank-Nicolson (Z).
  *
- * nx         = # of points along x (INT).
- * ny         = # of points along y (INT).
- * nz         = # of points along z (INT).
- * tstep      = time step length (REAL).
- * wf         = Source/destination grid for operation (CUCOMPLEX *; input).
- * bc         = boundary condition (gwf->boundary) (char).
- * pot        = external potential (CUCOMPLEX *). May be NULL.
- * mass       = gwf mass (REAL).
- * step       = spatial step (REAL).
- * kz0        = base momentum along z (REAL).
- * wrk        = Workspace (CUCOMPLEX *).
- * amp        = Absorbing amplitude (REAL).
- * lx         = Absorbing low boundary index x (INT).
- * hx         = Absorbing high boundary index x (INT).
- * ly         = Absorbing low boundary index y (INT).
- * hy         = Absorbing high boundary index y (INT).
- * lz         = Absorbing low boundary index z (INT).
- * hz         = Absorbing high boundary index z (INT).
+ * nx         = # of points along x (INT; input).
+ * ny         = # of points along y (INT; input).
+ * nz         = # of points along z (INT; input).
+ * tstep      = time step length (REAL; input).
+ * wf         = Source/destination grid for operation (CUCOMPLEX *; input/output).
+ * bc         = boundary condition (gwf->boundary) (char; input).
+ * pot        = external potential (CUCOMPLEX *; input). May be NULL.
+ * mass       = gwf mass (REAL; input).
+ * step       = spatial step (REAL; input).
+ * kz0        = base momentum along z (REAL; input).
+ * wrk        = Workspace (CUCOMPLEX *; scratch space).
+ * amp        = Absorbing amplitude (REAL; input).  If equal to 0.0, constant time step is used.
+ * lx         = Absorbing low boundary index x (INT; input).
+ * hx         = Absorbing high boundary index x (INT; input).
+ * ly         = Absorbing low boundary index y (INT; input).
+ * hy         = Absorbing high boundary index y (INT; input).
+ * lz         = Absorbing low boundary index z (INT; input).
+ * hz         = Absorbing high boundary index z (INT; input).
  * 
  */
 
@@ -491,18 +490,13 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
    * where C = 4 i m dz^2 / (hbar dt), CB = -2m dz^2 / hbar^2, C2 = -i dz kz.
    *
    */
-  c.x = 0.0;
-  c.y = 4.0 * mass * step * step / HBAR;
-  cb.x = -2.0 * mass * step * step / (HBAR * HBAR);  // diag element coefficient for the potential
-  cb.y = 0.0;
-  c2.x = 0.0;
-  c2.y = -step * kz0; // coeff for moving background
+  c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
+  cb = CUMAKE(-2.0 * mass * step * step / (HBAR * HBAR), 0.0);  // diag element coefficient for the potential
+  c2 = CUMAKE(0.0, -step * kz0); // coeff for moving background
 
   grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, pot, wrk, c, cb, c2, step, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
-
-/*******************************************************************************************************************/
 
 /*
  * Potential energy propagation in real space (possibly with absorbing boundaries).
@@ -555,5 +549,3 @@ extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *po
   grid_cuda_wf_propagate_potential_gpu<<<blocks,threads>>>(grid, pot, time_step, amp, lx, hx, ly, hy, lz, hz, nx, ny, nz);
   cuda_error_check();
 }
-
-/********************************************************************************************************************/

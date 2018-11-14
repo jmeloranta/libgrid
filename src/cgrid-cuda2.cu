@@ -203,23 +203,23 @@ __global__ void cgrid_cuda_sum_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT
 /*
  * Sum of two grids.
  *
- * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Input grid 1 (CUCOMPLEX *; input).
- * gridb    = Input grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (CUCOMPLEX *; output).
+ * gridb    = Input grid 1 (CUCOMPLEX *; input).
+ * gridc    = Input grid 2 (CUCOMPLEX *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_sumW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_sumW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_sum_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
+  cgrid_cuda_sum_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -244,23 +244,23 @@ __global__ void cgrid_cuda_difference_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX 
 /*
  * Subtract two grids.
  *
- * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Input grid 1 (CUCOMPLEX *; input).
- * gridb    = Input grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (CUCOMPLEX *; output).
+ * gridb    = Input grid 1 (CUCOMPLEX *; input).
+ * gridc    = Input grid 2 (CUCOMPLEX *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_differenceW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_differenceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_difference_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
+  cgrid_cuda_difference_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -285,23 +285,23 @@ __global__ void cgrid_cuda_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c,
 /*
  * Product of two grids.
  *
- * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Source grid 1 (CUCOMPLEX *; input).
- * gridb    = Source grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (CUCOMPLEX *; output).
+ * gridb    = Source grid 1 (CUCOMPLEX *; input).
+ * gridc    = Source grid 2 (CUCOMPLEX *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_productW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_productW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_product_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
+  cgrid_cuda_product_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -326,23 +326,23 @@ __global__ void cgrid_cuda_conjugate_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUC
 /*
  * Conjugate product of two grids.
  *
- * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Source grid 1 (complex conjugated) (CUCOMPLEX *; input).
- * gridb    = Source grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (CUCOMPLEX *; output).
+ * gridb    = Source grid 1 (complex conjugated) (CUCOMPLEX *; input).
+ * gridc    = Source grid 2 (CUCOMPLEX *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_conjugate_productW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_conjugate_productW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_conjugate_product_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
+  cgrid_cuda_conjugate_product_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -368,23 +368,23 @@ __global__ void cgrid_cuda_division_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c
 /*
  * Division of two grids.
  *
- * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Source grid 1 (CUCOMPLEX *; input).
- * gridb    = Source grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (CUCOMPLEX *; output).
+ * gridb    = Source grid 1 (CUCOMPLEX *; input).
+ * gridc    = Source grid 2 (CUCOMPLEX *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_divisionW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_divisionW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_division_gpu<<<blocks,threads>>>(gridc, grida, gridb, nx, ny, nz);
+  cgrid_cuda_division_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -412,9 +412,9 @@ __global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLE
 /*
  * "Safe" division of two grids.
  *
- * gridc    = Destination grid (CUCOMPLEX *; output).
- * grida    = Source grid 1 (CUCOMPLEX *; input).
- * gridb    = Source grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (CUCOMPLEX *; output).
+ * gridb    = Source grid 1 (CUCOMPLEX *; input).
+ * gridc    = Source grid 2 (CUCOMPLEX *; input).
  * eps      = Epsilon (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -422,14 +422,14 @@ __global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLE
  *
  */
 
-extern "C" void cgrid_cuda_division_epsW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL eps, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_division_epsW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, CUREAL eps, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_division_eps_gpu<<<blocks,threads>>>(gridc, grida, gridb, eps, nx, ny, nz);
+  cgrid_cuda_division_eps_gpu<<<blocks,threads>>>(grida, gridb, gridc, eps, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -576,23 +576,23 @@ __global__ void cgrid_cuda_add_scaled_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUCOMPLEX *
 /*
  * Scaled add grid.
  *
- * gridc    = Destination for operation (REAL complex *; output).
+ * grida    = Destination for operation (REAL complex *; output).
  * d        = Scaling factor (REAL complex; input).
- * grida    = Source for operation (REAL complex *; input).
+ * gridb    = Source for operation (REAL complex *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_add_scaledW(CUCOMPLEX *gridc, CUCOMPLEX d, CUCOMPLEX *grida, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_add_scaledW(CUCOMPLEX *grida, CUCOMPLEX d, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(gridc, d, grida, nx, ny, nz);
+  cgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(grida, d, gridb, nx, ny, nz);
   cuda_error_check();
 }
 
@@ -617,24 +617,24 @@ __global__ void cgrid_cuda_add_scaled_product_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUC
 /*
  * Add scaled product.
  *
- * gridc    = Destination for operation (REAL complex *; output).
+ * grida    = Destination for operation (REAL complex *; output).
  * d        = Scaling factor (REAL complex; input).
- * grida    = Source for operation (REAL complex *; input).
  * gridb    = Source for operation (REAL complex *; input).
+ * gridc    = Source for operation (REAL complex *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_add_scaled_productW(CUCOMPLEX *gridc, CUCOMPLEX d, CUCOMPLEX *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_add_scaled_productW(CUCOMPLEX *grida, CUCOMPLEX d, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_add_scaled_product_gpu<<<blocks,threads>>>(gridc, d, grida, gridb, nx, ny, nz);
+  cgrid_cuda_add_scaled_product_gpu<<<blocks,threads>>>(grida, d, gridb, gridc, nx, ny, nz);
   cuda_error_check();
 }
 

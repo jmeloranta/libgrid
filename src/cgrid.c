@@ -1964,16 +1964,18 @@ EXPORT void cgrid_inverse_fft_norm(cgrid *grid) {
 }
 
 /*
- * Convolute FFT transformed grids. To convolute grids grida and gridb and place the result in gridc:
+ * Convolute FFT transformed grids. 
+ *
+ * To convolute grids grida and gridb and place the result in gridc:
  * cgrid_fft(grida);
  * cgrid_fft(gridb);
  * cgrid_convolue(gridc, grida, gridb);
  * cgrid_inverse_fft(gridc);
  * gridc now contains the convolution of grida and gridb.
  *
+ * gridc = output grid (cgrid *; output).
  * grida = 1st grid to be convoluted (cgrid *; input).
  * gridb = 2nd grid to be convoluted (cgrid *; input).
- * gridc = output (cgrid *; output).
  *
  * No return value.
  *

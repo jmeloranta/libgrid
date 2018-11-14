@@ -1,6 +1,9 @@
 /*
  * CUDA device code (REAL; rgrid).
  *
+ * blockDim = # of threads
+ * gridDim = # of blocks
+ *
  */
 
 #include <cuda/cuda_runtime_api.h>
@@ -669,8 +672,11 @@ extern "C" void rgrid_cuda_constantW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT
 }
 
 /*
- * Block init.
+ * Block init (zero elements).
  *
+ * blocks  = Block table (CUCOMPLEX *; output).
+ * nblocks = Number of blocks in table (INT; input).
+ * 
  */
 
 __global__ void rgrid_cuda_block_init(CUREAL *blocks, INT nblocks) {
@@ -682,6 +688,9 @@ __global__ void rgrid_cuda_block_init(CUREAL *blocks, INT nblocks) {
 
 /*
  * Block reduction.
+ *
+ * blocks  = Block list to reduce (CUCOMPLEX *; input/output). blocks[0] will contain the reduced value.
+ * nblocks = Number of blocks (INT; input).
  *
  */
 

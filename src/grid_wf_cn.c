@@ -67,14 +67,14 @@ EXPORT void grid_wf_propagate_cn(wf *gwf, REAL complex (*time)(INT, INT, INT, vo
 /*
  * Auxiliary routine for propagating along x subject to given BC (Crank-Nicolson).
  *
- * gwf        = wavefunction to be propagated (wf *).
+ * gwf        = wavefunction to be propagated (wf *; input/output).
  * 
- * time       = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
- * tstep      = base time step length (REAL complex).
- * privdata   = additional private data form time step function (void *).
- * potential  = potential grid (cgrid *; NULL if not needed).
- * workspace  = additional storage space needed (REAL complex *) with size at least 3 * nx * (number of threads).
- * worklen    = workspace length (INT).
+ * time       = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex); input). If NULL, tstep will be used.
+ * tstep      = base time step length (REAL complex; input).
+ * privdata   = additional private data form time step function (void *; input).
+ * potential  = potential grid (cgrid *; input). NULL if not needed.
+ * workspace  = additional storage space needed (REAL complex *; overwritten) with size at least 3 * nx * (number of threads).
+ * worklen    = workspace length (INT; input).
  *
  * No return value.
  *
@@ -91,18 +91,22 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   INT nz = gwf->grid->nz, nyz = ny * nz;
   REAL complex *d, *b, *pwrk, *pot, tim, cp;
 
-  if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * nx) {
-    fprintf(stderr, "libgrid: grid_wf_propagate_cn_x workspace too small.\n");
+#ifdef USE_CUDA
+  if(time && time != &grid_wf_absorb) {
+    fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-
-#ifdef USE_CUDA
-  if(time != &grid_wf_absorb) {
-    fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
+  if(worklen < 3 * nx * nyz * (INT) sizeof(REAL complex)) {
+    fprintf(stderr, "libgrid(CUDA): CN worskspace too small.\n");
     exit(1);
   }
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_x(gwf, time, tstep, privdata, potential, workspace, worklen)) return;
 #endif
+
+  if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * nx) {
+    fprintf(stderr, "libgrid: grid_wf_propagate_cn_x workspace too small.\n");
+    exit(1);
+  }
 
   if(potential) pot = potential->value;
   else pot = NULL;
@@ -122,8 +126,8 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
 #pragma omp parallel for firstprivate(cb,c2,c3,nx,ny,ny2,nz,nyz,y0,psi,workspace,c,step,pot,time,tstep,privdata,gwf) private(tid,i,j,k,jk,d,b,ind,tim,cp,pwrk,y) default(none) schedule(runtime)
   for (jk = 0; jk < nyz; jk++) {  /* for each (y,z) */
     j = jk / nz;
-    y = ((REAL) (j - ny2)) * step - y0;
     k = jk % nz;  
+    y = ((REAL) (j - ny2)) * step - y0;
     tid = omp_get_thread_num();
     d = &workspace[nx * (3 * tid + 0)];
     b = &workspace[nx * (3 * tid + 1)];
@@ -138,16 +142,15 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
       /* Left-hand side (+) */
       /* (C + dx^2 laplace + CB V + C2 grad + C3 y grad) -- only C and laplace have diag elements */
       d[i] = cp - 2.0; // -2 from Laplacian, C = cp = c / dt
-      if(pot) d[i] += cb * pot[ind];
+      if(pot) d[i] = d[i] + cb * pot[ind];
       /* Right-hand side (-) */
       /* (C - dx^2 laplace - CB V - C2 grad - C3 y grad) */
       b[i] = cp * psi[ind] - (psi[ind + nyz] - 2.0 * psi[ind] + psi[ind - nyz]) 
              - c2 * (psi[ind + nyz] - psi[ind - nyz]) - c3 * y * (psi[ind + nyz] - psi[ind - nyz]);
-      if(pot) b[i] -= cb * pot[ind] * psi[ind];
+      if(pot) b[i] = b[i] - cb * pot[ind] * psi[ind];
     }
 
-    // Boundary conditions
- 
+    // Boundary conditions 
     ind = j * nz + k; // i = 0 - left boundary
     if(time) tim = (*time)(0, j, k, privdata, tstep);
     else tim = tstep;
@@ -170,8 +173,8 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }
     d[0] = cp - 2.0;  // LHS: -2 diag elem from Laplacian, cp = c / dt
     if(pot) {
-      b[0] -= cb * pot[ind] * psi[ind];  // RHS(-)
-      d[0] += cb * pot[ind];             // LHS(+)
+      b[0] = b[0] - cb * pot[ind] * psi[ind];  // RHS(-)
+      d[0] = d[0] + cb * pot[ind];             // LHS(+)
     }
 
     ind = (nx - 1) * nyz + j * nz + k;  // i = nx - 1, right boundary
@@ -196,8 +199,8 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }      
     d[nx-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
     if(pot) {
-      b[nx-1] -= cb * pot[ind] * psi[ind]; // RHS(-)
-      d[nx-1] += cb * pot[ind];            // LHS(+)
+      b[nx-1] = b[nx-1] - cb * pot[ind] * psi[ind]; // RHS(-)
+      d[nx-1] = d[nx-1] + cb * pot[ind];            // LHS(+)
     }
 
     if(gwf->boundary == WF_PERIODIC_BOUNDARY)
@@ -234,14 +237,22 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   INT nz = gwf->grid->nz, nyz = ny * nz, nxz = nx * nz;
   REAL complex *d, *b, *pwrk, *pot, tim, cp;
 
+#ifdef USE_CUDA
+  if(time && time != &grid_wf_absorb) {
+    fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
+    exit(1);
+  }
+  if(worklen < 3 * nx * nyz * (INT) sizeof(REAL complex)) {
+    fprintf(stderr, "libgrid(CUDA): CN worskspace too small.\n");
+    exit(1);
+  }
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, time, tstep, privdata, potential, workspace, worklen)) return;
+#endif
+
   if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * ny) {
     fprintf(stderr, "libgrid: grid_wf_propagate_cn_y workspace too small.\n");
     exit(1);
   }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, time, tstep, privdata, potential, workspace, worklen)) return;
-#endif
 
   if(potential) pot = potential->value;
   else pot = NULL;
@@ -261,8 +272,8 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
 #pragma omp parallel for firstprivate(cb,c2,c3,nx,nx2,ny,nz,nyz,nxz,x0,psi,workspace,c,step,pot,time,tstep,privdata,gwf) private(tid,i,j,k,ik,d,b,ind,tim,cp,x,pwrk) default(none) schedule(runtime)
   for (ik = 0; ik < nxz; ik++) {  /* for each (x,z) */
     i = ik / nz;
-    x = ((REAL) (i - nx2)) * step - x0;    
     k = ik % nz;
+    x = ((REAL) (i - nx2)) * step - x0;    
     tid = omp_get_thread_num();
     d = &workspace[ny * (3 * tid + 0)];
     b = &workspace[ny * (3 * tid + 1)];
@@ -277,12 +288,12 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
       /* Left-hand side (+) */
       /* (C + dy^2 laplace + CB V + C2 grad + C3 x grad) */
       d[j] = cp - 2.0; // -2 from Laplacian, cp = c / dt, LHS(+)
-      if(pot) d[j] += cb * pot[ind];
+      if(pot) d[j] = d[j] + cb * pot[ind];
       /* Right-hand side (-) */
       /* (C - dx^2 laplace - CB V - C2 grad - C3 x grad) */
       b[j] = cp * psi[ind] - (psi[ind + nz] - 2.0 * psi[ind] + psi[ind - nz]) 
              - c2 * (psi[ind + nz] - psi[ind - nz]) - c3 * x * (psi[ind + nz] - psi[ind - nz]);
-      if(pot) b[j] -= cb * pot[ind] * psi[ind];
+      if(pot) b[j] = b[j] - cb * pot[ind] * psi[ind];
     }
 
     // Boundary conditions
@@ -309,8 +320,8 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }
     d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
     if(pot) {
-      b[0] -= cb * pot[ind] * psi[ind];  // RHS(-)
-      d[0] += cb * pot[ind];             // LHS(+)
+      b[0] = b[0] - cb * pot[ind] * psi[ind];  // RHS(-)
+      d[0] = d[0] + cb * pot[ind];             // LHS(+)
     }
 
     ind = i * nyz + (ny-1) * nz + k;  // j = ny - 1 - right boundary
@@ -335,8 +346,8 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }
     d[ny-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
     if(pot) {
-      b[ny-1] -= cb * pot[ind] * psi[ind]; // RHS(-)
-      d[ny-1] += cb * pot[ind];            // LHS(+)
+      b[ny-1] = b[ny-1] - cb * pot[ind] * psi[ind]; // RHS(-)
+      d[ny-1] = d[ny-1] + cb * pot[ind];            // LHS(+)
     }
 
     if(gwf->boundary == WF_PERIODIC_BOUNDARY)
@@ -373,14 +384,22 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   INT nz = gwf->grid->nz, nyz = ny * nz, nxy = nx * ny;
   REAL complex *d, *b, *pwrk, *pot, tim, cp;
 
+#ifdef USE_CUDA
+  if(time && time != &grid_wf_absorb) {
+    fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
+    exit(1);
+  }
+  if(worklen < 3 * nx * nyz * (INT) sizeof(REAL complex)) {
+    fprintf(stderr, "libgrid(CUDA): CN worskspace too small.\n");
+    exit(1);
+  }
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, time, tstep, privdata, potential, workspace, worklen)) return;
+#endif
+
   if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * nz) {
     fprintf(stderr, "libgrid: grid_wf_propagate_cn_z workspace too small.\n");
     exit(1);
   }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, time, tstep, privdata, potential, workspace, worklen)) return;
-#endif
 
   if(potential) pot = potential->value;
   else pot = NULL;
@@ -414,12 +433,12 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
       /* Left-hand side (+) */
       /* (C + dz^2 laplace + CB V + C2 grad) */
       d[k] = cp - 2.0; // Diagonal: -2 from Laplacian, cp = c / dt
-      if(pot) d[k] += cb * pot[ind]; // add possible potential to diagonal
+      if(pot) d[k] = d[k] + cb * pot[ind]; // add possible potential to diagonal
       /* Right-hand side (-) */
       /* (C - dz^2 laplace - CB V - C2 grad) */
       b[k] = cp * psi[ind] - (psi[ind + 1] - 2.0 * psi[ind] + psi[ind - 1]) 
              - c2 * (psi[ind + 1] - psi[ind - 1]); // NOTE: No rotation term as the rotation is about the z-axis
-      if(pot) b[k] -= cb * pot[ind] * psi[ind];
+      if(pot) b[k] = b[k] - cb * pot[ind] * psi[ind];
     }
 
     // Boundary conditions
@@ -446,8 +465,8 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }
     d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
     if(pot) {
-      b[0] -= cb * pot[ind] * psi[ind];  // RHS(-)
-      d[0] += cb * pot[ind];             // LHS(+)
+      b[0] = b[0] - cb * pot[ind] * psi[ind];  // RHS(-)
+      d[0] = d[0] + cb * pot[ind];             // LHS(+)
     }
 
     ind = i * nyz + j * nz + (nz - 1);  // k = nz-1 - right boundary
@@ -471,13 +490,13 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }      
     d[nz-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
     if(pot) {
-      b[nz-1] -= cb * pot[ind] * psi[ind]; // RHS(-)
-      d[nz-1] += cb * pot[ind];            // LHS(+)
+      b[nz-1] = b[nz-1] - cb * pot[ind] * psi[ind]; // RHS(-)
+      d[nz-1] = d[nz-1] + cb * pot[ind];            // LHS(+)
     }
 
     if(gwf->boundary == WF_PERIODIC_BOUNDARY)
-      grid_solve_tridiagonal_system_cyclic2(nz, d, b, &psi[i * nxy + j * nz], c2, 1, pwrk);
+      grid_solve_tridiagonal_system_cyclic2(nz, d, b, &psi[i * nyz + j * nz], c2, 1, pwrk);
     else
-      grid_solve_tridiagonal_system2(nz, d, b, &psi[i * nxy + j * nz], c2, 1);
+      grid_solve_tridiagonal_system2(nz, d, b, &psi[i * nyz + j * nz], c2, 1);
   }
 }

@@ -507,7 +507,7 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, 
       /* psi(t+dt) = exp(- i V dt / hbar) psi(t) */
       if(time) c = -I * (*time)(i, j, k, privdata, tstep) / HBAR;
       else c = -I * tstep / HBAR;
-      psi[ijnz + k] *= CEXP(c * pot[ijnz + k]);
+      psi[ijnz + k] = psi[ijnz + k] * CEXP(c * pot[ijnz + k]);
     }
   }
 }
