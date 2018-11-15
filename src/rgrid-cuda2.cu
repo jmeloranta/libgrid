@@ -1039,7 +1039,7 @@ __global__ void rgrid_cuda_fd_gradient_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_de
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = inv_delta * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz, nzz));
 }
 
 /*
@@ -1080,7 +1080,7 @@ __global__ void rgrid_cuda_fd_gradient_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_de
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = inv_delta * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz, nzz));
 }
 
 /*
@@ -1121,7 +1121,7 @@ __global__ void rgrid_cuda_fd_gradient_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_de
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
+  b[idx] = inv_delta * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz, nzz));
 }
 
 /*
@@ -1162,10 +1162,10 @@ __global__ void rgrid_cuda_fd_laplace_gpu(CUREAL *a, CUREAL *b, CUREAL inv_delta
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta2 * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
-                         + rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
-                         + rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
-                         - 6.0 * a[idx]);
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz, nzz) + rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz, nzz)
+                       + rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz, nzz) + rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz, nzz)
+                       + rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz, nzz) + rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz, nzz)
+                       - 6.0 * a[idx]);
 }
 
 /*
@@ -1208,7 +1208,7 @@ __global__ void rgrid_cuda_fd_laplace_x_gpu(CUREAL *a, CUREAL *b, CUREAL inv_del
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta2 * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz, nzz) + rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz, nzz)
                          - 2.0 * a[idx]);
 }
 
@@ -1252,7 +1252,7 @@ __global__ void rgrid_cuda_fd_laplace_y_gpu(CUREAL *a, CUREAL *b, CUREAL inv_del
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta2 * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz, nzz) + rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz, nzz)
                          - 2.0 * a[idx]);
 }
 
@@ -1296,7 +1296,7 @@ __global__ void rgrid_cuda_fd_laplace_z_gpu(CUREAL *a, CUREAL *b, CUREAL inv_del
 
   idx = (i * ny + j) * nzz + k;
 
-  b[idx] = inv_delta2 * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
+  b[idx] = inv_delta2 * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz, nzz) + rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz, nzz)
                          - 2.0 * a[idx]);
 }
 
@@ -1343,13 +1343,13 @@ __global__ void rgrid_cuda_fd_gradient_dot_gradient_gpu(CUREAL *a, CUREAL *b, CU
 
   b[idx] = 0.0;
 
-  tmp = inv_delta * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
+  tmp = inv_delta * (rgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz, nzz));
   b[idx] = b[idx] + tmp * tmp;
 
-  tmp = inv_delta * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
+  tmp = inv_delta * (rgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz, nzz));
   b[idx] = b[idx] + tmp * tmp;
 
-  tmp = inv_delta * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
+  tmp = inv_delta * (rgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz, nzz));
   b[idx] = b[idx] + tmp * tmp;
 }
 
@@ -1761,18 +1761,18 @@ __global__ void rgrid_cuda_abs_rot_gpu(CUREAL *rot, CUREAL *fx, CUREAL *fy, CURE
   idx = (i * ny + j) * nzz + k;
 
   /* x: (d/dy) fz - (d/dz) fy */
-  tmp = inv_delta * (rgrid_cuda_bc_y_plus(fz, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(fz, bc, i, j, k, nx, ny, nz)
-                     - rgrid_cuda_bc_z_plus(fy, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(fy, bc, i, j, k, nx, ny, nz));
+  tmp = inv_delta * (rgrid_cuda_bc_y_plus(fz, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_y_minus(fz, bc, i, j, k, nx, ny, nz, nzz)
+                     - rgrid_cuda_bc_z_plus(fy, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_z_minus(fy, bc, i, j, k, nx, ny, nz, nzz));
   rot[idx] = tmp * tmp;
 
   /* y: (d/dz) fx - (d/dx) fz */
-  tmp = inv_delta * (rgrid_cuda_bc_z_plus(fx, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_z_minus(fx, bc, i, j, k, nx, ny, nz)
-                     - rgrid_cuda_bc_x_plus(fz, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(fz, bc, i, j, k, nx, ny, nz));
+  tmp = inv_delta * (rgrid_cuda_bc_z_plus(fx, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_z_minus(fx, bc, i, j, k, nx, ny, nz, nzz)
+                     - rgrid_cuda_bc_x_plus(fz, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_x_minus(fz, bc, i, j, k, nx, ny, nz, nzz));
   rot[idx] = rot[idx] + tmp * tmp;
 
   /* z: (d/dx) fy - (d/dy) fx */
-  tmp = inv_delta * (rgrid_cuda_bc_x_plus(fy, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_x_minus(fy, bc, i, j, k, nx, ny, nz)
-                     - rgrid_cuda_bc_y_plus(fx, bc, i, j, k, nx, ny, nz) - rgrid_cuda_bc_y_minus(fx, bc, i, j, k, nx, ny, nz));
+  tmp = inv_delta * (rgrid_cuda_bc_x_plus(fy, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_x_minus(fy, bc, i, j, k, nx, ny, nz, nzz)
+                     - rgrid_cuda_bc_y_plus(fx, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_y_minus(fx, bc, i, j, k, nx, ny, nz, nzz));
   rot[idx] = rot[idx] + tmp * tmp;
   rot[idx] = SQRT(rot[idx]);
 }
