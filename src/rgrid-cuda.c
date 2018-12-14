@@ -827,3 +827,4 @@ EXPORT char rgrid_cuda_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll
 
   return 0;
 }
+

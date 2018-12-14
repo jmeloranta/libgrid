@@ -9,7 +9,8 @@
 #include <time.h>
 #include "cuda.h"
 
-/* #define CUDA_LOCK_BLOCKS /* Lock all pages in memory (for debugging) */
+ /* Lock all pages in memory (for debugging) */
+/* #define CUDA_LOCK_BLOCKS */
 
 static gpu_mem_block *gpu_blocks_head = NULL;
 static long gpu_memory_hits = 0, gpu_memory_misses = 0;
@@ -25,6 +26,10 @@ static char cuda_debug_flag = 0;
 
 /*
  * Set GPU device to be used.
+ *
+ * dev = device number (int).
+ *
+ * No return value.
  *
  */
 
@@ -44,7 +49,7 @@ EXPORT void cuda_set_gpu(int dev) {
  * Calls abort() if something is wrong, so that the stack trace
  * can be used to locate the problem.
  *
- * NOTE: This will also do device synchronize!
+ * NOTE: This will also do device synchronize! (= can slow things down)
  *
  */
 
@@ -65,8 +70,8 @@ EXPORT inline void cuda_error_check() {
 }
 
 /*
- * Returns the amount of free GPU memory (in bytes).
- *
+ * Returns the amount of free current GPU memory (in bytes).
+ * 
  */
 
 EXPORT size_t cuda_memory() {
@@ -99,7 +104,7 @@ EXPORT char cuda_freemem(size_t size) {
   int cuda_remove_block(void *, char);
 
   for (curr_size = cuda_memory(); curr_size < size; curr_size -= dec_size) {
-    current = time(0)+1;
+    current = time(0) + 1;
     current_access = 0;
     for(ptr = gpu_blocks_head, rptr = NULL; ptr; ptr = ptr->next) {
       if(!ptr->locked && (ptr->last_used < current || (ptr->last_used == current && ptr->access_count < current_access))) {
@@ -141,7 +146,7 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block, size_t len) {
  * Transfer data from GPU to host memory.
  *
  * block = Memory block to syncronize from GPU to host (gpu_mem_block *; input/output).
- * len   = Transfer length (0 = all) (size_t; input).
+ * len   = Transfer length (0 = full block length) (size_t; input).
  *
  * Return value: 0 = OK, -1 = error.
  *
@@ -164,7 +169,7 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block, size_t len) {
  *
  * dst     = (destination) GPU buffer (gpu_mem_block *; output).
  * src     = (source) GPU buffer (gpu_mem_block *; input).
- * size    = # of bytes to transfer (INT; input). 0 = all in src.
+ * size    = # of bytes to transfer (INT; input). 0 = all in src block.
  *
  * Return value: 0 = OK, -1 = error.
  *

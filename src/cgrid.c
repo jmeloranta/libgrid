@@ -2942,7 +2942,7 @@ EXPORT void cgrid_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nynz = ny * nz;
   REAL complex *value = grid->value;
 
-  if(hx >= nx || lx < 0 || hy >= ny || ly < 0 || hz >= nz || lz < 0) return;
+  if(hx > nx || lx < 0 || hy > ny || ly < 0 || hz > nz || lz < 0) return;
 
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_zero_index(grid, lx, hx, ly, hy, lz, hz)) return;

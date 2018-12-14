@@ -6,7 +6,7 @@
 #ifndef __GRID_STRUCTS__
 #define __GRID_STRUCTS__
 
-typedef struct cgrid_struct { /*  complex grid */
+typedef struct cgrid_struct { /* complex grid data type */
   REAL complex *value;
   char id[32];
   size_t grid_len;
@@ -32,7 +32,7 @@ typedef struct cgrid_struct { /*  complex grid */
   REAL fft_norm2;
 } cgrid;
 
-typedef struct rgrid_struct { /*  real grid */
+typedef struct rgrid_struct { /* real grid data type */
   REAL *value;
   char id[32];
   size_t grid_len;

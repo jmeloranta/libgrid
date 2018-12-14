@@ -2682,6 +2682,31 @@ EXPORT void rgrid_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz) {
 }
 
 /*
+ * de-alias grid in Fourier space by the 2/3 rule: zero high wavenumber components between:
+ * [n/2 - n/3, n/2 + n/3] in each direction (except the last dimension is [nz - nz/3, nz]).
+ *
+ * grid     = Grid in Fourier space (rgrid *; input/output).
+ *
+ * Note: The combination component in the reciprocal space is at n/2 (f = \pm 1/(2 delta)).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_dealias32(rgrid *grid) {
+
+  cgrid tmp;
+
+  tmp.nx = grid->nx;
+  tmp.ny = grid->ny;
+  tmp.nz = grid->nz / 2 + 1;
+  tmp.value = (REAL complex *) grid->value;
+
+  cgrid_zero_index(&tmp, tmp.nx / 2 - tmp.nx / 3, tmp.nx / 2 + tmp.nx / 3 + 1, tmp.ny / 2 - tmp.ny / 3, tmp.ny / 2 + tmp.ny / 3 + 1, 
+                         tmp.nz - tmp.nz / 3, tmp.nz);
+}
+
+/*
  * Raise grid to integer power (fast).
  *
  * dst = Destination grid (rgrid *; output).
