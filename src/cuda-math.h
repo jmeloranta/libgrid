@@ -33,23 +33,23 @@
 
 /* Overload operators */
 
-__device__ inline cuDoubleComplex operator*(CUCOMPLEX a, CUCOMPLEX b) { return CUCMUL(a,b); }
-__device__ inline cuDoubleComplex operator*(CUCOMPLEX a, REAL b) { return CUMAKE(a.x * b, a.y * b); }
-__device__ inline cuDoubleComplex operator*(REAL a, CUCOMPLEX b) { return CUMAKE(b.x * a, b.y * a); }
+__device__ inline CUCOMPLEX operator*(CUCOMPLEX a, CUCOMPLEX b) { return CUCMUL(a,b); }
+__device__ inline CUCOMPLEX operator*(CUCOMPLEX a, REAL b) { return CUMAKE(a.x * b, a.y * b); }
+__device__ inline CUCOMPLEX operator*(REAL a, CUCOMPLEX b) { return CUMAKE(b.x * a, b.y * a); }
 
-__device__ inline cuDoubleComplex operator+(CUCOMPLEX a, CUCOMPLEX b) { return CUCADD(a,b); }
-__device__ inline cuDoubleComplex operator+(REAL a, CUCOMPLEX b) { return CUMAKE(a + b.x, b.y); }
-__device__ inline cuDoubleComplex operator+(CUCOMPLEX a, REAL b) { return CUMAKE(a.x + b, a.y); }
-__device__ inline cuDoubleComplex operator+(CUCOMPLEX a) { return a; }
+__device__ inline CUCOMPLEX operator+(CUCOMPLEX a, CUCOMPLEX b) { return CUCADD(a,b); }
+__device__ inline CUCOMPLEX operator+(REAL a, CUCOMPLEX b) { return CUMAKE(a + b.x, b.y); }
+__device__ inline CUCOMPLEX operator+(CUCOMPLEX a, REAL b) { return CUMAKE(a.x + b, a.y); }
+__device__ inline CUCOMPLEX operator+(CUCOMPLEX a) { return a; }
 
-__device__ inline cuDoubleComplex operator-(CUCOMPLEX a, CUCOMPLEX b) { return CUCSUB(a, b); }
-__device__ inline cuDoubleComplex operator-(CUCOMPLEX a, REAL b) { return CUMAKE(a.x - b, a.y); }
-__device__ inline cuDoubleComplex operator-(REAL a, CUCOMPLEX b) { return CUMAKE(a - b.x, -b.y); }
-__device__ inline cuDoubleComplex operator-(CUCOMPLEX a) { return CUMAKE(-a.x, -a.y); }
+__device__ inline CUCOMPLEX operator-(CUCOMPLEX a, CUCOMPLEX b) { return CUCSUB(a, b); }
+__device__ inline CUCOMPLEX operator-(CUCOMPLEX a, REAL b) { return CUMAKE(a.x - b, a.y); }
+__device__ inline CUCOMPLEX operator-(REAL a, CUCOMPLEX b) { return CUMAKE(a - b.x, -b.y); }
+__device__ inline CUCOMPLEX operator-(CUCOMPLEX a) { return CUMAKE(-a.x, -a.y); }
 
-__device__ inline cuDoubleComplex operator/(CUCOMPLEX a, CUCOMPLEX b) { return CUCDIV(a,b); }
-__device__ inline cuDoubleComplex operator/(CUCOMPLEX a, REAL b) { return CUMAKE(a.x / b, a.y / b); }
-__device__ inline cuDoubleComplex operator/(REAL a, CUCOMPLEX b) { return CUMAKE(a * b.x / (b.x * b.x + b.y * b.y), -a * b.y / (b.x * b.x + b.y * b.y)); }
+__device__ inline CUCOMPLEX operator/(CUCOMPLEX a, CUCOMPLEX b) { return CUCDIV(a,b); }
+__device__ inline CUCOMPLEX operator/(CUCOMPLEX a, REAL b) { return CUMAKE(a.x / b, a.y / b); }
+__device__ inline CUCOMPLEX operator/(REAL a, CUCOMPLEX b) { return CUMAKE(a * b.x / (b.x * b.x + b.y * b.y), -a * b.y / (b.x * b.x + b.y * b.y)); }
 
 __device__ inline CUREAL CUCABS(CUCOMPLEX val) {
 

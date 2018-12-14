@@ -144,7 +144,7 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
   if(grid->cufft_handle_c2r == -1) {
     rcufft_workspace(&(grid->cufft_handle_c2r), (int) nx, (int) ny, (int) nz);
 #ifdef SINGLE_PREC
-    if((status = cufftMakePlan3d(grid->cufft_handle_c2r, (int) nx, (int) ny, (int) nz, CUFFT_C2R)) != CUFFT_SUCCESS) {
+    if((status = cufftMakePlan3d(grid->cufft_handle_c2r, (int) nx, (int) ny, (int) nz, CUFFT_C2R, &len)) != CUFFT_SUCCESS) {
 #else
     if((status = cufftMakePlan3d(grid->cufft_handle_c2r, (int) nx, (int) ny, (int) nz, CUFFT_Z2D, &len)) != CUFFT_SUCCESS) {
 #endif
