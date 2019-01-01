@@ -264,7 +264,7 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
   total_alloc -= ptr->length;
   if(cudaFree(ptr->gpu_mem) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): Failed to free memory.\n");
-    exit(1);
+    abort();
   }
   if(prev) prev->next = ptr->next;
   else gpu_blocks_head = ptr->next;
@@ -308,7 +308,7 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, char *id, ch
 #endif
   if(!(new = (gpu_mem_block *) malloc(sizeof(gpu_mem_block)))) {
     fprintf(stderr, "libgrid(cuda): Out of memory in allocating gpu_mem_block.\n");
-    exit(1);
+    abort();
   }
 
   /* Data not in GPU - try to allocate & possibly swap out other blocks */
@@ -1310,7 +1310,7 @@ EXPORT void cuda_gpu_info() {
 
   if(cudaGetDeviceCount(&ndev) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): Cannot get device count.\n");
-    exit(1);
+    abort();
   }
   for(i = 0; i < ndev; i++) {
     cudaGetDeviceProperties(&prop, i);
