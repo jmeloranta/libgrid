@@ -1,0 +1,234 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage[latin1]{inputenc}
+\usepackage{url}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\author{Jussi Eloranta}
+\title{libgrid manual}
+\begin{document}
+
+\section{Introduction}
+
+Libgrid provides routines for efficiently accessing and manipulating 1-D, 2-D, and 3-D Cartesian real and complex grids on Linux-based systems without the need of considering the underlying specialized hardware (e.g., OpenMP, CUDA). In addition to the basic grid operations such as grid allocation, release, Fourier transform, grid arithmetics, etc., it has also specialized routines for propagating time-dependent Schr\"odinger equation in real or imaginary time. The latter routines are required by libdft library, which solves various types of non-linear Schr\"odinger equations that describe superfluid $^4$He and Bose-Einstein condensates. Libgrid was written by Lauri Lehtovaara, David Mateo, and Jussi Eloranta, and is freely distributed according to GNU GENERAL PUBLIC LICENSE Version 3 (see doc/GPL.txt).
+
+\section{Installation}
+
+Installation of libgrid requires the following packages:
+\begin{itemize}
+\item git (a free and open source distributed version control system)
+\item GNU C compiler with OpenMP support (gcc)
+\item FFTW 3.x (Fast Fourier Transform package)
+\item LAPACK (Linear Algebra PACKage; optional)
+\item BLAS (Basic Linear Algebra Subprograms; optional)
+\end{itemize}
+To install these packages on Fedora linux, use (\# implies execution with root privileges): 
+\begin{verbatim}
+# dnf install git gcc fftw-* lapack lapack-devel blas blas-devel
+\end{verbatim}
+If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA drivers and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. This installation is compatible with the default settings in make.conf as described below. Currently, libgrid does not support OpenCL.
+
+To copy the current version of libgrid to subdirectory libgrid, issue (\% implies execution with normal user privileges):
+\begin{verbatim}
+% git clone https://github.com/jmeloranta/libgrid.git
+\end{verbatim}
+Change to libgrid directory and review the configuration settings:
+\begin{verbatim}
+% cd libgrid
+% more make.conf
+\end{verbatim}
+The options specified in this file determine how libgrid will be compiled. OpenMP support is included automatically with COMPILER = gcc.\\
+
+\begin{tabular}{ll}
+\textbf{Option} & \textbf{Description}\\
+\cline{1-2}
+COMPILER & gcc (normal use) or gcc-debug (non-parallel debugging version)\\
+REAL & Real floating point precision (float, double or quad precision).\\
+     & Note that for libdft use, single precision floats have limited use.\\
+INT & Integer number size (int or long)\\
+ROOT & Root installation directory (default /usr)\\
+CUDA & Set to "yes" if CUDA is installed and "no" if not. The default\\
+     & is to auto-detect.\\
+CUDA\_DEV & Which CUDA device number to use by default (0 = first GPU).\\
+          & Note: GPU device number can be changed in the user code.\\
+CUDAINC & Include file directory for CUDA C header files (default\\
+        & /usr/include/cuda).\\
+CUDALIB & Directory containing the CUDA libraries (default /usr/lib64).\\
+CUDA\_HOSTCC & GCC version that is compatible with the current installation of\\
+             & CUDA (default /usr/bin/cuda-gcc).\\
+CUDA\_CC & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
+CUDA\_FASTMATH & "yes" implies NVCC options: --ftz=true --prec-div=false\\
+               & --prec-sqrt=false --fmad=true and "no" implies options:\\
+               & --ftz=false --prec-div=true --prec-sqrt=true --fmad=true\\
+               & (default no).\\
+CUDA\_TPB & Number of CUDA threads per block (GPU architecture\\
+          & dependent; default 6).\\
+CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank\\
+             & -Nicolson). GPU architecture dependent value, 2 - 3\\
+             & (default 3).\\
+CUDA\_DEBUG & Whether to include debug code in libggrid CUDA routines\\
+            & ("yes" or "no"; default no).\\
+USE\_LAPACK & Some routines in libgrid use LAPACK (not needed for libdft).\\
+            & Use "yes" to include them or "no" to leave them out.\\
+AR & Archive program (default ar).\\
+\end{tabular}
+To compile the library, change to src subdirectory and issue make:
+\begin{verbatim}
+% cd src
+% make -j
+\end{verbatim}
+Provided that the compilation completed without errors, install the library (as root):
+\begin{verbatim}
+# make install
+\end{verbatim}
+
+\section{Accessing the library routines}
+
+To access libgrid functions in C program, the following header files should be included:
+\begin{verbatim}
+#include <grid/grid.h>
+#include <grid/au.h>
+\end{verbatim}
+where the first include file is required and the second optional include makes the following conversion factors available:\\
+
+\begin{tabular}{ll}
+GRID\_AUTOANG & Factor to convert from Bohr to \AA{}nstr\"om ($10^{-10}$ m).\\
+GRID\_AUTOM & Factor to convert from Bohr to meter.\\
+GRID\_AUTOK & Factor to convert from Hartee to Kelvin (energy; $kT$).\\
+GRID\_AUTOCM1 & Factor to convert from Hartree to wavenumber.\\
+GRID\_HZTOCM1 & Factor to convert from Hz to wavenumber.\\
+GRID\_AUTOAMU & Atomic unit mass (electron mass) to atomic mass\\
+              & unit (AMU).\\
+GRID\_AUTOFS & Atomic unit time to femtosecond.\\
+GRID\_AUTOS  & Atomic unit time to second.\\
+GRID\_AUTOBAR & Atomic pressure unit (Hartree/Bohr$^2$) to bar.\\
+GRID\_AUTOPA & Atomic pressure unit to Pa (Pascal).\\
+GRID\_AUTOATM & Atomic pressure unit to atm.\\
+GRID\_AUTOMPS & Atomic velocity unit to m/s.\\
+GRID\_AUTON & Atomic force unit to Newton (N).\\
+GRID\_AUTOVPM & Atomic electric field strength to V/m.\\
+GRID\_AUTOPAS & Atomic viscosity unit to Pa s.\\
+GRID\_AUKB & Boltzmann constant in a.u. ($k_B$)\\ 
+\end{tabular}\\
+
+\noindent
+Note that wherever applicable, librid will use the atomic unit system and the above conversion factors are provided for converting to other systems. To convert from atomic unit to another unit, multiply by the predefined factor above or, divide by it in order to convert the other way around.
+
+To compile and link a program using libgrid, it is most convenient to construct a makefile (note that the \$(CC) line has TAB as the first character):
+\begin{verbatim}
+include /usr/include/grid/make.conf
+
+test: test.o
+    $(CC) $(CFLAGS) -o test test.o $(LDFLAGS)
+
+test.o: test.c
+\end{verbatim}
+This will compile the program specified in test.c and link the appropriate libraries automatically. Both CFLAGS and LDFLAGS are obtained automatically from libgrid's make.conf. 
+
+\section{Data types}
+
+The libgrid header file defines the real and integer data types automatically according to those requested during the configuration step (make.conf). Instead of using float, double, int, long etc. directly, use REAL to represent a floating point number and INT to introduce the variables (e.g., REAL x, y; INT i;). To define complex number type, use REAL complex. Since the function names in the system math library vary depending on the floating point precision (e.g., expf(), exp(), expl()), libgrid defines the corresponding function in upper case such that is assigned to the function of the requested precision (e.g., EXP()). So, in order to call the exponential function, use, e.g., y = EXP(x);. Another place where the size of the REAL and INT data types are required is the scanf/printf standard I/O library routines. To print a REAL number with printf, use, for example, printf("value = " FMT\_R "$\backslash$n");. Or to print an INT use FMT\_I.
+
+Libgrid has built-in data types for 1-D, 2-D, and 3-D Cartesian REAL ("rgrid") and REAL complex ("cgrid") grids. To allocate such grids in a C program, first introduce them as pointers, e.g., rgrid *abc or cgrid *abc. Then use either rgrid\_alloc() or cgrid\_alloc() functions to allocate the space. For example:
+\begin{verbatim}
+   cgrid *abc;
+   abc = cgrid_alloc(32, 32, 32, 1.0, CGRID3D_PERIODIC_BOUNDARY, NULL);
+   ...
+   cgrid_free(abc);
+\end{verbatim}
+would allocate a periodic 3-D grid with dimensions 32x32x32 and spatial grid step length of 1.0 (for more information on the arguments to cgrid\_alloc() in Section 5). To get a 1-D grid, include it as the last dimension, e.g., 1x1x32, or for a 2-D grid use the two last dimensions, 1x32x32. It is important to follow this convention for performance reasons. In the code, coordinate $x$ corresponds to the first index, $y$ to the second, and $z$ to the third. By default, the origin is placed to the center of the grid.
+
+The basic properties of the above rgrid and cgrid data types are explained below.
+
+\subsection{Real grid data type (rgrid)}
+
+Data type rgrid corresponds to a structure with the following members:
+\begin{longtable}{p{.4\textwidth} p{.6\textwidth}}
+Member & Description\\
+\cline{1-2}
+REAL *value & Array holding the real grid point data.\\
+char id$[32]$ & String describing the grid (comment).\\
+size\_t grid\_len & Number of bytes allocated for value array.\\
+INT nx & Number of grid points along the 1st grid index ($x$).\\
+INT ny & Number of grid points along the 2nd grid index ($y$).\\
+INT nz & Number of grid points along the 3rd grid index ($z$).\\
+INT nz2 & This is equal to $2\times(nz / 2 + 1)$. Used for indexing *value.\\
+REAL step & Grid step length (equal in all directions).\\
+REAL x0 & Grid origin $x_0$ (default 0.0).\\
+REAL y0 & Grid origin $y_0$ (default 0.0).\\
+REAL z0 & Grid origin $z_0$ (default 0.0).\\
+REAL kx0 & Grid origin $k_{x,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL ky0 & Grid origin $k_{y,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL kz0 & Grid origin $k_{z,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL (*value\_outside) & Pointer to function returning values outside\\
+\phantom{X}(rgrid *, INT, INT, INT) & the grid.\\
+void *outside\_params\_ptr & Pointer for passing additional data to value\_outside function.\\
+REAL default\_outside\_params & Default REAL value for outside\_params\_ptr.\\
+fftwX\_plan plan & FFTW plan for forward FFT transforming the grid (X = f, empty, l).\\
+fftwX\_plan iplan & FFTW plan for inverse FFT transforming the grid (X = f, empty, l).\\
+cufftHandle cufft\_handle\_r2c & CUFFT handle for forward FFT transform (CUDA).\\
+cufftHandle cufft\_handle\_c2r & CUFFT handle for inverse FFT transform (CUDA).\\
+REAL fft\_norm & Normalization factor for FFT (without including the step length).\\
+REAL fft\_norm2 & Normalization factor for FFT (including the step length).\\
+\end{longtable}
+
+\noindent
+Note that rgrid is the same as struct rgrid\_struct type. To reference the value at index (i, j, k) in grid-$>$value, use:
+\begin{verbatim}
+grid->value[(i * grid->ny + j) * grid->nz2 + k]
+\end{verbatim}
+The same indexing applies to 1-D (i = j = 0) and 2-D grids with (i = 0). This does not account for the grid boundary condition. Library function rgrid\_value\_at\_index(rgrid *grid, INT i, INT j, INT k) can be used to retrieve the value subject to the chosen boundary condition automatically. To set value for a grid point at (i, j, k), library function rgrid\_value\_to\_index(rgrid *grid, INT i, INT j, INT k, REAL value) can be used. This function does not consider the boundary condition assigned to the grid. Note that a different indexing scheme must be used if the grid is in the reciprocal (Fourier) space:
+\begin{verbatim}
+grid->value[(i * grid->ny + j) * (grid->nz / 2 + 1) + k]
+\end{verbatim}
+Alternatively, function rgrid\_cvalue\_at\_index(rgrid *grid, INT i, INT j, INT k) can be used.
+
+\subsection{Complex grid data type (cgrid)}
+
+Data type cgrid corresponds to a structure with the following members:
+\begin{longtable}{p{.55\textwidth} p{.45\textwidth}}
+Member & Description\\
+\cline{1-2}
+REAL complex *value & Array holding the complex grid point data.\\
+char id[32] & String describing the grid (comment).\\ 
+size\_t grid\_len; & Number of bytes allocated for the value array.\\
+INT nx & Number of grid points along the 1st grid index ($x$).\\
+INT ny & Number of grid points along the 2nd grid index ($y$).\\
+INT nz & Number of grid points along the 3rd grid index ($z$).\\
+REAL step & Grid step length (equal in all directions).\\
+REAL x0 & Grid origin $x_0$ (default 0.0).\\
+REAL y0 & Grid origin $y_0$ (default 0.0).\\
+REAL z0 & Grid origin $z_0$ (default 0.0).\\
+REAL kx0 & Grid origin $k_{x,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL ky0 & Grid origin $k_{y,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL kz0 & Grid origin $k_{z,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL omega & Rotation frequency around $z$-axis (rotating flow).\\
+REAL complex (*value\_outside) & Pointer to function returning values outside\\
+\phantom{X}(cgrid *grid, INT, INT, INT) & the grid.\\
+void *outside\_params\_ptr & Pointer for passing additional data to value\_outside function.\\
+REAL complex default\_outside\_params & Default REAL complex value for outside\_params\_ptr.\\
+fftwX\_plan plan & FFTW plan for forward FFT transforming the grid (X = f, empty, l).\\
+fftwX\_plan iplan & FFTW plan for inverse FFT transforming the grid (X = f, empty, l).\\
+fftwX\_plan implan & Like plan but for non-periodic boundaries (untested).\\
+fftwX\_plan iimplan & Like iplan but for non-periodic boundaries (untested).\\
+cufftHandle cufft\_handle & CUFFT handle for FFT transforms using CUDA.\\
+REAL fft\_norm & Normalization factor for FFT (without including the step length).\\
+REAL fft\_norm2 & Normalization factor for FFT (including the step length).\\
+\end{longtable}
+Indexing of the grid values follow the same convention as for rgrid data type.
+
+\subsection{Wave function data type (wf)}
+
+Wave functions are special objects that contain a complex grid (wave function values) and all other necessary parameters such that it can be propagated in time by using a non-linear Schr\"odinger equation. This data type is mostly used in libdft library.
+
+\section{Library functions}
+
+Functions in libgrid are divided into following classes: 1) rgrid\_* (real valued grids; rgrid), 2) cgrid\_* (complex valued grids; cgrid), and 3) grid\_wf\_* (grids describing a wavefunction; wf). 
+
+\section{Examples}
+
+\section{References}
+
+\end{document}
