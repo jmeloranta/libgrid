@@ -1572,10 +1572,10 @@ EXPORT void rgrid_fd_gradient_z(rgrid *grid, rgrid *gradient) {
 /*
  * Calculate gradient of a grid.
  *
- * grid       = grid to be differentiated twice (rgrid *; input).
- * gradient_x = x output grid for the operation (rgrid *; output).
- * gradient_y = y output grid for the operation (rgrid *; output).
- * gradient_z = z output grid for the operation (rgrid *; output).
+ * grid       = grid to be differentiated (rgrid *; input).
+ * gradient_x = x component grid for the operation (rgrid *; output).
+ * gradient_y = y component grid for the operation (rgrid *; output).
+ * gradient_z = z component grid for the operation (rgrid *; output).
  *
  * No return value.
  *
@@ -1620,8 +1620,8 @@ EXPORT void rgrid_fd_laplace(rgrid *grid, rgrid *laplace) {
     for(k = 0; k < nz; k++)
       lvalue[ijnz + k] = inv_delta2 * (-6.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k + 1)
 				       + rgrid_value_at_index(grid, i, j, k - 1) + rgrid_value_at_index(grid, i, j + 1, k) 
-				       + rgrid_value_at_index(grid, i, j - 1, k) + rgrid_value_at_index(grid,i + 1, j, k)
-				       + rgrid_value_at_index(grid,i - 1, j, k));
+				       + rgrid_value_at_index(grid, i, j - 1, k) + rgrid_value_at_index(grid, i + 1, j, k)
+				       + rgrid_value_at_index(grid, i - 1, j, k));
   }
 }
 
@@ -1882,7 +1882,7 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
  * Convolute FFT transformed grids (periodic). To apply this on grids grida and gridb and place the result in gridc:
  * rgrid_fft(grida);
  * rgrid_fft(gridb);
- * rgrid_convolue(gridc, grida, gridb);
+ * rgrid_convolute(gridc, grida, gridb);
  * rgrid_inverse_fft(gridc);
  * gridc now contains the convolution of grida and gridb.
  *

@@ -810,6 +810,259 @@ rgrid *gridb & 2nd grid for integration.\\
 \noindent
 This function returns the value of the overlap integral (REAL).
 
+\subsubsection{rgrid\_grid\_expectation\_value\_func() -- Expectation value of function over grid squared}
+
+Calculate the expectation value of a function over grid squared: int grida func() grida = int func() grida$^2$. This function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+REAL (*func)() & Function to be averaged. The arguments to this functions are given below.\\
+rgrid *grida & Grid giving the probability density (grida$^2$).\\
+\end{longtable}
+\noindent
+The arguments to (*func)() are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+void *arg & Pointer to use supplied data to the function.\\
+REAL val & Value of grida at the current point.\\
+REAL x & Current value of $x$.\\
+REAL y & Current value of $y$.\\
+REAL z & Current value of $z$.\\
+\end{longtable}
+\noindent
+This user supplied function return the function value to be averaged (REAL). Function rgrid\_grid\_expectation\_value\_func() returns the expectation value (REAL).
+
+\subsubsection{rgrid\_weighted\_integral() -- Integral of grid over weighting function}
+
+Integrate over grid multiplied by weighting function: int grid w(x,y,z). This function takes the arguments as:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be integrated over.\\
+REAL (*weight)() = Function defining the weight. The arguments to this function are given below.\\
+void *farg & Use supplied argument to the weight function.\\
+\end{longtable}
+\noindent
+The weight function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+void *farg & User supplied data to (*weight)().\\
+x & Current $x$ coordinate.\\
+y & Current $y$ coordinate.\\
+z & Current $z$ coordinate.\\
+\end{longtable}
+\noindent
+Function rgrid\_weighted\_integral() returns the value of the integral (REAL).
+
+\subsubsection{rgrid\_weighted\_integral\_of\_square() -- Integral of grid squared over weighting function}
+
+Integrate over grid squared multiplied by weighting function: int grid$^2$ w(x,y,z). This function takes the arguments as:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be integrated over.\\
+REAL (*weight)() = Function defining the weight. The arguments to this function are given below.\\
+void *farg & Use supplied argument to the weight function.\\
+\end{longtable}
+\noindent
+The weight function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+void *farg & User supplied data to (*weight)().\\
+x & Current $x$ coordinate.\\
+y & Current $y$ coordinate.\\
+z & Current $z$ coordinate.\\
+\end{longtable}
+\noindent
+Function rgrid\_weighted\_integral\_of\_square() returns the value of the integral (REAL).
+
+\subsubsection{rgrid\_fd\_gradient\_x() -- Differentiate grid with respect to x}
+
+Differentiate a grid with respect to $x$ (central difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient & Grid containing the derivative (output).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_gradient\_y() -- Differentiate grid with respect to y}
+
+Differentiate a grid with respect to $y$ (central difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient & Grid containing the derivative (output).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_gradient\_z() -- Differentiate grid with respect to z}
+
+Differentiate a grid with respect to $z$ (central difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient & Grid containing the derivative (output).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_gradient() -- gradient of a grid}
+
+Calculate gradient of a grid (finite difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be differentiated.\\
+rgrid *gradient\_x & $x$ component derivative grid.\\
+rgrid *gradient\_y & $y$ component derivative grid.\\
+rgrid *gradient\_z & $z$ component derivative grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_laplace() -- Laplace of a grid}
+
+Calculate Laplacian of a grid (finite difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be differentiated.\\
+rgrid *laplace & Grid containing the Laplacian.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_laplace\_x() -- 2nd derivative of a grid (x)}
+
+Calculate 2nd derivative of a grid with respect to $x$ (finite difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be differentiated.\\
+rgrid *laplacex & Grid containing the 2nd derivative.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_laplace\_y() -- 2nd derivative of a grid (y)}
+
+Calculate 2nd derivative of a grid with respect to $y$ (finite difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be differentiated.\\
+rgrid *laplacey & Grid containing the 2nd derivative.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_laplace\_z() -- 2nd derivative of a grid (z)}
+
+Calculate 2nd derivative of a grid with respect to $z$ (finite difference). The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be differentiated.\\
+rgrid *laplacez & Grid containing the 2nd derivative.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fd\_gradient\_dot\_gradient() -- Dot product of gradient of grid with itself}
+
+This function calculates dot product of the gradient of the grid with itself: $\nabla$ grid $\cdot$ $\nabla$ grid (finite difference). It takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid  & Source grid for the operation.\\
+rgrid *grad\_dot\_grad & Destination grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_print() -- Print contents of grid in ASCII}
+
+This function print a given grid into file in ASCII format. The arguments are as follows:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be printed.\\
+FILE *out & Output file pointer.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_fft() -- Fast forward Fourier transform of grid}
+
+Perform forward Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. No normalization of the output is performed. Note that the indexing of the complex data is different from the real data (see FFTW manual). The function does not return any value. 
+
+\subsubsection{rgrid\_inverse\_fft() -- Fast inverse Fourier transform of grid}
+
+Perform inverse Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. No normalization of the output is performed. The function does not return any value.
+
+\subsubsection{rgrid\_scaled\_inverse\_fft() -- Scaled fast inverse Fourier transform of grid}
+
+Perform scaled inverse Fourier transformation of a grid. The grid for FFT is given as the first argument (rgrid *) followed by normalization constant (i.e., transformed data multiplied by this value). The grid is overwritten by the result. The function does not return any value.
+
+\subsubsection{rgrid\_inverse\_fft\_norm() -- Normalized fast inverse Fourier transform of grid}
+
+Perform normalized inverse Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. The output is normalized (i.e., doing forward FFT followed by this yields the original data). The function does not return any value.
+
+\subsubsection{rgrid\_fft\_convolute() -- Convolution in reciprocal space}
+
+Multiply two grids that are in reciprocal space. Convolution between grida and gridb can be obtained by:
+\begin{verbatim}
+ rgrid_fft(grida);
+ rgrid_fft(gridb);
+ rgrid_convolute(gridc, grida, gridb);
+ rgrid_inverse_fft(gridc);
+\end{verbatim}
+The output will be in gridc. This function takes three arguments as follows:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grida & 1st grid to be convoluted.\\ 
+rgrid *gridb & 2nd grid to be convoluted.\\
+rgrud *gridc & Output.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_multiply\_fft() -- Multiply grid in reciprocal space by constant}
+
+Multiply grid in reciprocal space by a constant (grid-$>$value is complex). The arguments are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be multiplied. Note that the values are actually complex.\\
+REAL c & Multiply the grid by this value.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{rgrid\_value\_at\_index() -- Access grid point at given index}
+
+This function returns grid point value at a given index (follows boundary condition). The arguments are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be accessed.\\
+INT i & Index along $x$.\\
+INT j & Index along $y$.\\
+INT k & Index along $z$.\\
+\end{longtable}
+\noindent
+This function returns the grid point value (REAL). Note that in CUDA this function is very slow as it transfers every element individually.
+
 \subsection{Complex grid routines}
 
 \subsection{Mixed real - complex grid routines}
