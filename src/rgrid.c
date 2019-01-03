@@ -196,11 +196,11 @@ EXPORT void rgrid_shift_origin(rgrid *grid, REAL x0, REAL y0, REAL z0) {
  * kz0     = Momentum origin along the Z axis (REAL; input).
  *
  * kx0, ky0 and kz0 can be any real numbers but keep in mind that the grid
- * will only contain the compoent k = 0 if they are multiples of:
+ * will only contain the component k = 0 if they are multiples of:
  *
- *  kx0min = 2 * M_PI * HBAR / (NX * STEP * MASS) 
- *  ky0min = 2 * M_PI * HBAR / (NY * STEP * MASS) 
- *  kz0min = 2 * M_PI * HBAR / (NZ * STEP * MASS)
+ *  kx0min = 2 * M_PI / (NX * STEP) 
+ *  ky0min = 2 * M_PI / (NY * STEP) 
+ *  kz0min = 2 * M_PI / (NZ * STEP)
  *
  * No return value.
  *
@@ -279,7 +279,7 @@ EXPORT void rgrid_write(rgrid *grid, FILE *out) {
  *        Note that the boundary condition will assigned to PERIODIC by default.
  * in   = file handle for reading the file (FILE *; input).
  *
- * Returns value to the grid (NULL on error).
+ * Returns pointer to the grid (NULL on error).
  *
  */
 
@@ -550,7 +550,7 @@ EXPORT void rgrid_smooth_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y
 }
 
 /*
- * Map a given function onto  grid with linear "smoothing".
+ * Map a given function onto grid with linear "smoothing".
  * This can be used to weight the values at grid points to produce more
  * accurate integration over the grid. Limits for intermediate steps and
  * tolerance can be given.
@@ -562,7 +562,7 @@ EXPORT void rgrid_smooth_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y
  * farg   = pointer to user specified data (void *; input).
  * min_ns = minimum number of intermediate points to be used in smoothing (INT; input).
  * max_ns = maximum number of intermediate points to be used in smoothing (INT; input).
- * tol    = tolerance for weighing (REAL; input).
+ * tol    = tolerance for the converge of integral over the function (REAL; input).
  *
  * No return value.
  *
@@ -943,7 +943,7 @@ EXPORT void rgrid_multiply_and_add(rgrid *grid, REAL cm, REAL ca) {
 }
 
 /* 
- * Add scaled grid (multiply/add): gridc = gridc + d * grida
+ * Add scaled grids (multiply/add): gridc = gridc + d * grida
  *
  * gridc = destination grid for the operation (rgrid *; input/output).
  * d     = multiplier for the operation (REAL; input).
@@ -1011,6 +1011,7 @@ EXPORT void rgrid_add_scaled_product(rgrid *gridc, REAL d, rgrid *grida, rgrid *
  * grida    = source grid (rgrid *; input).
  * operator = operator (REAL (*)(REAL, void *); input). Args are value and param pointer.
  *            (i.e., a function mapping a given R-number to another)
+ * params   = parameters for operator (void *).
  *
  * No return value.
  *
@@ -1046,6 +1047,7 @@ EXPORT void rgrid_operate_one(rgrid *gridc, rgrid *grida, REAL (*operator)(REAL 
  * grida    = source grid (rgrid *; input).
  * operator = operator (REAL (*)(REAL), void *; input). Args are value and params.
  *            (i.e., a function mapping a given R-number to another)
+ * params   = user supplied parameters to operator (void *).
  *
  * No return value.
  *
@@ -1080,7 +1082,7 @@ EXPORT void rgrid_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, 
  * where O is the operator.
  *
  * gridc    = destination grid (rgrid *; output).
- * grida    = 1s source grid (rgrid *; input).
+ * grida    = 1st source grid (rgrid *; input).
  * gridb    = 2nd source grid (rgrid *; input).
  * operator = operator mapping grida and gridb (REAL (*)(REAL, REAL); input).
  *
@@ -1264,18 +1266,20 @@ EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL y
 EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
-  REAL sum, step = grid->step;
+  REAL sum, step = grid->step, tmp;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_integral_of_square(grid, &sum)) return sum;
 #endif
 
   sum = 0.0;
-#pragma omp parallel for firstprivate(nx,ny,nz,grid) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,grid) private(i,j,k,tmp) reduction(+:sum) default(none) schedule(runtime)
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
-      for (k = 0; k < nz; k++)
-	sum += sqnorm(rgrid_value_at_index(grid, i, j, k));
+      for (k = 0; k < nz; k++) {
+        tmp = rgrid_value_at_index(grid, i, j, k);
+	sum += tmp * tmp;
+      }
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
@@ -1305,8 +1309,9 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 #pragma omp parallel for firstprivate(nx,ny,nz,grida,gridb) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
-      for (k = 0; k < nz; k++)
+      for (k = 0; k < nz; k++) {
 	sum += rgrid_value_at_index(grida, i, j, k) * rgrid_value_at_index(gridb, i, j, k);
+      }
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
@@ -1315,9 +1320,9 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 
 /*
  * Calculate the expectation value of a grid over a grid.
- * (int gridb grida gridb = int grida gridb^2).
+ * (int grida gridb grida = int gridb grida^2).
  *
- * grida = grid giving the probability (gridb^2) (rgrid *; input).
+ * grida = grid giving the probability (grida^2) (rgrid *; input).
  * gridb = grid to be averaged (rgrid *; input).
  *
  * Returns the average value (REAL *).
@@ -1327,18 +1332,20 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 EXPORT REAL rgrid_grid_expectation_value(rgrid *grida, rgrid *gridb) {
 
   INT i, j, k, nx = grida->nx, ny = grida->ny, nz = grida->nz;
-  REAL sum, step = grida->step;
+  REAL sum, step = grida->step, tmp;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_grid_expectation_value(grida, gridb, &sum)) return sum;
 #endif
 
   sum = 0.0;
-#pragma omp parallel for firstprivate(nx,ny,nz,grida,gridb) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,grida,gridb) private(i,j,k,tmp) reduction(+:sum) default(none) schedule(runtime)
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
-      for (k = 0; k < nz; k++)
-	sum += sqnorm(rgrid_value_at_index(grida, i, j, k)) * rgrid_value_at_index(gridb, i, j, k);
+      for (k = 0; k < nz; k++) {
+        tmp = rgrid_value_at_index(grida, i, j, k);
+	sum += tmp * tmp * rgrid_value_at_index(gridb, i, j, k);
+      }
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
@@ -1374,7 +1381,7 @@ EXPORT REAL rgrid_grid_expectation_value_func(void *arg, REAL (*func)(void *arg,
       for (k = 0; k < nz; k++) {
 	z = ((REAL) (k - nz2)) * step - z0;
 	tmp = rgrid_value_at_index(grida, i, j, k);
-	sum += sqnorm(tmp) * func(arg, tmp, x, y, z);
+	sum += tmp * tmp * func(arg, tmp, x, y, z);
       }
     }
   }
@@ -1436,20 +1443,21 @@ EXPORT REAL rgrid_weighted_integral(rgrid *grid, REAL (*weight)(void *farg, REAL
 EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *farg, REAL x, REAL y, REAL z), void *farg) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
-  REAL sum = 0.0, step = grid->step, x0 = grid->x0, y0 = grid->y0, z0 = grid->z0, x, y, z;
+  REAL sum = 0.0, step = grid->step, x0 = grid->x0, y0 = grid->y0, z0 = grid->z0, x, y, z, tmp;
   
 #ifdef USE_CUDA
   if(cuda_status()) cuda_remove_block(grid->value, 1);
 #endif
 
-#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,grid,x0,y0,z0,step,weight,farg) private(x,y,z,i,j,k) reduction(+:sum) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,grid,x0,y0,z0,step,weight,farg) private(x,y,z,i,j,k,tmp) reduction(+:sum) default(none) schedule(runtime)
   for (i = 0; i < nx; i++) {
     x = ((REAL) (i - nx2)) * step - x0;
     for (j = 0; j < ny; j++) {
       y = ((REAL) (j - ny2)) * step - y0;
       for (k = 0; k < nz; k++) {
 	z = ((REAL) (k - nz2)) * step - z0;
-	sum += weight(farg, x, y, z) * sqnorm(rgrid_value_at_index(grid, i, j, k));
+        tmp = rgrid_value_at_index(grid, i, j, k);
+	sum += weight(farg, x, y, z) * tmp * tmp;
       }
     }
   }
@@ -1737,7 +1745,7 @@ EXPORT void rgrid_fd_laplace_z(rgrid *grid, rgrid *laplacez) {
 EXPORT void rgrid_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad) {
 
   INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_2delta2 = 1.0 / (2.0 * grid->step * 2.0 * grid->step), *gvalue = grad_dot_grad->value;
+  REAL inv_2delta2 = 1.0 / (2.0 * grid->step * 2.0 * grid->step), *gvalue = grad_dot_grad->value, tmp;
   
   if(grid == grad_dot_grad) {
     fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_dot_gradient().\n");
@@ -1749,16 +1757,20 @@ EXPORT void rgrid_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad) {
 #endif
 
 /*  grad f(x,y,z) dot grad f(x,y,z) = [ |f(+,0,0) - f(-,0,0)|^2 + |f(0,+,0) - f(0,-,0)|^2 + |f(0,0,+) - f(0,0,-)|^2 ] / (2h)^2 */
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,gvalue,inv_2delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,gvalue,inv_2delta2,grid) private(ij,ijnz,i,j,k,tmp) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
     j = ij % ny;
-    for(k = 0; k < nz; k++)
-      gvalue[ijnz + k] = inv_2delta2 * 
-	(sqnorm(rgrid_value_at_index(grid, i, j, k + 1) - rgrid_value_at_index(grid, i, j, k - 1)) 
-         + sqnorm(rgrid_value_at_index(grid, i, j + 1, k) - rgrid_value_at_index(grid, i, j - 1, k))
-	 + sqnorm(rgrid_value_at_index(grid, i + 1, j, k) - rgrid_value_at_index(grid, i - 1, j, k)));
+    for(k = 0; k < nz; k++) {
+      tmp = rgrid_value_at_index(grid, i, j, k + 1) - rgrid_value_at_index(grid, i, j, k - 1); tmp *= tmp;
+      gvalue[ijnz + k] = tmp;
+      tmp = rgrid_value_at_index(grid, i, j + 1, k) - rgrid_value_at_index(grid, i, j - 1, k); tmp *= tmp;
+      gvalue[ijnz + k] += tmp;
+      tmp = rgrid_value_at_index(grid, i + 1, j, k) - rgrid_value_at_index(grid, i - 1, j, k); tmp *= tmp;
+      gvalue[ijnz + k] += tmp;
+      gvalue[ijnz + k] *= inv_2delta2;
+    }
   }
 }
 

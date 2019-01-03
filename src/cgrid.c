@@ -181,9 +181,9 @@ EXPORT void cgrid_shift_origin(cgrid *grid , REAL x0, REAL y0, REAL z0) {
 /*
  * Set the origin in the momentum space (or the moving frame of reference).
  * kx0, ky0 and kz0 should be multiples of
- *  kx0min = 2.0 * M_PI * HBAR / (NX * STEP * MASS) 
- *  ky0min = 2.0 * M_PI * HBAR / (NY * STEP * MASS) 
- *  kz0min = 2.0 * M_PI * HBAR / (NZ * STEP * MASS)
+ *  kx0min = 2.0 * M_PI / (NX * STEP) 
+ *  ky0min = 2.0 * M_PI / (NY * STEP) 
+ *  kz0min = 2.0 * M_PI / (NZ * STEP)
  *
  * kx0 = Momentum origin along x (REAL; input). 
  * ky0 = Momentum origin along y (REAL; input). 
@@ -1390,9 +1390,9 @@ EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gri
 
 /*
  * Calculate the expectation value of a grid over a grid.
- * (int gridb^* grida gridb = int grida |gridb|^2).
+ * (int gridb^* grida gridb = int gridb |grida|^2).
  *
- * grida = grid giving the probability (|gridb|^2) (cgrid *; input).
+ * grida = grid giving the probability (|grida|^2) (cgrid *; input).
  * gridb = grid to be averaged (cgrid *; input).
  *
  * Returns the average value (REAL complex).
