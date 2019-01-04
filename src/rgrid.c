@@ -18,6 +18,23 @@
 #include <cuda.h>
 #endif
 
+/*
+ * Subroutine for rotating grid around z axis.
+ *
+ */
+
+static REAL rgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
+
+  /* Unpack the values in arg */ 
+  rgrid *grid = ((rotation *) arg)->rgrid;
+  REAL sth = ((rotation *) arg)->sinth, cth = ((rotation *) arg)->costh, xp, yp;
+
+  xp = -y * sth + x * cth; 
+  yp =  y * cth + x * sth;
+
+  return rgrid_value(grid, xp, yp, z);
+}
+
 #ifdef USE_CUDA
 static char rgrid_bc_conv(rgrid *grid) {
 

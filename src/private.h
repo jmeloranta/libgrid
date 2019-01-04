@@ -149,21 +149,4 @@ static inline REAL shift_rgrid(void *arg, REAL x, REAL y, REAL z) {
   return rgrid_value(params->grid, x - params->x, y - params->y, z - params->z);
 }
 
-/*
- * Subroutine for rotating grid around z axis.
- *
- */
-
-static REAL rgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
-
-  /* Unpack the values in arg */ 
-  rgrid *grid = ((rotation *) arg)->rgrid;
-  REAL sth = ((rotation *) arg)->sinth, cth = ((rotation *) arg)->costh, xp, yp;
-
-  xp = -y * sth + x * cth; 
-  yp =  y * cth + x * sth;
-
-  return rgrid_value(grid, xp, yp, z);
-}
-
 #endif /*  __GRIDPRIVATE__ */
