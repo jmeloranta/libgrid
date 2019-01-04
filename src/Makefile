@@ -2,17 +2,19 @@
 # To add new ext/function, add another entry to SRC and NVSRC below
 #
 
-include ../make.conf
-
+CUDA = $(shell ./cuda-detect.sh)
 ifeq ($(CUDA),yes)
 CUDA_CC = $(shell ./get_cc.sh)
 endif
+
+include ../make.conf
 
 all:
 ifeq ($(CUDA),yes)
 	echo "CUDA enabled for GPU architecture " $(CUDA_CC)
 	echo $(CUDA_CC) > cuda.arch
 endif
+	echo $(CUDA) > cuda.status
 	make prototypes
 	make libgrid.a
 
@@ -53,6 +55,7 @@ install:
 	-mkdir $(ROOT)/include/grid
 	cp *.h $(ROOT)/include/grid
 	-cp cuda.arch $(ROOT)/include/grid
+	-cp cuda.status $(ROOT)/include/grid
 	cp ../make.conf $(ROOT)/include/grid
 
 clean:
