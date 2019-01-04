@@ -575,7 +575,7 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
   REAL tol2 = tol * tol;
   REAL sum, sump;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
-  REAL *value = grid->value;
+  REAL *value = grid->value, tmp;
   
   if (min_ns < 1) min_ns = 1;
   if (max_ns < min_ns) max_ns = min_ns;
@@ -584,7 +584,7 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
   if(cuda_status()) cuda_remove_block(grid->value, 0);
 #endif
 
-#pragma omp parallel for firstprivate(stderr,farg,nx,ny,nz,nzz,nx2,ny2,nz2,nxy,min_ns,max_ns,step,func,value,tol2,x0,y0,z0) private(i,j,k,ijnz,ns,xc,yc,zc,sum,sump) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(stderr,farg,nx,ny,nz,nzz,nx2,ny2,nz2,nxy,min_ns,max_ns,step,func,value,tol2,x0,y0,z0) private(i,j,k,ijnz,ns,xc,yc,zc,sum,sump,tmp) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
@@ -597,7 +597,8 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
       for(ns = min_ns; ns <= max_ns; ns *= 2) {
         sum  = linearly_weighted_integralr(func, farg, xc, yc, zc, step, ns);
         sump = linearly_weighted_integralr(func, farg, xc, yc, zc, step, ns + 1);
-        if (sqnorm(sum - sump) < tol2) break;
+        tmp = sum - sump;
+        if (tmp * tmp < tol2) break;
       }
 #if 0
       if (ns >= max_ns)
@@ -608,9 +609,8 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
         fprintf(stderr, "-");
 #endif      
       value[ijnz + k] = 0.5 * (sum + sump);
-    }
-    
-    /*fprintf(stderr, "\n");*/
+    }    
+// fprintf(stderr, "\n");
   }
 }
 
