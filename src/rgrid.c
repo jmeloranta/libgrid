@@ -172,7 +172,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
  *
  */
 
-void rgrid_claim(rgrid *grid) {
+EXPORT void rgrid_claim(rgrid *grid) {
 
   if(grid->flag) {
     fprintf(stderr, "libgrid: Attempting to claim grid twice.\n");
@@ -190,7 +190,7 @@ void rgrid_claim(rgrid *grid) {
  *
  */
 
-void rgrid_release(rgrid *grid) {
+EXPORT void rgrid_release(rgrid *grid) {
 
   if(!grid->flag) {
     fprintf(stderr, "libgrid: Attempting to release grid twice.\n");
