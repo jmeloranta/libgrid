@@ -1,3 +1,4 @@
+- Add status field in grids. Libdft could use this to track which workspaces are in use.
 - use malloc/free when moving blocks to/from GPU. This way the GPU node does not need as much memory.
 - write kernels in .h files that can be included by both openmp and cuda code.
 - try using local memory for derivatives etc. (avooid jumping in memory)

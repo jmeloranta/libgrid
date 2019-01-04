@@ -1063,9 +1063,240 @@ INT k & Index along $z$.\\
 \noindent
 This function returns the grid point value (REAL). Note that in CUDA this function is very slow as it transfers every element individually.
 
+\subsubsection{rgrid\_value\_to\_index() -- Set value to grid at given index}
+
+This function puts a specified value to a given index location in a grid. It takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be accessed.\\
+INT i & 1st index ($x$).\\
+INT j & 2nd index ($y$).\\
+INT k & 3rd index ($z$).\\
+REAL value & Value to be set at grid location (i, j, k).\\
+\end{longtable}
+\noindent
+This function does not return any value. Note that in CUDA this function is very slow as it transfers every element individually.
+
+\subsubsection{rgrid\_cvalue\_at\_index() -- Access grid point in reciprocal space}
+
+This function returns (complex) grid point value at a given index when the grid is in reciprocal space (i.e., it has been Fourier transformed). It takes arguments as follows:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be accessed. The data is complex (after FFT).\\
+INT i & 1st index ($x$).\\
+INT j & 2nd index ($y$).\\
+INT k & 3rd index ($z$).\\
+\end{longtable}
+\noindent
+The function returns (REAL complex) value at grid point (i, j, k). Note that in CUDA this function is very slow as it transfers every element individually.
+
+\subsubsection{rgrid\_value() -- Access grid point at (x, y, z)}
+
+This function returns grid point at given (x, y, z) point where linear interpolation is used between the grid points. The arguments are as follows:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be accessed.\\
+REAL x & $x$ value.\\
+REAL y & $y$ value.\\
+REAL z & $z$ value.\\
+\end{longtable}
+\noindent
+This function returns (REAL) value at grid position (x, y, z). Note that in CUDA this function is very slow as it transfers every element individually.
+
+\subsubsection{rgrid\_extrapolate() -- Extrapolate between two grid sizes}
+
+This function extrapolates between grids of different sizes (both size and step) using linear interpolation. It takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dest & Destination grid.\\
+rgrid *src  & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_rotate\_z() -- Rotate contents of grid around $z$-axis}
+
+Rotate contents of a grid by a given angle around the $z$-axis. The function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *in & The original grid (to be rotated).\\                                                                                
+rgrid *out & Output grid (rotated grid).\\
+REAL th & Rotation angle in radians.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_max() -- Largest value on grid}
+
+Return the largest value contained in a grid (REAL). This function takes only one argument (rgrid *grid), which specifies the grid to be searched.
+
+\subsubsection{rgrid\_max() -- Smallest value on grid}
+
+Return the smallest value contained in a grid (REAL). This function takes only one argument (rgrid *grid), which specifies the grid to be searched.
+
+\subsubsection{rgrid\_random() -- Add random noise to grid}
+
+Add random numbers to given grid within [-scale,+scale[. The arguments are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid where random numbers will be added.\\
+REAL scale & Specify the scale for random numbers.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_poisson() -- Solve Poisson equation}
+
+This routine solves Poisson equation ($\Delta f = u$) subject to periodic boundaries. It
+uses finite difference for Laplacian (7 point) and FFT. It takes one grid (rgrid *) as argument, which on entry describes the right hand side function ($u$). On exit, this grid is replaced by the solution ($f$). The function does not return any value.
+
+\subsubsection{rgrid\_div() -- Divergence of vector field}
+
+Calculate divergence of a given vector field. The arguments are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *div & Result grid.\\
+rgrid *fx  & $x$ component of the vector field.\\
+rgrid *fy  & $y$ component of the vector field.\\
+rgrid *fz  & $z$ component of the vector field.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_rot() -- Rot of vector field}
+
+Calculate rot of a given vector field. The arguments are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *rotx & Result grid ($x$ component).\\
+rgrid *roty & Result grid ($y$ component).\\
+rgrid *rotz & Result grid ($z$ component).\\
+rgrid *fx  & $x$ component of the vector field.\\
+rgrid *fy  & $y$ component of the vector field.\\
+rgrid *fz  & $z$ component of the vector field.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_abs\_rot() -- Norm of rot of vector field}
+
+Calculate norm of rot of a given vector field ($|$rot$|$). The arguments are:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *rot & Result grid.\\
+rgrid *fx  & $x$ component of the vector field.\\
+rgrid *fy  & $y$ component of the vector field.\\
+rgrid *fz  & $z$ component of the vector field.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_dealias23() -- Dealias in Fourier space (2/3 rule)}
+
+This function performs de-alias of a grid in Fourier space by the 2/3 rule: zero high wavenumber components between: [n/2 - n/3, n/2 + n/3] in each direction (except the last dimension is [nz - nz/3, nz]). The only argument is the grid (rgrid *; in reciprocal space) that will be operated on. The function does not return any value.
+
+\subsubsection{rgrid\_ipower() -- Rise grid to integer power}
+
+Raise given grid to a specified integer power (fast -- not using POW()). The following arguments are required:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dst & Destination grid.\\
+rgrid *src & Source grid for operation.\\
+INT exponent & Exponent to be used. This value can be negative.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsubsection{rgrid\_threshold\_clear() -- Set grid value based on threshold values}
+
+Set a value to given grid points based on upper/lower limit thresholds of another grid (which may correspond to same grids). This function takes the following arguments:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dest & Destination grid.\\
+rgrid *src  & Source grid for evaluating the thresholds.\\
+REAL ul & Upper limit threshold for the operation.\\
+REAL ll & Lower limit threshold for the operation.\\
+REAL uval & Value to set when the upper limit was exceeded.\\
+REAL lval & Value to set when the lower limit was exceeded.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
 \subsection{Complex grid routines}
 
 \subsection{Mixed real - complex grid routines}
+
+
+\subsubsection{grid\_real\_to\_complex\_re() -- Copy real grid to real part of complex grid}
+
+Copy a real grid to real part of a complex grid (imaginary part is set to zero). The following arguments apply:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *dest & Destination grid.\\
+rgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{grid\_real\_to\_complex\_im() -- Copy real grid to imaginary part of complex grid}
+
+Copy a real grid to imaginary part of a complex grid (real part is set to zero). The following arguments apply:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *dest & Destination grid.\\
+rgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{grid\_add\_real\_to\_complex\_re() -- add real grid to real part of complex grid}
+
+Add a real grid to real part of a complex grid (imaginary part unchanged). The following arguments apply:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *dest & Destination grid.\\
+rgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{grid\_add\_real\_to\_complex\_im() -- add real grid to imaginary part of complex grid}
+
+Add a real grid to imaginary part of a complex grid (real part unchanged). The following arguments apply:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *dest & Destination grid.\\
+rgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsubsection{grid\_product\_complex\_with\_real() -- Product of real grid with complex grid}
+
+Calculates product of a real grid with a complex grid: dest(complex) = dest(complex) * source(real). The following arguments apply:
+\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *dest & Destination grid.\\
+rgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
 
 \subsection{Wave function routines}
 

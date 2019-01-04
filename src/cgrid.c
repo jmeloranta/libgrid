@@ -2967,7 +2967,7 @@ EXPORT void cgrid_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz
  *
  */
 
-EXPORT void cgrid_dealias32(cgrid *grid) {
+EXPORT void cgrid_dealias23(cgrid *grid) {
 
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
