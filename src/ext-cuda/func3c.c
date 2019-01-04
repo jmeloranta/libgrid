@@ -1,7 +1,7 @@
 /*
  * Function #3: Backflow related function for libdft.
  *
- * Name: dft_ot3d_bf_pi_op(rho, xi, rhobf). This is rho x dG/drho + G(rho).
+ * Name: dft_ot3d_bf_pi_op(rho, xi, rhobf). This is rho * dG/drho + G(rho).
  *
  * In ot3d.c this was, e.g.,
  * rgrid_operate_one_product(workspace6, workspace6, density, dft_ot3d_bf_pi_op, otf);
