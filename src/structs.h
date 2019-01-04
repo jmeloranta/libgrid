@@ -30,6 +30,7 @@ typedef struct cgrid_struct { /* complex grid data type */
 #endif
   REAL fft_norm;
   REAL fft_norm2;
+  char flag;
 } cgrid;
 
 typedef struct rgrid_struct { /* real grid data type */
@@ -56,6 +57,7 @@ typedef struct rgrid_struct { /* real grid data type */
 #endif
   REAL fft_norm;
   REAL fft_norm2;
+  char flag;
 } rgrid;
 
 typedef struct wf_struct { /*  wavefunction */

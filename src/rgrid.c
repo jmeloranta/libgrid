@@ -158,7 +158,45 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   for(i = 0; i < nx * ny * nz2; i++)
     grid->value[i] = 0.0;
 
+  grid->flag = 0;
+
   return grid;
+}
+
+/*
+ * Claim grid (simple locking system for the workspace model).
+ *
+ * grid = Grid to be claimed (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+void rgrid_claim(rgrid *grid) {
+
+  if(grid->flag) {
+    fprintf(stderr, "libgrid: Attempting to claim grid twice.\n");
+    abort();
+  }
+  grid->flag = 1;
+}
+
+/*
+ * Release grid (simple locking system for the workspace model).
+ *
+ * grid = Grid to be claimed (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+void rgrid_release(rgrid *grid) {
+
+  if(!grid->flag) {
+    fprintf(stderr, "libgrid: Attempting to release grid twice.\n");
+    abort();
+  }
+  grid->flag = 0;
 }
 
 /*

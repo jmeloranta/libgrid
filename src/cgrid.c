@@ -134,7 +134,46 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   for(i = 0; i < nx * ny * nz; i++)
     grid->value[i] = 0.0;
 
+  grid->flag = 0;
+
   return grid;
+}
+
+
+/*
+ * Claim grid (simple locking system for the workspace model).
+ *
+ * grid = Grid to be claimed (cgrid *).
+ *
+ * No return value.
+ *
+ */
+
+void cgrid_claim(cgrid *grid) {
+
+  if(grid->flag) {
+    fprintf(stderr, "libgrid: Attempting to claim grid twice.\n");
+    abort();
+  }
+  grid->flag = 1;
+}
+
+/*
+ * Release grid (simple locking system for the workspace model).
+ *
+ * grid = Grid to be claimed (cgrid *).
+ *
+ * No return value.
+ *
+ */
+
+void cgrid_release(cgrid *grid) {
+
+  if(!grid->flag) {
+    fprintf(stderr, "libgrid: Attempting to release grid twice.\n");
+    abort();
+  }
+  grid->flag = 0;
 }
 
 /*
