@@ -3,7 +3,7 @@
  *
  */
 
-#define GRID_EPS 1.0E-12
+#define GRID_EPS 1.0E-16
 
 #define CGRID_DIRICHLET_BOUNDARY cgrid_value_outside_constantdirichlet
 #define CGRID_NEUMANN_BOUNDARY cgrid_value_outside_neumann
