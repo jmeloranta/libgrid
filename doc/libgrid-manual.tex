@@ -1,4 +1,6 @@
-\documentclass[12pt,letterpaper]{article}
+\documentclass[12pt,letterpaper]{report}
+\usepackage[letterpaper,hcentering,vcentering,left=1in,top=2.45cm,right=1in,bott
+om=2.45cm]{geometry}
 \usepackage[latin1]{inputenc}
 \usepackage{url}
 \usepackage{longtable}
@@ -10,9 +12,13 @@
 \title{libgrid manual}
 \begin{document}
 
+\maketitle
+
+\chapter{Prerequisites}
+
 \section{Introduction}
 
-Libgrid provides routines for efficiently accessing and manipulating 1-D, 2-D, and 3-D Cartesian real and complex grids on Linux-based systems without the need of considering the underlying specialized hardware (e.g., OpenMP, CUDA). In addition to the basic grid operations such as grid allocation, release, Fourier transform, grid arithmetics, etc., it has also specialized routines for propagating time-dependent Schr\"odinger equation in real or imaginary time. The latter routines are required by libdft library, which solves various types of non-linear Schr\"odinger equations that describe superfluid $^4$He and Bose-Einstein condensates. Libgrid was written by Lauri Lehtovaara, David Mateo, and Jussi Eloranta, and is freely distributed according to GNU GENERAL PUBLIC LICENSE Version 3 (see doc/GPL.txt).
+Libgrid provides routines for efficiently accessing and manipulating 1-D, 2-D, and 3-D Cartesian real and complex grids on Linux-based systems without the need of considering the underlying specialized hardware (e.g., OpenMP, CUDA). In addition to the basic grid operations such as grid allocation, release, Fourier transform, grid arithmetics, etc., it has also specialized routines for propagating time-dependent Schr\"odinger equation in real or imaginary time. The latter routines are required by libdft library, which solves various types of non-linear Schr\"odinger equations that describe superfluid $^4$He and Bose-Einstein condensates. Libgrid was written by Lauri Lehtovaara, David Mateo, and Jussi Eloranta, and is freely distributed according to GNU GENERAL PUBLIC LICENSE Version 3 (see doc/GPL.txt). This project was partially supported by National Science Foundation grants: CHE-0949057, CHE-1262306 and DMR-1205734.
 
 \section{Installation}
 
@@ -84,6 +90,15 @@ Provided that the compilation completed without errors, install the library (as 
 # make install
 \end{verbatim}
 
+The recommended OpenMP environment variable setting for optimal performance is:
+\begin{verbatim}
+setenv OMP_SCHEDULE auto
+setenv OMP_PROC_BIND TRUE
+setenv OMP_WAIT_POLICY ACTIVE
+\end{verbatim}
+
+\chapter{Programming interface}
+
 \section{Accessing the library routines}
 
 To access libgrid functions in C program, the following header files should be included:
@@ -93,7 +108,7 @@ To access libgrid functions in C program, the following header files should be i
 \end{verbatim}
 where the first include file is required and the second optional include makes the following conversion factors available:\\
 
-\begin{tabular}{ll}
+\begin{longtable}{ll}
 GRID\_AUTOANG & Factor to convert from Bohr to \AA{}nstr\"om ($10^{-10}$ m).\\
 GRID\_AUTOM & Factor to convert from Bohr to meter.\\
 GRID\_AUTOK & Factor to convert from Hartee to Kelvin (energy; $kT$).\\
@@ -111,8 +126,7 @@ GRID\_AUTON & Atomic force unit to Newton (N).\\
 GRID\_AUTOVPM & Atomic electric field strength to V/m.\\
 GRID\_AUTOPAS & Atomic viscosity unit to Pa s.\\
 GRID\_AUKB & Boltzmann constant in a.u. ($k_B$)\\ 
-\end{tabular}\\
-
+\end{longtable}
 \noindent
 Note that wherever applicable, librid will use the atomic unit system and the above conversion factors are provided for converting to other systems. To convert from atomic unit to another unit, multiply by the predefined factor above or, divide by it in order to convert the other way around.
 
@@ -143,9 +157,8 @@ would allocate a periodic 3-D grid with dimensions 32x32x32 and spatial grid ste
 The basic properties of the above rgrid and cgrid data types are explained below.
 
 \subsection{Real grid data type (rgrid)}
-
 Data type rgrid corresponds to a structure with the following members:
-\begin{longtable}{p{.4\textwidth} p{.6\textwidth}}
+\begin{longtable}{p{.33\textwidth} p{.6\textwidth}}
 Member & Description\\
 \cline{1-2}
 REAL *value & Array holding the real grid point data.\\
@@ -172,6 +185,7 @@ cufftHandle cufft\_handle\_r2c & CUFFT handle for forward FFT transform (CUDA).\
 cufftHandle cufft\_handle\_c2r & CUFFT handle for inverse FFT transform (CUDA).\\
 REAL fft\_norm & Normalization factor for FFT (without including the step length).\\
 REAL fft\_norm2 & Normalization factor for FFT (including the step length).\\
+char flag & Field for marking whether the grid is exclusively in use or not (rgrid\_claim() and rgrid\_release()).\\
 \end{longtable}
 
 \noindent
@@ -188,7 +202,7 @@ Alternatively, function rgrid\_cvalue\_at\_index(rgrid *grid, INT i, INT j, INT 
 \subsection{Complex grid data type (cgrid)}
 
 Data type cgrid corresponds to a structure with the following members:
-\begin{longtable}{p{.55\textwidth} p{.45\textwidth}}
+\begin{longtable}{p{.43\textwidth} p{.55\textwidth}}
 Member & Description\\
 \cline{1-2}
 REAL complex *value & Array holding the complex grid point data.\\
@@ -216,6 +230,7 @@ fftwX\_plan iimplan & Like iplan but for non-periodic boundaries (untested).\\
 cufftHandle cufft\_handle & CUFFT handle for FFT transforms using CUDA.\\
 REAL fft\_norm & Normalization factor for FFT (without including the step length).\\
 REAL fft\_norm2 & Normalization factor for FFT (including the step length).\\
+char flag & Field for marking whether the grid is exclusively in use or not (cgrid\_claim() and cgrid\_release()).\\
 \end{longtable}
 \noindent
 Indexing of the grid values follow the same convention as for rgrid data type.
@@ -224,7 +239,7 @@ Indexing of the grid values follow the same convention as for rgrid data type.
 
 Wave functions are special objects that contain a complex grid (wave function values) and all other necessary parameters such that it can be propagated in time by using a non-linear Schr\"odinger equation. This data type is mostly used in libdft library.
 
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.2\textwidth} p{.75\textwidth}}
 Member & Description\\
 \cline{1-2}
 cgrid *grid & Complex grid containing the wave function values.\\
@@ -234,16 +249,16 @@ char boundary & Boundary condition to be used for time propagation. WF\_DIRICHLE
 char propagator & Time propagator. WF\_2ND\_ORDER\_PROPAGATOR = 2nd order in time, WF\_4TH\_ORDER\_PROPAGATOR = 4th order in time.\\
 \end{longtable}
 
-\section{Library functions}
+\chapter{Library functions}
 
 Functions in libgrid are divided into following classes: 1) rgrid\_* (real valued grids; rgrid), 2) cgrid\_* (complex valued grids; cgrid), and 3) grid\_wf\_* (grids describing a wavefunction; wf). These are described in the subsections below. The arguments are listed in the tables in the same order as they are passed to the corresponding functions.
 
-\subsection{Real grid routines}
+\section{Real grid routines}
 
-\subsubsection{rgrid\_alloc() -- Allocate a real-valued grid}
+\subsection{rgrid\_alloc() -- Allocate a real-valued grid}
 
 This function allocates memory for a real-valued grid. It takes the following arguments:
-\begin{longtable}{p{.4\textwidth} p{.7\textwidth}}
+\begin{longtable}{p{.28\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 INT nx & Number of points on the grid along $x$ (1st index).\\
@@ -257,10 +272,18 @@ char *id & String ID describing the grid.
 \noindent
 The return value is a pointer to the allocated grid (rgrid *) or NULL on allocation error. \textit{Note that the grid is kept in padded form, which can be directly used for in-place FFT.}
 
-\subsubsection{rgrid\_set\_origin() -- Set grid origin}
+\subsection{rgrid\_claim() -- Mark grid to be in use}
+
+This function sets the flag field in given grid (argument; rgrid *) to non-zero. If the flag was already non-zero, it aborts the program execution. This allows a simple locking of grids when using the ``workspace" model (as in libdft).
+
+\subsection{rgrid\_release() -- Mark grid not in use}
+
+This function sets the flag field in given grid (argument; rgrid *) to zero. If the flag was already zero, it aborts the program execution. This allows a simple locking of grids when using the ``workspace" model (as in libdft).
+
+\subsection{rgrid\_set\_origin() -- Set grid origin}
 
 This function sets the origin (i.e., coordinates for the center of the grid). t takes the following arguments:
-\begin{longtable}{p{.4\textwidth} p{.7\textwidth}}
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid for which the origin is to be defined.\\
@@ -277,7 +300,7 @@ z(k)  = (k - nz / 2) * step - z0
 \end{verbatim}
 for a grid with dimensions nx$\times$ny$\times$nz, spatial step length step, and origin set at (x0,y0,z0).
 
-\subsubsection{rgrid\_shift\_origin() -- Shift grid origin}
+\subsection{rgrid\_shift\_origin() -- Shift grid origin}
 
 This function shifts the current origin by given offsets. It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -291,7 +314,7 @@ REAL z0 & Shift in $z$ coordinate (i.e., add z0 to origin $z$).\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_set\_momentum() -- Set grid origin in reciprocal space}
+\subsection{rgrid\_set\_momentum() -- Set grid origin in reciprocal space}
 
 This function sets the grid origin in momentum space (or the velocity of the frame of reference). It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -304,25 +327,21 @@ REAL kz0 & Momentum origin along the $z$ axis.\\
 \end{longtable}
 \noindent
 Here kx0, ky0 and kz0 can be any real numbers but keep in mind that the grid will only contain the component $k = 0$ if they are multiples of:
-\begin{verbatim} 
-kx0min = 2 * M_PI / (NX * STEP)
-ky0min = 2 * M_PI / (NY * STEP)
-kz0min = 2 * M_PI / (NZ * STEP)
-\end{verbatim}
+$$kx_{0,min} = 2 * \pi / (NX * STEP)$$
+$$ky_{0,min} = 2 * \pi / (NY * STEP)$$
+$$kz_{0,min} = 2 * \pi / (NZ * STEP)$$
 \noindent
 where (NX, NY, NZ) specify the grid dimensions and STEP is the grid spatial step length. In terms of velocities, this means that velocities must be multiples of:
-\begin{verbatim} 
-kx0min = 2 * M_PI * HBAR / (NX * STEP * MASS)
-ky0min = 2 * M_PI * HBAR / (NY * STEP * MASS)
-kz0min = 2 * M_PI * HBAR / (NZ * STEP * MASS)
-\end{verbatim}
-where MASS is the particle mass, and HBAR is $\hbar$. This function does not return any value.
+$$vx_{0,min} = 2\pi\hbar / (NX * STEP * MASS)$$
+$$vy_{0,min} = 2\pi\hbar / (NY * STEP * MASS)$$
+$$vz_{0,min} = 2\pi\hbar / (NZ * STEP * MASS)$$
+where MASS is the particle mass. This function does not return any value.
 
-\subsubsection{rgrid\_free() -- Free real-valued grid}
+\subsection{rgrid\_free() -- Free real-valued grid}
 
 This function takes a pointer to the grid (rgrid *) to be freed as the argument. It has not return value. Note that all allocated memory is automatically released when the program terminates.
 
-\subsubsection{rgrid\_write() -- Write grid on disk in binary format}
+\subsection{rgrid\_write() -- Write grid on disk in binary format}
 
 This function will write the contents of a given grid to the disk. It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -342,7 +361,7 @@ step
 \end{verbatim}
 where the grid dimensions are (nx,ny,nz) and nz2 = 2 * (nz / 2 + 1). Note that nz2 must be used as we store the grid in padded format. This function does not return any value.
 
-\subsubsection{rgrid\_read() -- Read grid from disk in binary format}
+\subsection{rgrid\_read() -- Read grid from disk in binary format}
 
 This function will read grid data from disk. It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -353,7 +372,7 @@ FILE *in & File handle for reading the file I/O.\\
 \end{longtable}
 This function returns a pointer to the grid or NULL pointer on error.
 
-\subsubsection{rgrid\_copy() -- Copy grid}
+\subsection{rgrid\_copy() -- Copy grid}
 
 Copy a grid to another where the source and destination grids are determined by the arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -365,7 +384,7 @@ rgrid *grid & Source grid.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_shift() -- Shift grid}
+\subsection{rgrid\_shift() -- Shift grid}
 
 This function shifts a grid spatially by a given amount. It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -387,11 +406,11 @@ z(new) = z - zs
 \noindent
 So, the the point (xs, ys, zs) moves to the center of the grid. This function does not return any value.
 
-\subsubsection{rgrid\_zero() - Zero grid values}
+\subsection{rgrid\_zero() - Zero grid values}
 
 This function sets all values in a given grid to zero. The only argument it takes is a pointer (rgrid *) to the grid to be zeroed. It returns no value.
 
-\subsubsection{rgrid\_constant -- Set grid to constant value}
+\subsection{rgrid\_constant -- Set grid to constant value}
 
 This function is similar to rgrid\_zero() but it allows for an additional argument to specify the value that will be written to the grid. The arguments are as follows:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -403,7 +422,7 @@ REAL c & Constant value.
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_product\_func() -- Multiply grid by function}
+\subsection{rgrid\_product\_func() -- Multiply grid by function}
 
 This function multiples a given grid by the values returned by a user specified function. It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -427,10 +446,9 @@ REAL z & Current $z$ coordinate.\\
 \noindent
 rgrid\_product\_func() function has no return value.
 
-\subsubsection{rgrid\_map -- Map function on grid}
+\subsection{rgrid\_map -- Map function on grid}
 
 This function maps a user specified function onto a given grid. It takes the following arguments:
-Function REAL (*func)() takes the following arguments:\\
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
 Argument & Description\\
 \cline{1-2}
@@ -450,10 +468,10 @@ REAL z & Current $z$ coordinate.\\
 \noindent
 rgrid\_map function has no return value.
 
-\subsubsection{rgrid\_smooth\_map -- Smooth map function onto grid}
+\subsection{rgrid\_smooth\_map -- Smooth map function onto grid}
 
 This function is like rgrid\_map() but performs linear smoothing on the function. This can be used to weight the values at grid points to produce more accurate integration over the grid. This function takes the following arguments:
-\begin{longtable}{p{.15\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.2\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Destination grid for the operation.\\
@@ -464,10 +482,10 @@ INT ns & Number of intermediate points to be used in smoothing.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_adaptive\_map() -- Adaptive smooth map function onto grid}
+\subsection{rgrid\_adaptive\_map() -- Adaptive smooth map function onto grid}
 
 This function is like rgrid\_smooth\_map() but limits for intermediate steps and requested tolerance can be specified. It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Destination grid for the operation.\\
@@ -475,15 +493,15 @@ REAL (*func)() & Function providing the mapping. It takes the same arguments as 
 void *farg & Pointer to user specified data for (*func)().\\
 INT min\_ns & Minimum number of intermediate points to be used in smoothing.\\
 INT max\_ns & Maximum number of intermediate points to be used in smoothing.\\
-REAL tol & Tolerance for the converge of integral over the function (REAL; input).\\
+REAL tol & Tolerance for the converge of integral over the function.\\
 \end{longtable}
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_sum() -- Add two grids}
+\subsection{rgrid\_sum() -- Add two grids}
 
 This function adds two grids and stores the output in a third grid (``gridc = grida + gridb"). It takes the grid pointers as arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -493,10 +511,10 @@ rgrid *gridb & 2nd grid for the summation.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_difference() -- Subtract two grids}
+\subsection{rgrid\_difference() -- Subtract two grids}
 
 This function subtracts two grids and stores the output in a third grid (``gridc = grida - gridb"). It takes the grid pointers as arguments :
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -506,10 +524,10 @@ rgrid *gridb & 2nd grid for the difference.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_product() -- Product of two grids}
+\subsection{rgrid\_product() -- Product of two grids}
 
 This function takes a product of two grids and stores the output in a third grid (``gridc = grida * gridb"). It takes the grid pointers as arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -519,10 +537,10 @@ rgrid *gridb & 2nd grid for the product.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_power() -- Rise grid to power}
+\subsection{rgrid\_power() -- Rise grid to power}
 
 This function rises a grid to specified power and stores the output in a third grid (``gridb = grida$^\textnormal{exponent}$"). It takes the grid pointers as arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridb & Destination grid.\\
@@ -532,10 +550,10 @@ REAL exponent & Exponent for power operation.\\
 \noindent
 This function has no return value. Note this function uses math library routine POW().
 
-\subsubsection{rgrid\_abs\_power() -- Rise absolute grid to power}
+\subsection{rgrid\_abs\_power() -- Rise absolute grid to power}
 
 This function rises absolute value of a grid to specified power and stores the output in a third grid (``gridb = $|$grida$|^\textnormal{exponent}$"). It takes the grid pointers as arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridb & Destination grid.\\
@@ -545,10 +563,10 @@ REAL exponent & Exponent for power operation.\\
 \noindent
 This function has no return value. Note this function uses math library routine POW().
 
-\subsubsection{rgrid\_division() -- Divide two grids}
+\subsection{rgrid\_division() -- Divide two grids}
 
 This function divides two grids and stores the output in a third grid (``gridc = grida / gridb"). It takes the grid pointers as arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -558,10 +576,10 @@ rgrid *gridb & 2nd grid for the division.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_division\_eps() -- Safe divide two grids}
+\subsection{rgrid\_division\_eps() -- Safe divide two grids}
 
 This function ``safely" divides two grids and stores the output in a third grid (``gridc = grida / (gridb + eps)"). It takes the grid pointers as arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -572,10 +590,10 @@ REAL eps & Small number to be added to the denominator.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_add() - Add constant to grid}
+\subsection{rgrid\_add() - Add constant to grid}
 
 This function adds a constant number to a grid (``grid = grid + c"). It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid where the constant is added.\\
@@ -584,10 +602,10 @@ REAL c & Number to be added.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_multiply() -- Multiply grid by constant}
+\subsection{rgrid\_multiply() -- Multiply grid by constant}
 
 This function multiplied a grid by constant (``grid = grid * c"). It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be multiplied.\\
@@ -596,10 +614,10 @@ REAL c & Number to multiply with.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_add\_and\_multiply() -- Add and multiply grid}
+\subsection{rgrid\_add\_and\_multiply() -- Add and multiply grid}
 
 This function adds a constant to grid and multiplies it with another constant (``grid = (grid + ca) * cm"). It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be multiplied.\\
@@ -609,10 +627,10 @@ REAL cm & Constant to be multiplied with the grid.\\
 \noindent
 This function has no return value. Note that the adding and multiplying are done in different order as in rgrid\_multiply\_and\_add().
 
-\subsubsection{rgrid\_multiply\_and\_add() -- Multiply and add grid}
+\subsection{rgrid\_multiply\_and\_add() -- Multiply and add grid}
 
 This function adds a constant to grid and multiplies it with another constant (``grid = cm * grid + ca"). It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be multiplied.\\
@@ -622,10 +640,10 @@ REAL ca & Constant to be added to the grid.\\
 \noindent
 This function has no return value. Note that the adding and multiplying are done in different order as in rgrid\_add\_and\_multiply().
 
-\subsubsection{rgrid\_add\_scaled() -- Add scaled grids}
+\subsection{rgrid\_add\_scaled() -- Add scaled grids}
 
 This function adds two grids such that the second grid is scaled (``gridc = gridc + d * grida"). It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Source/destination grid for the operation.\\
@@ -635,10 +653,10 @@ rgrid *grida & Source grid for the operation.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_add\_scaled\_product() -- Add scaled product of grids}
+\subsection{rgrid\_add\_scaled\_product() -- Add scaled product of grids}
 
 This function performs operation: ``gridc = gridc + d * grida * gridb". It takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Source/destination grid.\\
@@ -649,10 +667,10 @@ rgrid *gridb & 3rd source grid.\\
 \noindent
 This function has no return value.
 
-\subsubsection{rgrid\_operate\_one() -- Operate on grid}
+\subsection{rgrid\_operate\_one() -- Operate on grid}
 
 Operate on a grid by a given operator: gridc = O(grida). It takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -661,7 +679,7 @@ REAL (*operator)() & Function operating on grida. Arguments for this user specif
 \end{longtable}
 \noindent
 The user specified operator (*operator)() maps the value at a grid point to another real number. The arguments to this function pointer are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -671,7 +689,7 @@ void *params & Parameters for operator (pointer).\\
 \end{longtable}
 \noindent
 The arguments to (*operator)() are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 REAL val & Value at the current grid point.\\
@@ -680,10 +698,10 @@ void *params & Pointer to use supplied parameters.\\
 \noindent
 rgrid\_operate\_one() function has no return value.
 
-\subsubsection{rgrid\_operate\_one\_product() -- Operate and multiply grids}
+\subsection{rgrid\_operate\_one\_product() -- Operate and multiply grids}
 
 This function  operates on a grid by a given operator and then multiplies by another grid: ``gridc = gridb * O(grida)". The arguments to this function are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -692,7 +710,7 @@ rgrid *grida & Multiply by O(grida).\\
 REAL (*operator)() & Function operating on grida. Arguments for this user specified function are given below.\\
 \end{longtable}
 The arguments to (*operator)() are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 REAL val & Value at the current grid point.\\
@@ -701,10 +719,10 @@ void *params & Pointer to use supplied parameters.\\
 \noindent
 rgrid\_operate\_one() function has no return value.
 
-\subsubsection{rgrid\_operate\_two() -- Operate on two grids}
+\subsection{rgrid\_operate\_two() -- Operate on two grids}
 
 This function  operates on a grid by a given operator that depends on two grids: ``gridc = O(grida, gridb)". The arguments to this function are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *gridc & Destination grid.\\
@@ -713,7 +731,7 @@ rgrid *gridb & 2nd source grid for operator.\\
 REAL (*operator)() & Function operating on grida and gridb. Arguments for this user specified function are given below.\\
 \end{longtable}
 The arguments to (*operator)() are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 REAL aval & Value at the current grid point (grida).\\
@@ -722,17 +740,17 @@ REAL bval & Value at the current grid point (gridb).\\
 \noindent
 rgrid\_operate\_two() function has no return value.
 
-\subsubsection{rgrid\_transform\_one() -- Transform grid}
+\subsection{rgrid\_transform\_one() -- Transform grid}
 
 This function operates directly on a grid by a given operator:  "O(grid)". The arguments to this function are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Source/destination grid.\\
 void (*operator)() & Function operating on grid. Arguments for this user specified function are given below.\\
 \end{longtable}
 The arguments to (*operator)() are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 REAL *val & Value at the current grid points (note: pointer).\\
@@ -740,10 +758,10 @@ REAL *val & Value at the current grid points (note: pointer).\\
 \noindent
 rgrid\_transform\_one() function has no return value.
 
-\subsubsection{rgrid\_transform\_two() -- Transform two grids}
+\subsection{rgrid\_transform\_two() -- Transform two grids}
 
 This function operates directly on two grids by a given operator: "O(grida,gridb)". The arguments to this function are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grida & 1st grid to be operated.\\
@@ -752,7 +770,7 @@ void *(operator) & Operator for grid and gridb. The arguments to this function a
 \end{longtable}
 \noindent
 The arguments to (*operator)() are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 REAL *avalue & Pointer to current grida value.\\
@@ -761,14 +779,14 @@ REAL *bvalue & Pointer to current gridb value.\\
 \noindent
 rgrid\_transform\_two() function has no return value.
 
-\subsubsection{rgrid\_integral() -- Integrate over grid}
+\subsection{rgrid\_integral() -- Integrate over grid}
 
 This function integrates over the given grid. It takes the grid pointer (rgrid *) as the only argument and returns the value of the integral. 
 
-\subsubsection{rgrid\_integral\_region() -- Integrate over grid region}
+\subsection{rgrid\_integral\_region() -- Integrate over grid region}
 
 This function integrates over the given grid region. It takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be integrated.\\
@@ -782,14 +800,14 @@ REAL zu & Upper limit for $z$.\\
 \noindent
 This function returns the value of the integral. 
 
-\subsubsection{rgrid\_integral\_of\_square() -- Integrate grid squared}
+\subsection{rgrid\_integral\_of\_square() -- Integrate grid squared}
 
 This function integrates over the given grid squared (``grid$^2$"). It takes the grid pointer (rgrid *) as the only argument and returns the value of the integral.
 
-\subsubsection{rgrid\_integral\_of\_product() -- Overlap between grids}
+\subsection{rgrid\_integral\_of\_product() -- Overlap between grids}
 
 Calculate the overlap between two grids (i.e., integral over the product of the grids). This function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grida & 1st grid for integration.\\
@@ -798,10 +816,10 @@ rgrid *gridb & 2nd grid for integration.\\
 \noindent
 This function returns the value of the overlap integral (REAL).
 
-\subsubsection{rgrid\_grid\_expectation\_value() -- Grid expectation value}
+\subsection{rgrid\_grid\_expectation\_value() -- Grid expectation value}
 
 Calculate the expectation value of a grid over a given probability density: integral(gridb * $|$grida$|^2$). This function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grida & 1st grid for integration ($|$grida$|^2$).\\
@@ -810,10 +828,10 @@ rgrid *gridb & 2nd grid for integration.\\
 \noindent
 This function returns the value of the overlap integral (REAL).
 
-\subsubsection{rgrid\_grid\_expectation\_value\_func() -- Expectation value of function over grid squared}
+\subsection{rgrid\_grid\_expectation\_value\_func() -- Expectation value of function over grid squared}
 
 Calculate the expectation value of a function over grid squared: int grida func() grida = int func() grida$^2$. This function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 REAL (*func)() & Function to be averaged. The arguments to this functions are given below.\\
@@ -821,7 +839,7 @@ rgrid *grida & Grid giving the probability density (grida$^2$).\\
 \end{longtable}
 \noindent
 The arguments to (*func)() are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 void *arg & Pointer to use supplied data to the function.\\
@@ -833,19 +851,19 @@ REAL z & Current value of $z$.\\
 \noindent
 This user supplied function return the function value to be averaged (REAL). Function rgrid\_grid\_expectation\_value\_func() returns the expectation value (REAL).
 
-\subsubsection{rgrid\_weighted\_integral() -- Integral of grid over weighting function}
+\subsection{rgrid\_weighted\_integral() -- Integral of grid over weighting function}
 
 Integrate over grid multiplied by weighting function: int grid w(x,y,z). This function takes the arguments as:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be integrated over.\\
-REAL (*weight)() = Function defining the weight. The arguments to this function are given below.\\
+REAL (*weight)() & Function defining the weight. The arguments to this function are given below.\\
 void *farg & Use supplied argument to the weight function.\\
 \end{longtable}
 \noindent
 The weight function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 void *farg & User supplied data to (*weight)().\\
@@ -856,19 +874,19 @@ z & Current $z$ coordinate.\\
 \noindent
 Function rgrid\_weighted\_integral() returns the value of the integral (REAL).
 
-\subsubsection{rgrid\_weighted\_integral\_of\_square() -- Integral of grid squared over weighting function}
+\subsection{rgrid\_weighted\_integral\_of\_square() -- Integral of grid squared over weighting function}
 
 Integrate over grid squared multiplied by weighting function: int grid$^2$ w(x,y,z). This function takes the arguments as:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be integrated over.\\
-REAL (*weight)() = Function defining the weight. The arguments to this function are given below.\\
+REAL (*weight)() & Function defining the weight. The arguments to this function are given below.\\
 void *farg & Use supplied argument to the weight function.\\
 \end{longtable}
 \noindent
 The weight function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 void *farg & User supplied data to (*weight)().\\
@@ -879,10 +897,10 @@ z & Current $z$ coordinate.\\
 \noindent
 Function rgrid\_weighted\_integral\_of\_square() returns the value of the integral (REAL).
 
-\subsubsection{rgrid\_fd\_gradient\_x() -- Differentiate grid with respect to x}
+\subsection{rgrid\_fd\_gradient\_x() -- Differentiate grid with respect to x}
 
 Differentiate a grid with respect to $x$ (central difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be differentiated.\\
@@ -891,10 +909,10 @@ rgrid *gradient & Grid containing the derivative (output).\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_gradient\_y() -- Differentiate grid with respect to y}
+\subsection{rgrid\_fd\_gradient\_y() -- Differentiate grid with respect to y}
 
 Differentiate a grid with respect to $y$ (central difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be differentiated.\\
@@ -903,10 +921,10 @@ rgrid *gradient & Grid containing the derivative (output).\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_gradient\_z() -- Differentiate grid with respect to z}
+\subsection{rgrid\_fd\_gradient\_z() -- Differentiate grid with respect to z}
 
 Differentiate a grid with respect to $z$ (central difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be differentiated.\\
@@ -915,10 +933,10 @@ rgrid *gradient & Grid containing the derivative (output).\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_gradient() -- gradient of a grid}
+\subsection{rgrid\_fd\_gradient() -- gradient of a grid}
 
 Calculate gradient of a grid (finite difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & grid to be differentiated.\\
@@ -929,10 +947,10 @@ rgrid *gradient\_z & $z$ component derivative grid.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_laplace() -- Laplace of a grid}
+\subsection{rgrid\_fd\_laplace() -- Laplace of a grid}
 
 Calculate Laplacian of a grid (finite difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & grid to be differentiated.\\
@@ -941,10 +959,10 @@ rgrid *laplace & Grid containing the Laplacian.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_laplace\_x() -- 2nd derivative of a grid (x)}
+\subsection{rgrid\_fd\_laplace\_x() -- 2nd derivative of a grid (x)}
 
 Calculate 2nd derivative of a grid with respect to $x$ (finite difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & grid to be differentiated.\\
@@ -953,10 +971,10 @@ rgrid *laplacex & Grid containing the 2nd derivative.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_laplace\_y() -- 2nd derivative of a grid (y)}
+\subsection{rgrid\_fd\_laplace\_y() -- 2nd derivative of a grid (y)}
 
 Calculate 2nd derivative of a grid with respect to $y$ (finite difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & grid to be differentiated.\\
@@ -965,10 +983,10 @@ rgrid *laplacey & Grid containing the 2nd derivative.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_laplace\_z() -- 2nd derivative of a grid (z)}
+\subsection{rgrid\_fd\_laplace\_z() -- 2nd derivative of a grid (z)}
 
 Calculate 2nd derivative of a grid with respect to $z$ (finite difference). The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & grid to be differentiated.\\
@@ -977,10 +995,10 @@ rgrid *laplacez & Grid containing the 2nd derivative.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fd\_gradient\_dot\_gradient() -- Dot product of gradient of grid with itself}
+\subsection{rgrid\_fd\_gradient\_dot\_gradient() -- Dot product of gradient of grid with itself}
 
 This function calculates dot product of the gradient of the grid with itself: $\nabla$ grid $\cdot$ $\nabla$ grid (finite difference). It takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid  & Source grid for the operation.\\
@@ -989,10 +1007,10 @@ rgrid *grad\_dot\_grad & Destination grid.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_print() -- Print contents of grid in ASCII}
+\subsection{rgrid\_print() -- Print contents of grid in ASCII}
 
 This function print a given grid into file in ASCII format. The arguments are as follows:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be printed.\\
@@ -1001,23 +1019,23 @@ FILE *out & Output file pointer.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_fft() -- Fast forward Fourier transform of grid}
+\subsection{rgrid\_fft() -- Fast forward Fourier transform of grid}
 
 Perform forward Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. No normalization of the output is performed. Note that the indexing of the complex data is different from the real data (see FFTW manual). The function does not return any value. 
 
-\subsubsection{rgrid\_inverse\_fft() -- Fast inverse Fourier transform of grid}
+\subsection{rgrid\_inverse\_fft() -- Fast inverse Fourier transform of grid}
 
 Perform inverse Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. No normalization of the output is performed. The function does not return any value.
 
-\subsubsection{rgrid\_scaled\_inverse\_fft() -- Scaled fast inverse Fourier transform of grid}
+\subsection{rgrid\_scaled\_inverse\_fft() -- Scaled fast inverse Fourier transform of grid}
 
 Perform scaled inverse Fourier transformation of a grid. The grid for FFT is given as the first argument (rgrid *) followed by normalization constant (i.e., transformed data multiplied by this value). The grid is overwritten by the result. The function does not return any value.
 
-\subsubsection{rgrid\_inverse\_fft\_norm() -- Normalized fast inverse Fourier transform of grid}
+\subsection{rgrid\_inverse\_fft\_norm() -- Normalized fast inverse Fourier transform of grid}
 
 Perform normalized inverse Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. The output is normalized (i.e., doing forward FFT followed by this yields the original data). The function does not return any value.
 
-\subsubsection{rgrid\_fft\_convolute() -- Convolution in reciprocal space}
+\subsection{rgrid\_fft\_convolute() -- Convolution in reciprocal space}
 
 Multiply two grids that are in reciprocal space. Convolution between grida and gridb can be obtained by:
 \begin{verbatim}
@@ -1027,7 +1045,7 @@ Multiply two grids that are in reciprocal space. Convolution between grida and g
  rgrid_inverse_fft(gridc);
 \end{verbatim}
 The output will be in gridc. This function takes three arguments as follows:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grida & 1st grid to be convoluted.\\ 
@@ -1037,10 +1055,10 @@ rgrud *gridc & Output.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_multiply\_fft() -- Multiply grid in reciprocal space by constant}
+\subsection{rgrid\_multiply\_fft() -- Multiply grid in reciprocal space by constant}
 
 Multiply grid in reciprocal space by a constant (grid-$>$value is complex). The arguments are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be multiplied. Note that the values are actually complex.\\
@@ -1049,10 +1067,10 @@ REAL c & Multiply the grid by this value.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{rgrid\_value\_at\_index() -- Access grid point at given index}
+\subsection{rgrid\_value\_at\_index() -- Access grid point at given index}
 
 This function returns grid point value at a given index (follows boundary condition). The arguments are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be accessed.\\
@@ -1063,10 +1081,10 @@ INT k & Index along $z$.\\
 \noindent
 This function returns the grid point value (REAL). Note that in CUDA this function is very slow as it transfers every element individually.
 
-\subsubsection{rgrid\_value\_to\_index() -- Set value to grid at given index}
+\subsection{rgrid\_value\_to\_index() -- Set value to grid at given index}
 
 This function puts a specified value to a given index location in a grid. It takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be accessed.\\
@@ -1078,10 +1096,10 @@ REAL value & Value to be set at grid location (i, j, k).\\
 \noindent
 This function does not return any value. Note that in CUDA this function is very slow as it transfers every element individually.
 
-\subsubsection{rgrid\_cvalue\_at\_index() -- Access grid point in reciprocal space}
+\subsection{rgrid\_cvalue\_at\_index() -- Access grid point in reciprocal space}
 
 This function returns (complex) grid point value at a given index when the grid is in reciprocal space (i.e., it has been Fourier transformed). It takes arguments as follows:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & grid to be accessed. The data is complex (after FFT).\\
@@ -1092,10 +1110,10 @@ INT k & 3rd index ($z$).\\
 \noindent
 The function returns (REAL complex) value at grid point (i, j, k). Note that in CUDA this function is very slow as it transfers every element individually.
 
-\subsubsection{rgrid\_value() -- Access grid point at (x, y, z)}
+\subsection{rgrid\_value() -- Access grid point at (x, y, z)}
 
 This function returns grid point at given (x, y, z) point where linear interpolation is used between the grid points. The arguments are as follows:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be accessed.\\
@@ -1106,10 +1124,10 @@ REAL z & $z$ value.\\
 \noindent
 This function returns (REAL) value at grid position (x, y, z). Note that in CUDA this function is very slow as it transfers every element individually.
 
-\subsubsection{rgrid\_extrapolate() -- Extrapolate between two grid sizes}
+\subsection{rgrid\_extrapolate() -- Extrapolate between two grid sizes}
 
 This function extrapolates between grids of different sizes (both size and step) using linear interpolation. It takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *dest & Destination grid.\\
@@ -1118,10 +1136,10 @@ rgrid *src  & Source grid.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_rotate\_z() -- Rotate contents of grid around $z$-axis}
+\subsection{rgrid\_rotate\_z() -- Rotate contents of grid around $z$-axis}
 
 Rotate contents of a grid by a given angle around the $z$-axis. The function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *in & The original grid (to be rotated).\\                                                                                
@@ -1131,18 +1149,18 @@ REAL th & Rotation angle in radians.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_max() -- Largest value on grid}
+\subsection{rgrid\_max() -- Largest value on grid}
 
 Return the largest value contained in a grid (REAL). This function takes only one argument (rgrid *grid), which specifies the grid to be searched.
 
-\subsubsection{rgrid\_max() -- Smallest value on grid}
+\subsection{rgrid\_max() -- Smallest value on grid}
 
 Return the smallest value contained in a grid (REAL). This function takes only one argument (rgrid *grid), which specifies the grid to be searched.
 
-\subsubsection{rgrid\_random() -- Add random noise to grid}
+\subsection{rgrid\_random() -- Add random noise to grid}
 
 Add random numbers to given grid within [-scale,+scale[. The arguments are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid where random numbers will be added.\\
@@ -1151,15 +1169,15 @@ REAL scale & Specify the scale for random numbers.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_poisson() -- Solve Poisson equation}
+\subsection{rgrid\_poisson() -- Solve Poisson equation}
 
 This routine solves Poisson equation ($\Delta f = u$) subject to periodic boundaries. It
 uses finite difference for Laplacian (7 point) and FFT. It takes one grid (rgrid *) as argument, which on entry describes the right hand side function ($u$). On exit, this grid is replaced by the solution ($f$). The function does not return any value.
 
-\subsubsection{rgrid\_div() -- Divergence of vector field}
+\subsection{rgrid\_div() -- Divergence of vector field}
 
 Calculate divergence of a given vector field. The arguments are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *div & Result grid.\\
@@ -1170,10 +1188,10 @@ rgrid *fz  & $z$ component of the vector field.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_rot() -- Rot of vector field}
+\subsection{rgrid\_rot() -- Rot of vector field}
 
 Calculate rot of a given vector field. The arguments are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *rotx & Result grid ($x$ component).\\
@@ -1186,10 +1204,10 @@ rgrid *fz  & $z$ component of the vector field.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_abs\_rot() -- Norm of rot of vector field}
+\subsection{rgrid\_abs\_rot() -- Norm of rot of vector field}
 
 Calculate norm of rot of a given vector field ($|$rot$|$). The arguments are:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *rot & Result grid.\\
@@ -1200,14 +1218,14 @@ rgrid *fz  & $z$ component of the vector field.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_dealias23() -- Dealias in Fourier space (2/3 rule)}
+\subsection{rgrid\_dealias23() -- Dealias in Fourier space (2/3 rule)}
 
 This function performs de-alias of a grid in Fourier space by the 2/3 rule: zero high wavenumber components between: [n/2 - n/3, n/2 + n/3] in each direction (except the last dimension is [nz - nz/3, nz]). The only argument is the grid (rgrid *; in reciprocal space) that will be operated on. The function does not return any value.
 
-\subsubsection{rgrid\_ipower() -- Rise grid to integer power}
+\subsection{rgrid\_ipower() -- Rise grid to integer power}
 
 Raise given grid to a specified integer power (fast -- not using POW()). The following arguments are required:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *dst & Destination grid.\\
@@ -1217,10 +1235,10 @@ INT exponent & Exponent to be used. This value can be negative.\\
 \noindent
 This function does not return any value. 
 
-\subsubsection{rgrid\_threshold\_clear() -- Set grid value based on threshold values}
+\subsection{rgrid\_threshold\_clear() -- Set grid value based on threshold values}
 
 Set a value to given grid points based on upper/lower limit thresholds of another grid (which may correspond to same grids). This function takes the following arguments:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *dest & Destination grid.\\
@@ -1233,15 +1251,297 @@ REAL lval & Value to set when the lower limit was exceeded.\\
 \noindent
 This function does not return any value. 
 
-\subsection{Complex grid routines}
+\section{Complex grid routines}
 
-\subsection{Mixed real - complex grid routines}
+\subsection{cgrid\_alloc() -- Allocate a complex-valued grid}
 
+This function allocates memory for a complex-valued grid. It takes the following arguments:
+\begin{longtable}{p{.41\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT nx & Number of points on the grid along $x$ (1st index).\\
+INT ny & Number of points on the grid along $y$ (2nd index).\\
+INT nz & Number of points on the grid along $z$ (3rd index).\\
+REAL step & Spatial step length for the grid.\\
+REAL complex *(value\_outside)() & Function for accessing boundary points: CGRID\_DIRICHLET\_BOUNDARY = Dirichlet boundary, CGRID\_NEUMANN\_BOUNDARY = Neumann boundary, CGRID\_PERIODIC\_BOUNDARY  = Periodic boundary. This can also be a user supplied function.\\
+void *outside\_params\_ptr & Pointer for passing parameters for the given boundary access function. Use NULL to with the predefined boundary functions.\\
+char *id & String ID describing the grid.
+\end{longtable}
+\noindent
+The return value is a pointer to the allocated grid (cgrid *) or NULL on allocation error.
 
-\subsubsection{grid\_real\_to\_complex\_re() -- Copy real grid to real part of complex grid}
+\subsection{cgrid\_claim() -- Mark grid to be in use}
+
+This function sets the flag field in given grid (argunent; cgrid *) to non-zero. If the flag was already non-zero, it aborts the program execution. This allows a simple locking of grids when using the ``workspace" model (as in libdft).
+
+\subsection{cgrid\_release() -- Mark grid not in use}
+
+This function sets the flag field in given grid (argument; cgrid *) to zero. If the flag was already zero, it aborts the program execution. This allows a simple locking of grids when using the ``workspace" model (as in libdft).
+
+\subsection{cgrid\_set\_origin() -- Set grid origin}
+
+This function sets the origin (i.e., coordinates for the center of the grid). t takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.5\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid for which the origin is to be defined.\\
+REAL x0 & $x$ coordinate for the origin.\\
+REAL y0 & $y$ coordinate for the origin.\\
+REAL z0 & $z$ coordinate for the origin.\\
+\end{longtable}
+\noindent
+This function does not return any value. The mapping between grid indices and coordinates is given by:
+\begin{verbatim}
+x(i)  = (i - nx / 2) * step - x0
+y(j)  = (j - ny / 2) * step - y0
+z(k)  = (k - nz / 2) * step - z0
+\end{verbatim}
+for a grid with dimensions nx$\times$ny$\times$nz, spatial step length step, and origin set at (x0, y0, z0).
+
+\subsection{cgrid\_shift\_origin() -- Shift grid origin}
+
+This function shifts the current origin by given offsets. It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid for which the origin is to be defined.\\
+REAL x0 & Shift in $x$ coordinate (i.e., add x0 to origin $x$).\\
+REAL y0 & Shift in $y$ coordinate (i.e., add y0 to origin $y$).\\
+REAL z0 & Shift in $z$ coordinate (i.e., add z0 to origin $z$).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{cgrid\_set\_momentum() -- Set grid origin in reciprocal space}
+
+This function sets the grid origin in momentum space (or the velocity of the frame of reference). It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid for which the momentum origin is to be defined.\\
+REAL kx0 & Momentum origin along the $x$ axis.\\
+REAL ky0 & Momentum origin along the $y$ axis.\\
+REAL kz0 & Momentum origin along the $z$ axis.\\
+\end{longtable}
+\noindent
+Here kx0, ky0 and kz0 can be any real numbers but keep in mind that the grid will only contain the component $k = 0$ if they are multiples of:
+$$kx_{0,min} = 2 * \pi / (NX * STEP)$$
+$$ky_{0,min} = 2 * \pi / (NY * STEP)$$
+$$kz_{0,min} = 2 * \pi / (NZ * STEP)$$
+\noindent
+where (NX, NY, NZ) specify the grid dimensions and STEP is the grid spatial step length. In terms of velocities, this means that velocities must be multiples of:
+$$vx_{0,min} = 2\pi\hbar / (NX * STEP * MASS)$$
+$$vy_{0,min} = 2\pi\hbar / (NY * STEP * MASS)$$
+$$vz_{0,min} = 2\pi\hbar / (NZ * STEP * MASS)$$
+where MASS is the particle mass. This function does not return any value.
+
+\subsection{cgrid\_free() -- Free real-valued grid}
+
+This function takes a pointer to the grid (cgrid *) to be freed as the argument. It has not return value. Note that all allocated memory is automatically released when the program terminates.
+
+\subsection{cgrid\_write() -- Write grid on disk in binary format}
+
+This function will write the contents of a given grid to the disk. It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid to be written to disk.\\
+FILE *out & File handle for the file I/O.\\
+\end{longtable}
+\noindent
+This is a binary format file where the data is stored in the following order:
+\begin{verbatim}
+nx
+ny
+nz
+step
+(nx * ny * nz) number of complex grid point values
+\end{verbatim}
+where the grid dimensions are (nx,ny,nz). This function does not return any value.
+
+\subsection{cgrid\_read() -- Read grid from disk in binary format}
+
+This function will read grid data from disk. It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid where the data is to be read. If NULL, a grid with the correct dimensions will be allocated. Note that the boundary condition will assigned to periodic by default.\\
+FILE *in & File handle for reading the file I/O.\\
+\end{longtable}
+This function returns a pointer to the grid or NULL pointer on error.
+
+\subsection{cgrid\_copy() -- Copy grid}
+
+Copy a grid to another where the source and destination grids are determined by the arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *copy & Destination grid.\\
+cgrid *grid & Source grid.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{cgrid\_conjugate() -- Complex conjugate of grid}
+
+This function takes complex conjugate of a given grid, conjugate = grid$^*$. It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *conjugate & Destination for complex conjugated grid.\\
+cgrid *grid & Source grid for the operation.\\
+\end{longtable}
+\noindent
+This function returns no value.
+
+\subsection{cgrid\_shift() -- Shift grid}
+
+This function shifts a grid spatially by a given amount. It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *shifted & Destination grid for the operation.\\
+rgrid *grid & Source grid for the operation.\\
+REAL xs & Shift grid spatially by this amount along $x$.\\
+REAL ys & Shift grid spatially by this amount along $y$.\\
+REAL zs & Shift grid spatially by this amount along $z$.\\
+\end{longtable}
+\noindent
+The new positions for the grid are:
+\begin{verbatim}
+x(new) = x - xs 
+y(new) = y - ys 
+z(new) = z - zs
+\end{verbatim}
+\noindent
+So, the the point (xs, ys, zs) moves to the center of the grid. This function does not return any value.
+
+\subsection{cgrid\_zero() - Zero grid values}
+
+This function sets all values (both real and imaginary parts) in a given grid to zero. The only argument it takes is a pointer (cgrid *) to the grid to be zeroed. It returns no value.
+
+\subsection{cgrid\_constant -- Set grid to constant value}
+
+This function is similar to cgrid\_zero() but it allows for an additional argument to specify the value that will be written to the grid. The arguments are as follows:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid to be set to a constant value.\\
+REAL complex c & Constant value.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{cgrid\_product\_func() -- Multiply grid by function}
+
+This function multiples a given grid by the values returned by a user specified function. It takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Destination grid for the operation.\\
+REAL complex (*func)() & Function providing the multiplication values. See below for the arguments to this function.\\
+void *farg & Pointer to user specified data that is passed to (*func).\\   
+\end{longtable}
+\noindent
+Function REAL complex (*func)() takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+void *arg & Pointer to user data (provided by *farg above).\\
+REAL complex val & Value at the current grid point.\\
+REAL x & Current $x$ coordinate.\\
+REAL y & Current $y$ coordinate.\\
+REAL z & Current $z$ coordinate.\\
+\end{longtable}
+\noindent
+cgrid\_product\_func() function has no return value.
+
+\subsection{cgrid\_map -- Map function on grid}
+
+This function maps a user specified function onto a given grid. It takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Destination grid for the operation.\\
+REAL complex (*func)() & User specified function providing the mapping. For description of the arguments, see below.\\
+void *farg & Pointer to user specified data for (*func)().\\
+\end{longtable}
+User specified function REAL complex (*func)() takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+void *arg & Pointer to user data (provided by *farg above).\\
+REAL x & Current $x$ coordinate.\\
+REAL y & Current $y$ coordinate.\\
+REAL z & Current $z$ coordinate.\\
+\end{longtable}
+\noindent
+rgrid\_map function has no return value.
+
+\subsection{cgrid\_smooth\_map -- Smooth map function onto grid}
+
+This function is like cgrid\_map() but performs linear smoothing on the function. This can be used to weight the values at grid points to produce more accurate integration over the grid. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Destination grid for the operation.\\
+REAL complex (*func)() & Function providing the mapping. The arguments are same as for rgrid\_map() function.\\
+void *farg & Pointer to user specified data.\\
+INT ns & Number of intermediate points to be used in smoothing.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{cgrid\_adaptive\_map() -- Adaptive smooth map function onto grid}
+
+This function is like cgrid\_smooth\_map() but limits for intermediate steps and requested tolerance can be specified. It takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Destination grid for the operation.\\
+REAL complex (*func)() & Function providing the mapping. It takes the same arguments as cgrid\_map().\\
+void *farg & Pointer to user specified data for (*func)().\\
+INT min\_ns & Minimum number of intermediate points to be used in smoothing.\\
+INT max\_ns & Maximum number of intermediate points to be used in smoothing.\\
+REAL tol & Tolerance for the converge of integral over the function.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{cgrid\_sum() -- Add two grids}
+
+This function adds two grids and stores the output in a third grid (``gridc = grida + gridb"). It takes the grid pointers as arguments:
+\begin{longtable}{p{.25\textwidth} p{.75\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *gridc & Destination grid.\\
+cgrid *grida & 1st grid for the summation.\\
+cgrid *gridb & 2nd grid for the summation.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\section{Mixed real - complex grid routines}
+
+\subsection{grid\_read\_peek() -- Peek at file for dimensions}
+
+This function takes a peek at the specified grid file to get the grid dimensions. It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+FILE *fp & File pointer for operation.\\                                                                                   
+INT *nx & Number of points along $x$-axis (1st index).\\
+INT *ny & Number of points along $y$-axis (2nd index).\\
+INT *nz & Number of points along $z$-axis (INT *; input).\\
+REAL *step & Spatial grid step length.\\
+\end{longtable}
+\noindent
+The function does not return any value (all data is returned through the above pointers). This function works with both REAL and REAL complex grids. After reading the dimensions, the file pointer (*fp) is rewound so that Xgrid\_read() and be called subsequently.
+
+\subsection{grid\_real\_to\_complex\_re() -- Copy real grid to real part of complex grid}
 
 Copy a real grid to real part of a complex grid (imaginary part is set to zero). The following arguments apply:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 cgrid *dest & Destination grid.\\
@@ -1250,10 +1550,10 @@ rgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{grid\_real\_to\_complex\_im() -- Copy real grid to imaginary part of complex grid}
+\subsection{grid\_real\_to\_complex\_im() -- Copy real grid to imaginary part of complex grid}
 
 Copy a real grid to imaginary part of a complex grid (real part is set to zero). The following arguments apply:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 cgrid *dest & Destination grid.\\
@@ -1262,10 +1562,10 @@ rgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{grid\_add\_real\_to\_complex\_re() -- add real grid to real part of complex grid}
+\subsection{grid\_add\_real\_to\_complex\_re() -- add real grid to real part of complex grid}
 
 Add a real grid to real part of a complex grid (imaginary part unchanged). The following arguments apply:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 cgrid *dest & Destination grid.\\
@@ -1274,10 +1574,10 @@ rgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{grid\_add\_real\_to\_complex\_im() -- add real grid to imaginary part of complex grid}
+\subsection{grid\_add\_real\_to\_complex\_im() -- add real grid to imaginary part of complex grid}
 
 Add a real grid to imaginary part of a complex grid (real part unchanged). The following arguments apply:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 cgrid *dest & Destination grid.\\
@@ -1286,10 +1586,10 @@ rgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
-\subsubsection{grid\_product\_complex\_with\_real() -- Product of real grid with complex grid}
+\subsection{grid\_product\_complex\_with\_real() -- Product of real grid with complex grid}
 
 Calculates product of a real grid with a complex grid: dest(complex) = dest(complex) * source(real). The following arguments apply:
-\begin{longtable}{p{.35\textwidth} p{.65\textwidth}}
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 cgrid *dest & Destination grid.\\
@@ -1298,16 +1598,20 @@ rgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
-\subsection{Wave function routines}
+\section{Wave function routines}
 
-\subsection{Linear algebra routines}
+\section{Linear algebra routines}
+
+\section{CUDA specific routines}
+
+\chapter{Interfacing with other software}
 
 \section{External functions}
 
 \section{Utilities}
 
-\section{Examples}
+\chapter{Examples}
 
-\section{References}
+%\section{References}
 
 \end{document}

@@ -19,6 +19,33 @@
 #endif
 
 /*
+ * Peek at a grid file to get the grid dimensions.
+ *
+ * fp   = File pointer for operation (FILE *; input).
+ * nx   = # of points along x (INT *; input).
+ * ny   = # of points along y (INT *; input).
+ * nz   = # of points along z (INT *; input).
+ * step = spatial step length (REAL *; input).
+ *
+ * No return value.
+ *
+ * Notes: - This works for both real and complex grids and hence it is just called
+ *          grid_read_peek().
+ *        - This rewinds the fp so that Xgrid_read() can be called directly
+ *          after this.
+ *
+ */
+
+EXPORT void grid_read_peek(FILE *fp, INT *nx, INT *ny, INT *nz, REAL *step) {
+
+  fread(nx, sizeof(INT), 1, fp);
+  fread(ny, sizeof(INT), 1, fp);
+  fread(nz, sizeof(INT), 1, fp);
+  fread(step, sizeof(REAL), 1, fp);
+  rewind(fp);
+}
+
+/*
  * Copy a real grid to a complex grid (to real part).  Note that this zeroes the imaginary part.
  *
  * dest   = destination grid (cgrid *; output).
