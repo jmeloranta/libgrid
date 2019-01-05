@@ -202,7 +202,9 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
     for(k = 0; k < nz; k++) {
       pp = cgrid_value_at_index(grid, i+1, j, k);
       pm = cgrid_value_at_index(grid, i-1, j, k);
-      tmp = inv_delta * CIMAG(CLOG(pp * CONJ(pm) / (CONJ(pp) * pm)));
+      pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
+      if(CABS(pp) < GRID_EPS) tmp = 0.0;
+      else tmp = inv_delta * CIMAG(CLOG(pp));
       if(tmp > cutoff) tmp = cutoff;
       else if(tmp < -cutoff) tmp = -cutoff;
       rgrid_value_to_index(vx, i, j, k, tmp);      
@@ -233,7 +235,9 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
     for(k = 0; k < nz; k++) {
       pp = cgrid_value_at_index(grid, i, j+1, k);
       pm = cgrid_value_at_index(grid, i, j-1, k);
-      tmp = inv_delta * CIMAG(CLOG(pp * CONJ(pm) / (CONJ(pp) * pm)));
+      pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
+      if(CABS(pp) < GRID_EPS) tmp = 0.0;
+      else tmp = inv_delta * CIMAG(CLOG(pp));
       if(tmp > cutoff) tmp = cutoff;
       else if(tmp < -cutoff) tmp = -cutoff;
       rgrid_value_to_index(vy, i, j, k, tmp);
@@ -264,7 +268,9 @@ EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL cutoff) {
     for(k = 0; k < nz; k++) {
       pp = cgrid_value_at_index(grid, i, j, k+1);
       pm = cgrid_value_at_index(grid, i, j, k-1);
-      tmp = inv_delta * CIMAG(CLOG(pp * CONJ(pm) / (CONJ(pp) * pm)));
+      pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
+      if(CABS(pp) < GRID_EPS) tmp = 0.0;
+      else tmp = inv_delta * CIMAG(CLOG(pp));
       if(tmp > cutoff) tmp = cutoff;
       else if(tmp < -cutoff) tmp = -cutoff;
       rgrid_value_to_index(vz, i, j, k, tmp);
