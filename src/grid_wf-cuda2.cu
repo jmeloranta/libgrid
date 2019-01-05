@@ -9,6 +9,7 @@
 #include <cufft.h>
 #include "cuda.h"
 #include "cuda-math.h"
+#include "defs.h"
 
 extern void *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
@@ -75,7 +76,9 @@ __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL in
   if(i == nx-1) wp = wf[j*nz + k]; // i = 0
   else wp = wf[((i+1)*ny + j)*nz + k];
 
-  vx[idx2] = inv_delta * CUCIMAG(CUCLOG(wp * CUCONJ(wm) / (CUCONJ(wp) * wm)));
+  wp = wp * CUCONJ(wm) / (GRID_EPS + CUCONJ(wp) * wm);
+  if(CUCABS(wp) < GRID_EPS) vx[idx2] = 0.0;
+  else vx[idx2] = inv_delta * CUCARG(wp);
   if(vx[idx2] > cutoff) vx[idx2] = cutoff;
   if(vx[idx2] < -cutoff) vx[idx2] = -cutoff;
 }
@@ -128,7 +131,9 @@ __global__ void grid_cuda_wf_velocity_y_gpu(CUCOMPLEX *wf, CUREAL *vy, CUREAL in
   if(j == ny-1) wp = wf[i*ny*nz + k];
   else wp = wf[(i*ny + j + 1)*nz + k];
 
-  vy[idx2] = inv_delta * CUCIMAG(CUCLOG(wp * CUCONJ(wm) / (CUCONJ(wp) * wm)));
+  wp = wp * CUCONJ(wm) / (GRID_EPS + CUCONJ(wp) * wm);
+  if(CUCABS(wp) < GRID_EPS) vy[idx2] = 0.0;
+  else vy[idx2] = inv_delta * CUCARG(wp);
   if(vy[idx2] > cutoff) vy[idx2] = cutoff;
   if(vy[idx2] < -cutoff) vy[idx2] = -cutoff;
 }
@@ -181,7 +186,9 @@ __global__ void grid_cuda_wf_velocity_z_gpu(CUCOMPLEX *wf, CUREAL *vz, CUREAL in
   if(k == nz-1) wp = wf[(i*ny + j)*nz];
   else wp = wf[(i*ny + j)*nz + k+1];
 
-  vz[idx2] =  inv_delta * CUCIMAG(CUCLOG(wp * CUCONJ(wm) / (CUCONJ(wp) * wm)));
+  wp = wp * CUCONJ(wm) / (GRID_EPS + CUCONJ(wp) * wm);
+  if(CUCABS(wp) < GRID_EPS) vz[idx2] = 0.0;
+  else vz[idx2] =  inv_delta * CUCARG(wp);
   if(vz[idx2] > cutoff) vz[idx2] = cutoff;
   if(vz[idx2] < -cutoff) vz[idx2] = -cutoff;
 }
