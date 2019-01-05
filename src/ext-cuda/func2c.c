@@ -1,12 +1,7 @@
 /*
  * Function #2: Backflow related function for libdft.
  *
- * Name: dft_ot3d_bf_pi_energy_op(rho, xi, rhobf).
- *
- * In ot3d.c this used to be, e.g.,
- * rgrid_operate_one(workspace7, density, dft_ot3d_bf_pi_energy_op, otf);
- * and now it is:
- * grid_func2_operate_one(workspace7, density, otf->xi, otf->rhobf);
+ * Evaluate: rho * G(rho)
  *
  */
 
@@ -18,6 +13,7 @@ extern void grid_func2_cuda_operate_one_productW(CUREAL *, CUREAL *, CUREAL *, C
 extern void grid_func2_cuda_operate_oneW(CUREAL *, CUREAL *, CUREAL, CUREAL, INT, INT, INT);
 #endif
 
+/* rho * G(rho) */
 static inline REAL grid_func2(REAL rhop, REAL xi, REAL rhobf) {
 
   return FUNCTION;
@@ -39,6 +35,16 @@ EXPORT char grid_func2_cuda_operate_one_product(rgrid *gridc, rgrid *gridb, rgri
 }
 #endif
 
+/*
+ * Evaluate rho * G(rho(r)): gridc = grida * G(grida).
+ *
+ * gridc = Destination grid (rgrid *; output).
+ * grida = Source grid (rgrid *; input)
+ *
+ * No return value.
+ *
+ */
+
 EXPORT void grid_func2_operate_one(rgrid *gridc, rgrid *grida, REAL xi, REAL rhobf) {
 
   INT ij, k, ijnz, nxy = gridc->nx * gridc->ny, nz = gridc->nz, nzz = gridc->nz2;
@@ -57,6 +63,17 @@ EXPORT void grid_func2_operate_one(rgrid *gridc, rgrid *grida, REAL xi, REAL rho
       cvalue[ijnz + k] = grid_func2(avalue[ijnz + k], xi, rhobf);
   }
 }
+
+/*
+ * Multiply by rho * G(rho(r)): gridc = gridb * grida * G(grida).
+ *
+ * gridc = Destination grid (rgrid *; output).
+ * gridb = Source grid for multiplication (rgrid *; input).
+ * grida = Source grid for rho*G(rho) (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
 
 EXPORT void grid_func2_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, REAL xi, REAL rhobf) {
 

@@ -1,12 +1,7 @@
 /*
  * Function #3: Backflow related function for libdft.
  *
- * Name: dft_ot3d_bf_pi_op(rho, xi, rhobf). This is rho * dG/drho + G(rho).
- *
- * In ot3d.c this was, e.g.,
- * rgrid_operate_one_product(workspace6, workspace6, density, dft_ot3d_bf_pi_op, otf);
- * and now is:
- * grid_func3_operate_one_product(workspace6, workspace6, density, otf->xi, otf->rhobf);
+ * Evaluate: rho * (dG/rho) + G(rho).
  *
  */
 
@@ -17,6 +12,7 @@
 extern void grid_func3_cuda_operate_one_productW(CUREAL *, CUREAL *, CUREAL *, CUREAL, CUREAL, INT, INT, INT);
 #endif
 
+/* rho * (dG/rho) + G(rho) */
 static inline REAL grid_func3(REAL rhop, REAL xi, REAL rhobf) {
 
   REAL tmp = 1.0 / (COSH((rhop - rhobf) * xi) + DFT_BF_EPS);
@@ -33,6 +29,17 @@ EXPORT char grid_func3_cuda_operate_one_product(rgrid *gridc, rgrid *gridb, rgri
   return 0;
 }
 #endif
+
+/*
+ * Multiply grid by rho * (dG/drho) + G(rho): gridc = gridb * (grida * (dG/drho)(grida) + G(grida)).
+ *
+ * gridc = Destination grid (rgrid *; output).
+ * gridb = Source grid for multiplication (rgrid *; input).
+ * grida = Source grid for G() (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
 
 EXPORT void grid_func3_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, REAL xi, REAL rhobf) {
 
