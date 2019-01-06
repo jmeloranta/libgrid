@@ -2611,7 +2611,7 @@ EXPORT void cgrid_extrapolate(cgrid *dest, cgrid *src) {
  *
  */
 
-REAL complex cgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
+static REAL complex cgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
 
   /* Unpack the values in arg */ 
   cgrid *grid = ((rotation *) arg)->cgrid;
@@ -2711,6 +2711,7 @@ EXPORT void cgrid_phase(rgrid *dst, cgrid *src) {
   INT i;
 
 #ifdef USE_CUDA
+  // Not implemented yet (TODO)
   cuda_remove_block(src->value, 1);
   cuda_remove_block(dst->value, 0);
 #endif
@@ -2837,12 +2838,12 @@ EXPORT void cgrid_div(cgrid *div, cgrid *fx, cgrid *fy, cgrid *fz) {
 /*
  * Calculate rot of a vector field.
  *
- * rotx = x component of rot (rgrid *; output).
- * roty = y component of rot (rgrid *; output).
- * rotz = z component of rot (rgrid *; output).
- * fx   = x component of the field (rgrid *; input).
- * fy   = y component of the field (rgrid *; input).
- * fz   = z component of the field (rgrid *; input).
+ * rotx = x component of rot (cgrid *; output).
+ * roty = y component of rot (cgrid *; output).
+ * rotz = z component of rot (cgrid *; output).
+ * fx   = x component of the field (cgrid *; input).
+ * fy   = y component of the field (cgrid *; input).
+ * fz   = z component of the field (cgrid *; input).
  *
  * TODO: CUDA implementation missing.
  *
