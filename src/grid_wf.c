@@ -14,11 +14,11 @@
  * nz         = number of spatial grid points along z (INT).
  * step       = spatial step size (REAL).
  * mass       = mass of the particle corresponding to this wavefunction (REAL).
- * boundary   = boundary condition (int):
+ * boundary   = boundary condition (char):
  *              WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition.
  *              WF_NEUMANN_BOUNDARY   = Neumann boundary condition.
  *              WF_PERIODIC_BOUNDARY  = Periodic boundary condition.
- * propagator = which time propagator to use for this wavefunction:
+ * propagator = which time propagator to use for this wavefunction (char):
  *              WF_2ND_ORDER_PROPAGATOR = 2nd order in time.
  *              WF_4TH_ORDER_PROPAGATOR = 4th order in time.
  * id         = String identifier for the grid (for debugging; char *; input).

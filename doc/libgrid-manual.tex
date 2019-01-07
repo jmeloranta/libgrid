@@ -2281,6 +2281,39 @@ cgrid *fz  & $z$ component of the vector field.\\
 \noindent
 This function does not return any value. 
 
+\subsection{cgrid\_zero\_index() -- Zero given range in grid}
+
+Zero a given index range of a complex grid over [lx, hx[ X [ly, hy[ X [lz, hz[. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid to be operated on.\\                                                                           
+INT lx & Lower limit for 1st index ($x$).\\                                                                                     
+INT hx & Upper limit for 1st index ($x$).\\                                                                                     
+INT ly & Lower limit for 2nd index ($y$).\\                                                                                     
+INT hy & Upper limit for 2nd index ($y$).\\                                                                                     
+INT lz & Lower limit for 3rd index ($z$).\\                                                                                      INT hz & Upper limit for 3rd index ($z$).\\        
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{cgrid\_dealias23() -- Dealias in Fourier space (2/3 rule)}
+
+This function performs de-alias of a grid in Fourier space by the 2/3 rule: zero high wavenumber components between: [n/2 - n/3, n/2 + n/3] in each direction (except the last dimension is [nz - nz/3, nz]). The only argument is the grid (cgrid *; in reciprocal space) that will be operated on. The function does not return any value.
+
+\subsection{cgrid\_ipower() -- Rise grid to integer power}
+
+Raise given grid to a specified integer power (fast -- not using POW()). The following arguments are required:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *dst & Destination grid.\\
+cgrid *src & Source grid for operation.\\
+INT exponent & Exponent to be used. This value can be negative.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
 \section{Mixed real - complex grid routines}
 
 \subsection{grid\_read\_peek() -- Peek at file for dimensions}
@@ -2358,9 +2391,92 @@ rgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
+\subsection{grid\_complex\_im\_to\_real() -- Copy imaginary part to real grid}
+
+Copy imaginary part of a complex grid to real grid. The arguments are the source and destination grids:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dest & Destination grid.\\
+cgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{grid\_complex\_re\_to\_real() -- Copy real part to real grid}
+
+Copy real part of a complex grid to real grid. The arguments are the source and destination grids:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dest & Destination grid.\\
+cgrid *source & Source grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
 \section{Wave function routines}
 
+The following routines act on wave functions (wf data type).
+
+\subsection{grid\_wf\_alloc() -- Allocate wave function}
+
+This function will allocate wave function (including the grid holding the data). It takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT nx & Number of spatial grid points along $x$ (1st index).\\
+INT ny & Number of spatial grid points along $y$ (2nd index).\\
+INT nz & Number of spatial grid points along $z$ (3rd index).\\
+REAL step & Spatial step size for wave function grid.\\
+REAL mass & Mass of the particle corresponding to this wave function (in atomic units).\\
+char boundary & Boundary condition for wave function: WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition.\\
+char propagator & Which time propagator to use for this wave function: WF\_2ND\_ORDER\_PROPAGATOR = 2nd order in time, WF\_4TH\_ORDER\_PROPAGATOR = 4th order in time.\\
+char *id & String identifier describing the grid (for debugging; char *; input).
+\end{longtable}
+\noindent
+This function returns a pointer to the allocated wave function structure (wf *). If memory allocation fails, NULL is returned.
+
+\subsection{grid\_wf\_free() -- Free wave function}
+
+This function frees a given wave function. The only argument is a pointer to the wave function structure (wf *). Function has no return value.
+
+\subsection{grid\_wf\_absorb() -- Complex time for absorbing boundaries}
+
+Calculate (complex) time for implementing absorbing boundaries using mixed real/imaginary time propagation. Excitations entering the absorbing region will be damped out
+such that no back reflections occur from the boundary of the finite grid.
+This is achieved by introducing imaginary time component to propagation
+in this reagion, which is turned to full gradually (using a linear function).
+This is to be used with time propagation routines that allow spatially dependent
+time (kinetic energy propagation by FFT cannot be used). The absorging region is placed outside [lx,hx] x [ly,hy] x [lz,hz]. At the corners of the box, the propagation time
+is (1.0 - I) * tstep (whereas outside the absorbing region the imaginary
+component is zero). Each x,y,z direction contributes 1/3 to the imaginary component.
+The arguments are as follows:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT i & Current index along $x$ (1st).\\                                                                                    
+INT j & Current index along $y$ (2nd).\\
+INT k & Current index along $z$ (3rd).\\
+void *data & Pointer to struct grid\_abs holding values for specifying the absorbing region. This will specify amp (attenuation amplitude), lx (lower index for $x$), hx (upper index for $x$), ly (lower index for $y$), hy (upper index for $x$), lz (lower index for $z$), hz (upper index for $z$).\\
+REAL complex time\_step & Real time step to be used.\\
+\end{longtable}
+\noindent
+This function returns complex time step to be used at (i, j, k) (REAL complex). The grid\_abs structure is:
+\begin{verbatim}
+struct grid_abs {
+  REAL amp;           /* Absorption amplitude (larger means higher absorption) */
+  INT data[6];        /* Six indices corresponding to lx, hx, ly, hy, lz, hz */
+};
+\end{verbatim}
+
 \section{Linear algebra routines}
+
+\chapter{Parallel execution}
+
+% explain model
+
+\section{OpenMP specific routines}
 
 \section{CUDA specific routines}
 
