@@ -183,6 +183,12 @@ EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz, REAL cuto
  * Calculate the velocity field x component using:
  * v = -\frac{i\hbar}{2m} (d/dx) ln(\psi/\psi^*).
  *
+ * gwf    = wavefunction for the operation (wf *).
+ * vx     = x output grid containing the velocity (rgrid *).
+ * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
+ *
+ * No return value.
+ *
  */
 
 EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
@@ -216,6 +222,12 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
  * Calculate the velocity field y component using:
  * v = -\frac{i\hbar}{2m} (d/dy) ln(\psi/\psi^*).
  *
+ * gwf    = wavefunction for the operation (wf *).
+ * vy     = y output grid containing the velocity (rgrid *).
+ * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
+ *
+ * No return value.
+ *
  */
 
 EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
@@ -248,6 +260,12 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
 /*
  * Calculate the velocity field z component using:
  * v = -\frac{i\hbar}{2m} (d/dz) ln(\psi/\psi^*).
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vz     = z output grid containing the velocity (rgrid *).
+ * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
+ *
+ * No return value.
  *
  */
 

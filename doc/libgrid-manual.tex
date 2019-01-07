@@ -2470,6 +2470,110 @@ struct grid_abs {
 };
 \end{verbatim}
 
+\subsection{grid\_wf\_velocity() -- Calculate velocity field}
+
+Calculate the velocity field (from gradient of the complex phase) associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *vx & $x$ component of the velocity field.\\
+rgrid *vy & $y$ component of the velocity field.\\
+rgrid *vz & $z$ component of the velocity field.\\
+REAL cutoff & Cutoff value for velocity ($|v| <=$ cutoff) as the phase may not be well defined where the norm of the wave function is small.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_velocity\_x() -- Calculate $x$ component of velocity field}
+
+Calculate $x$ component of the velocity field (from gradient of the complex phase) associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *vx & $x$ component of the velocity field.\\
+REAL cutoff & Cutoff value for velocity ($|v| <=$ cutoff) as the phase may not be well defined where the norm of the wave function is small.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_velocity\_y() -- Calculate $y$ component of velocity field}
+
+Calculate $y$ component of the velocity field (from gradient of the complex phase) associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *vy & $y$ component of the velocity field.\\
+REAL cutoff & Cutoff value for velocity ($|v| <=$ cutoff) as the phase may not be well defined where the norm of the wave function is small.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_velocity\_z() -- Calculate $z$ component of velocity field}
+
+Calculate $z$ component of the velocity field (from gradient of the complex phase) associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *vz & $z$ component of the velocity field.\\
+REAL cutoff & Cutoff value for velocity ($|v| <=$ cutoff) as the phase may not be well defined where the norm of the wave function is small.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_probability\_flux() -- Calculate probability flux}
+
+Calculate the probability flux associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *flux\_x & $x$ component of the flux.\\
+rgrid *flux\_y & $y$ component of the flux.\\
+rgrid *flux\_z & $z$ component of the flux.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_probability\_flux\_x() -- Calculate probability flux $x$ component}
+
+Calculate the $x$ component of probability flux associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *flux\_x & $x$ component of the flux.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_probability\_flux\_y() -- Calculate probability flux $y$ component}
+
+Calculate the $y$ component of probability flux associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *flux\_y & $y$ component of the flux.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\subsection{grid\_wf\_probability\_flux\_z() -- Calculate probability flux $z$ component}
+
+Calculate the $z$ component of probability flux associated with the wave function. The arguments to this function are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the operation.\\
+rgrid *flux\_z & $z$ component of the flux.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
 \section{Linear algebra routines}
 
 \chapter{Parallel execution}
