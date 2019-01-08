@@ -2574,7 +2574,138 @@ rgrid *flux\_z & $z$ component of the flux.\\
 \noindent
 This function has no return value.
 
+\subsection{grid\_wf\_energy() -- Total energy of wave function}
+
+Calculate the total energy (kinetic + potential) for the wave function. This includes also the energy of the possible moving background. The arguments are as follows:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the energy calculation.\\
+cgrid *potential & Grid containing the potential function.\\
+cgrid *workspace & Additional storage needed for the operation.\\
+\end{longtable}
+\noindent
+This function returns the total energy (REAL).
+
+\subsection{grid\_wf\_potential\_energy() -- Calculate potential energy}
+
+This function calculates the potential energy of a given wave function. The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the potential energy calculation.\\
+cgrid *potential & Grid containing the potential function.\\
+\end{longtable}
+\noindent
+This function returns the potential energy (REAL).
+
+\subsection{grid\_wf\_propagate() -- Propagate wave function in time}
+
+Propagate the wave function in time subject to a given potential. The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function to be propagated.\\
+cgrid *potential & Grid containing the (complex) potential.\\
+cgrid *sq\_grad\_pot & grid containing square of potential gradient. Only used for the 4th order propagator (can be set to NULL when not used).\\
+REAL complex time & Time step for propagation (atomic units). Note this may be complex.\\
+cgrid *workspace & Additional workspace needed for the operation.\\
+\end{longtable}
+\noindent
+This function returns no value.
+
+\subsection{grid\_wf\_propagate\_potential() -- Propagate wave function in time (potential only)}
+
+Propagate wave function in time using potential only. The arguments are as follows:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function to be propagated.\\
+REAL complex (*time)() & Time step function. If NULL, constant value will be used specified by tstep below.\\
+REAL complex *tstep & Time step (atomic units).\\
+void *privdata & Private data for the time step function.\\                                                                            
+cgrid *potential & Grid containing the potential.\\
+\end{longtable}
+\noindent
+Function grid\_wf\_propagate\_potential() does not return any value. The time step function REAL complex (*time)(), which allows spatial variation in time stepping, takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT i & 1st grid point index ($x$).\\
+INT j & 2nd grid point index ($y$).\\
+INT k & 3rd grid point index ($z$).\\
+void *privdata & Pointer to user supplied private data.\\
+REAL complex tstep & Value of tstep passed to grid\_wf\_propagate\_potential().\\
+\end{longtable}
+\noindent
+The function returns the (complex) time step to be used for grid point (i, j, k).
+
+\subsection{grid\_wf\_density() -- Compute probability density for wave function}
+
+This function computes the probability density ($|\psi|^2$) for the given wave function. It takes two arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function for the density calculation.\\
+rgrid *density & Density grid output.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{grid\_wf\_zero() - Zero wave function}
+
+Set all values in the grid describing the wave function to zero. It takes a pointer to the wave function as the only argument (wf *). It does not return any value.
+
+\subsection{grid\_wf\_constant() - Set wave function to constant value}
+
+Set all values in the grid describing the wave function to a given value. It takes a pointer to the wave function as the first argument (wf *) and the second argument is the constant value (REAL complex). It does not return any value.
+
+\subsection{grid\_wf\_map() -- Map function on wave function grid}
+
+This routine maps a given function to the complex grid of a wave function. The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function on which the function will be mapped to.\\
+REAL complex (*func)() & Function providing the mapping (see below).\\
+void *farg & Optional argument for passing private data to func (NULL if not needed).\\
+\end{longtable}
+\noindent
+Function grid\_wf\_map() does not return any value. Function REAL complex (*func)() takes the arguments as:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+void *farg & Private data for the function.\\
+REAL x & Current $x$ coordinate.\\
+REAL y & Current $y$ coordinate.\\
+REAL z & Current $z$ coordinate.\\
+\end{longtable} 
+\noindent
+The return value (REAL complex) is the function value at the current point.
+
+\subsection{grid\_wf\_norm() -- Calculate norm of wave function}
+
+This function returns (REAL) the norm ($\int|\psi|^2d\tau$) of the wave function, which is specified by the argument to this function (wf *).
+
+\subsection{grid\_wf\_normalize() -- Normalize wave function}
+
+This function normalizes the given wave function (i.e., impose $\int|\psi|^2d\tau = 1$). The argument to this function (wf *) specifies the wave function. The return value (REAL) is the previous norm of the wave function prior to normalization.
+
+\subsection{grid\_wf\_overlap() -- Overlap integral between wave functions}
+
+Calculate the overlap integral between two wave functions (i.e., $\int \psi_1^*\psi_2d\tau$). This function takes the two wave functions (wf *) as arguments and returns the overlap (REAL complex).
+
+\subsection{grid\_wf\_print() -- Print wave function}
+
+This function returns prints the values of the grid points in the wave function using cgrid\_print(). It takes the wave function (wf *) as the first argument and file pointer (FILE *) as the second argument (these are same as for cgrid\_print()). This function does not return any value.
+
 \section{Linear algebra routines}
+
+% linalg.c
+
+\section{Other routines}
+
+% other.c
 
 \chapter{Parallel execution}
 

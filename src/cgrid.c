@@ -2639,7 +2639,7 @@ EXPORT void cgrid_rotate_z(cgrid *out, cgrid *in, REAL th) {
   rotation *r;
 
   if(in == out) {
-    fprintf(stderr,"libgrid: in and out grids in rgrid_rotate_z must be different\n");
+    fprintf(stderr,"libgrid: in and out grids in cgrid_rotate_z must be different\n");
     abort();
   }
   if(!(r = malloc(sizeof(rotation)))) {

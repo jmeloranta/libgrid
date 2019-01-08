@@ -410,7 +410,7 @@ EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgri
 }
 
 /*
- * Calculate energy for the wavefunction. 
+ * Calculate total energy for the wavefunction. 
  * Includes -E_{kin} * n if the frame of reference has momentum != 0.
  *
  * gwf       = wavefunction for the energy calculation (wf *).
@@ -540,7 +540,7 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, 
  * Produce density grid from a given wavefunction.
  *
  * gwf     = wavefunction (wf *).
- * density = output density grid (cgrid *).
+ * density = output density grid (rgrid *).
  *
  * No return value.
  *
@@ -597,7 +597,7 @@ EXPORT inline void grid_wf_constant(wf *gwf, REAL complex c) {
  * Map a given function on a wavefunction.
  *
  * gwf  = wavefunction where function will be mapped to (wf *).
- * func = function providing the mapping (REAL complex (*)(void *, REAL)).
+ * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL)).
  * farg = optional argument for passing parameters to func (void *).
  *
  * No return value.
