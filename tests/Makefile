@@ -49,3 +49,4 @@ clean:
 	-rm *.o *~ 
 	-rm test_wf3d test_wf3d_itp_linear test_wf3d_itp_nonlinear 
 	-rm cfft-3d cfft-2d test_convolution_r3d test_rfft3d
+	-rm lintest1 lintest2 lintest3
