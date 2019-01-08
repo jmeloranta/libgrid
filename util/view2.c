@@ -1,5 +1,5 @@
 /*
- * Show grid axis cut animation using xmgrace.
+ * Show 1-D animation using xmgrace.
  *
  * Usage: view file1 file2...
  *
@@ -18,9 +18,15 @@ void my_error_function(const char *msg) {
 
 int main(int argc, char **argv) {
 
-  INT i, j, npts;
+  INT i, j, npts, save;
   FILE *fp;
   REAL x, x_prev, y, begin, end, step = -1.0, ymax = -1.0, ymin = 0.0;
+
+  if(argv[1][0] == '-' && argv[1][1] == 's') {
+    argv = &argv[1];
+    save = 1;
+    argc--;
+  } else save = 0;
 
   if(argc < 2) {
     fprintf(stderr, "Usage: view file1 file2...\n");
@@ -50,7 +56,7 @@ int main(int argc, char **argv) {
 
   GraceRegisterErrorFunction(my_error_function);
   /* Start Grace with a buffer size of 2048 and open the pipe */
-  if (GraceOpenVA("/usr/bin/xmgrace", 2048, "-free", "-nosigcatch","-geometry", "930x730", NULL) == -1) {
+  if (GraceOpenVA("/usr/bin/xmgrace", 2048, "-free", "-nosafe", "-nosigcatch","-geometry", "930x730", NULL) == -1) {
     fprintf(stderr, "Can't start Grace. \n");
     exit(1);
   }
@@ -87,6 +93,12 @@ int main(int argc, char **argv) {
       GracePrintf("g0.s0 point " FMT_R "," FMT_R, x, y);
     }
     GracePrintf("redraw");
+    if(save) {
+      GracePrintf("HARDCOPY DEVICE \"JPEG\"");
+      GracePrintf("PRINT TO \"movie-%05d.jpg\"", i);
+      GracePrintf("PRINT");
+      
+    }
     if(i == 1) sleep(5);
     else usleep(300000);
     fclose(fp);
