@@ -79,66 +79,6 @@ EXPORT void grid_wf_project_out(wf *gwfa, wf *gwfb) {
 }
 
 /*
- * "traditional" diagonalization of Hamiltonian.
- *
- * gwf    = an array of wavefunctions (wf **).
- * states = number of states (int).
- *
- * No return value.
- *
- */
-
-#ifdef USE_LAPACK
-
-EXPORT void grid_wf_diagonalize(wf **gwf, INT states) {
-
-  INT i, j;
-  REAL *eigenvalue = (REAL *) malloc(((size_t) states) * sizeof(REAL));
-  REAL complex *overlap = (REAL complex *) malloc(((size_t) (states * states)) * sizeof(REAL complex));
-  wf *gwf_tmp;
-  
-#ifdef USE_CUDA
-  for(i = 0; i < states; i++)
-    if(cuda_status()) cuda_remove_block(gwf[i]->grid->value, 1);
-#endif
-  if (states == 1) {
-    grid_wf_normalize(gwf[0]);
-    return;
-  }
-  
-  /* overlap matrix */
-  for(i = 0; i < states; i++) {
-    for(j = 0; j <= i; j++) {
-      /* fortran (column major) matrix order, i is row (minor) index, j is column (major) index */
-      overlap[i + j * states] = grid_wf_overlap(gwf[i], gwf[j]);
-      overlap[j + i * states] = CONJ(overlap[i + j * states]);
-    }
-  }
-  
-  /* diagonalize */
-  grid_hermitian_eigenvalue_problem(eigenvalue, overlap, states);
-  
-  /* phi_i = 1 / SQRT(m_i) C_ij psi_j, C (row major) matrix order ???is it??? (TODO) */
-  for(i = 0; i < states; i++)
-    for(j = 0; j < states; j++)
-      overlap[i * states + j] /= SQRT(eigenvalue[i]);
-  
-  grid_wf_linear_transform(gwf, overlap, states);
-  
-  /* invert order */
-  for(i = 0; i < states/2; i++) {
-    gwf_tmp = gwf[i];
-    gwf[i] = gwf[states-i-1];
-    gwf[states - i - 1] = gwf_tmp;	
-  }
-  
-  /* free memory */
-  free(eigenvalue);
-  free(overlap);
-}
-#endif
-
-/*
  * Linear transform a set of wavefunctions.
  *
  * gwf       = an array of wavefunctions (wf **).

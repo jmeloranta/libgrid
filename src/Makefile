@@ -17,8 +17,8 @@ endif
 	echo $(CUDA) > cuda.status
 	make libgrid.a
 
-SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c ngrid.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c grid_itp.c cgrid_bc.c \
-      rgrid_bc.c threads.c linalg.c ctimer.c other.c lapack.c
+SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c ngrid.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c cgrid_bc.c \
+      rgrid_bc.c threads.c linalg.c ctimer.c other.c
 SRC += ext-cuda/func1c.c ext-cuda/func2c.c ext-cuda/func3c.c ext-cuda/func4c.c ext-cuda/func5c.c ext-cuda/func6c.c ext-cuda/func7c.c
 
 ifeq ($(CUDA),yes)
@@ -45,7 +45,6 @@ cgrid_fft.o: cgrid_fft.c grid.h
 cgrid_fft-cuda.o: cgrid_fft-cuda.c grid.h
 ctimer.o: ctimer.c grid.h
 cuda.o: cuda.c cuda.h
-grid_itp.o: grid_itp.c grid.h private.h
 grid_wf.o: grid_wf.c grid.h private.h
 grid_wf_cn.o: grid_wf_cn.c grid.h private.h
 grid_wf_cn-cuda.o: grid_wf_cn-cuda.c grid.h
@@ -55,7 +54,6 @@ grid_wf_diag.o: grid_wf_diag.c grid.h private.h
 grid_wf_fft.o: grid_wf_fft.c grid.h private.h
 grid_wf_fft-cuda2.o: grid_wf_fft-cuda2.cu cuda.h cuda-math.h
 grid_wf_fft-cuda.o: grid_wf_fft-cuda.c grid.h
-lapack.o: lapack.c grid.h private.h
 linalg.o: linalg.c grid.h private.h
 ngrid.o: ngrid.c grid.h private.h
 ngrid-cuda.o: ngrid-cuda.c grid.h

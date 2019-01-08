@@ -27,12 +27,10 @@ Installation of libgrid requires the following packages:
 \item git (a free and open source distributed version control system)
 \item GNU C compiler with OpenMP support (gcc)
 \item FFTW 3.x (Fast Fourier Transform package)
-\item LAPACK (Linear Algebra PACKage; optional)
-\item BLAS (Basic Linear Algebra Subprograms; optional)
 \end{itemize}
 To install these packages on Fedora linux, use (\# implies execution with root privileges): 
 \begin{verbatim}
-# dnf install git gcc fftw-* lapack lapack-devel blas blas-devel
+# dnf install git gcc fftw-*
 \end{verbatim}
 If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA drivers and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. This installation is compatible with the default settings in make.conf as described below. Currently, libgrid does not support OpenCL.
 
@@ -76,8 +74,6 @@ CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank\\
              & (default 3).\\
 CUDA\_DEBUG & Whether to include debug code in libggrid CUDA routines\\
             & ("yes" or "no"; default no).\\
-USE\_LAPACK & Some routines in libgrid use LAPACK (not needed for libdft).\\
-            & Use "yes" to include them or "no" to leave them out.\\
 AR & Archive program (default ar).\\
 \end{tabular}
 To compile the library, change to src subdirectory and issue make:
