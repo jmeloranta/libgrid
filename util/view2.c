@@ -3,6 +3,9 @@
  *
  * Usage: view file1 file2...
  *
+ * Movies can be made with ffmpeg:
+ * ffmpeg -f image2 -framerate 12 -i "movie-%05d.jpg" -s 800x600 movie.avi
+ *
  */
 
 #include <stdio.h>
