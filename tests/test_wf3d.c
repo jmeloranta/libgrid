@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
   time = time_step;
   for(l = 0; l < iterations; l++) {
     grid_wf_square_of_potential_gradient(sq_grad_pot, potential, workspace, workspace2);
-    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace, workspace2);
+    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace);
 #if 1
     grid_wf_density(gwf, rworkspace);
     for (i = 0; i < n; i++) {
