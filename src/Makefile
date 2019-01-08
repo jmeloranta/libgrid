@@ -30,8 +30,8 @@ endif
 OBJS = $(SRC:.c=.o) $(NVSRC:.cu=.o)
 
 libgrid.a: $(OBJS)
-	$(AR) cr libgrid.a $(OBJS)
-	$(RANLIB) libgrid.a
+	ar cr libgrid.a $(OBJS)
+	ranlib libgrid.a
 
 %.o: %.cu
 	nvcc $(NVCFLAGS) -c -o $@ $<
