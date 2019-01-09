@@ -53,7 +53,7 @@ EXPORT inline void grid_solve_tridiagonal_system(INT n, REAL complex *a, REAL co
  * v = right hand side vector (overwritten) (REAL complex *).
  * x = solution on exit (REAL complex *).
  * c2 = Off diagonal parameter (REAL complex; input). Sub = c2 - 1 (or c2 at rh boundary); Sup = c2 + 1 (or c2 at lh boundary).
- * str = solution may go to a non-continous array (INT; input).
+ * str = solution may go to a non-continuous array (INT; input).
  *
  * Status: Compared against Mathematica.
  *
@@ -102,7 +102,7 @@ EXPORT inline void grid_solve_tridiagonal_system2(INT n, REAL complex *b, REAL c
  * v = right hand side vector (overwritten) (REAL complex *).
  * x = solution on exit (REAL complex *).
  * c2 = Off diagonal parameter (REAL complex; input). Subdiagonal = c2 - 1; Supdiagonal = c2 + 1.
- * str = solution may go to a non-continous array (INT; input).
+ * str = solution may go to a non-continuous array (INT; input).
  *
  * Status: Compared against Mathematica.
  *
@@ -148,10 +148,10 @@ EXPORT inline void grid_solve_tridiagonal_system3(INT n, REAL complex *b, REAL c
  * c = supdiagonal (indexed 0 ... n-2). n-1 unused (REAL complex *).
  * v = right hand side vector (overwritten) (REAL complex *).
  * alpha = left corner matrix element for the last row of A (REAL complex).
- * beta  = right corner matrix element for the first rotw of A (REAL complex).
+ * beta  = right corner matrix element for the first row of A (REAL complex).
  * x = solution on exit (REAL complex *).
- * str = solution x may go to a non-continous array (INT; input).
- * bb = worksapce1 (0, ..., n) (REAL complex).
+ * str = solution x may go to a non-continuous array (INT; input).
+ * bb = Worksapce vector of dimension n (REAL complex *).
  *
  * Notes:  - with finite difference, use alpha = beta = 1.0 for periodic boundary
  *           and -1.0 for both if anti periodc.
@@ -197,8 +197,8 @@ EXPORT void grid_solve_tridiagonal_system_cyclic(INT n, REAL complex *a, REAL co
  * v = right hand side vector (overwritten) (REAL complex *).
  * x = solution on exit (REAL complex *).
  * c2 = Off diagonal parameter (REAL complex; input).
- * str = solution x may go to a non-continous array (INT; input).
- * bb = worksapce1 (0, ..., n) (REAL complex).
+ * str = solution x may go to a non-continuous array (INT; input).
+ * bb = worksapce1 (0, ..., n) (REAL complex *).
  *
  * Status: Compared against Mathematica.
  *

@@ -18,7 +18,7 @@ endif
 	make libgrid.a
 
 SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c ngrid.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c cgrid_bc.c \
-      rgrid_bc.c threads.c linalg.c ctimer.c other.c
+      rgrid_bc.c threads.c linalg.c ctimer.c interpolate.c
 SRC += ext-cuda/func1c.c ext-cuda/func2c.c ext-cuda/func3c.c ext-cuda/func4c.c ext-cuda/func5c.c ext-cuda/func6c.c ext-cuda/func7c.c
 
 ifeq ($(CUDA),yes)
@@ -58,7 +58,7 @@ linalg.o: linalg.c grid.h private.h
 ngrid.o: ngrid.c grid.h private.h
 ngrid-cuda.o: ngrid-cuda.c grid.h
 ngrid-cuda2.o: ngrid-cuda2.cu cuda-math.h
-other.o: other.c grid.h private.h
+interpolate.o: interpolate.c grid.h private.h
 rgrid_bc.o: rgrid_bc.c grid.h private.h
 rgrid.o: rgrid.c grid.h private.h
 rgrid-cuda.o: rgrid-cuda.c grid.h

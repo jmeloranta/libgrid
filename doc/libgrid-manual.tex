@@ -2696,11 +2696,90 @@ This function returns prints the values of the grid points in the wave function 
 
 \section{Linear algebra routines}
 
-% linalg.c
+Routines for solving matrix equation problems for specialized cases are provided. These include various tridiagonal systems that arise from finite difference discretization of the Laplace operator. Only the externally usable functions are described below.
 
-\section{Other routines}
+\subsection{grid\_solve\_tridiagonal\_system() -- Solve tridiagonal $Ax = b$ problem}
 
-% other.c
+Solve tridiagonal matrix equation $Ax = b$ by using the Thomas algorithm. This algorithm is not stable in general but works for diagonally dominant systems. It takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT *n & dimensionality (number of equations).\\
+REAL complex *a & Subdiagonal of $A$ (preserved) (indexed 1 ... n-1). Element 0 unused.\\
+REAL complex *b & Diagonal of $A$ (overwritten).\\
+REAL complex *c & Supdiagonal of $A$ (preserved) (indexed 0 ... n-2). Element n-1 unused.\\
+REAL complex *v & Right-hand side vector $b$ (overwritten).\\
+REAL complex *x & Solution on exit.\\
+INT str & Stride for writing the output (if elements of solution are not located adjacent to each other in memory).\\
+\end{longtable}
+\noindent
+Note that a and x may be the same array. This function does not return any value.
+
+\subsection{grid\_solve\_tridiagonal\_system\_cyclic() -- Solve tridiagonal $Ax = b$ problem (Sherman-Morrison)}
+
+Solve tridiagonal matrix equation $Ax = b$ by using the Sherman-Morrison/Thomas algorithm. Below alpha and beta specify the extreme non-zero elements in $A$ (this may arise, for example, from finite difference and periodic boundary condition. The arguments to this function are as follows:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT n & Dimensionality (number of equations).\\
+REAL complex *a & Subdiagonal of $A$ (indexed 1 ... n-1). Element 0 unused.\\
+REAL complex *b & Diagonal of $A$ (overwritten).\\
+REAL complex *c & Supdiagonal of $A$ (indexed 0 ... n-2). Element n-1 unused.\\
+REAL complex *v & Right hand side vector $b$ (overwritten).\\
+REAL complex alpha & Left corner matrix element for the last row of $A$.\\
+REAL complex beta  & Right corner matrix element for the first row of $A$.\\
+REAL complex *x & Solution on exit.\\
+INT str & Stride; solution $x$ may go to a non-continuous array.\\
+REAL complex *bb & Worksapce vector of dimension n.\\
+\end{longtable}
+\noindent
+This function has no return value.
+
+\section{Interpolation}
+
+This section describes miscellaneous functions in libgrid.
+
+\subsection{grid\_polynomial\_interpolate() - Polynomial interpolation}
+
+This function performs polynomial interpolation over a discrete set of (x, y) values. It takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+REAL *xa & Array of discrete $x$ values.\\
+REAL *ya & Array of discrete $y$ values.\\  
+INT n & Number of (x,y) points in the above arrays.\\
+REAL *x & Point at which the approximation is sought.\\
+REAL *dy & Returned error estimate.\\
+\end{longtable}
+\noindent
+Estimate of the function at point $x$ is returned (REAL).
+
+\subsection{grid\_spline\_ypp() and grid\_spline\_interpolate() -- Spline interpolation}
+
+These functions perform spline interpolation of discrete data points. User must first call function grid\_spline\_ypp() once (2nd derivative calculation) after which grid\_spline\_interpolate() can be called multiple times to obtain the spline approximation. Function grid\_spline\_ypp() takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+REAL *x & Array of $x$ values.\\
+REAL *y & Array of $y$ values.\\
+INT n & Number of (x,y) points.\\
+REAL yp1 & First derivative at point x[1].\\
+REAL ypn & First derivative at point x[n+1].\\
+REAL *y2 & Storage for second derivative (computed; dimension n).\\
+\end{longtable}
+\noindent
+This function does not return any value. After grid\_spline\_upp() function has been called, grid\_spline\_interpolate() can be called with arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+REAL *xa & Array of $x$ values.\\
+REAL *ya & Array of $y$ values.\\
+REAL *y2a & Array of second derivatives (computed in grid\_spline\_ypp()).\\
+INT n & Number of (x,y) points.\\
+REAL x & Point at which the approximation is obtained.\\
+\end{longtable}
+\noindent
+This function returns the spline approximation at point $x$.
 
 \chapter{Parallel execution}
 

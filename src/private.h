@@ -149,4 +149,35 @@ static inline REAL shift_rgrid(void *arg, REAL x, REAL y, REAL z) {
   return rgrid_value(params->grid, x - params->x, y - params->y, z - params->z);
 }
 
+/*
+ * Integer version of pow().
+ *
+ */
+
+static inline REAL ipow(REAL x, INT n) {
+
+  INT ii, sig;
+  REAL value = 1.0;
+
+  if(n == 0) return 1.0;
+  sig = (n < 0) ? -1:1;
+  n = ABS(n);
+  switch(n) {
+    case 1:      
+      break;
+    case 2:
+      x *= x;
+      break;
+    case 3:
+      x *= x * x;
+      break;
+    default:
+      for(ii = 0; ii < n; ii++)
+        value *= x;
+      x = value;
+  }
+  if(sig == -1) x = 1.0 / x;
+  return x;
+}
+
 #endif /*  __GRIDPRIVATE__ */

@@ -112,40 +112,6 @@ EXPORT void grid_spline_ypp(REAL *x, REAL *y, INT n, REAL yp1, REAL ypn, REAL *y
  free(u);
 }
 
-/* Same as before but allocating and returning the y2 */
-/*
- * Second derivative for spline interpolation.
- *
- * x    = Array of x values (REAL *).
- * y    = Array of y values (REAL *).
- * n    = Number of points for (x,y) (INT).
- * yp1	= First derivative at x[1] (REAL)
- * ypn 	= First derivative at x[n+1] (REAL)
- *
- * Must be called only once before calling grid_spline_interpolate
- *
- * If yp1 and yp2 are larger than 1.e30 the second derivative at the boundaries is 0.
- *
- * Source: Numerical Recipes (indexing from zero).
- *
- * Same as grid_spline_ypp() but allocates spave for y2.
- *
- * Returns pointer to y2. User must remember to free it when no longer used.
- *
- */
-
-EXPORT REAL *grid_spline_ypp_new(REAL *x, REAL *y, INT n, REAL yp1, REAL ypn) {
-
-  REAL *y2;
-
-  if(!(y2 = (REAL *) malloc(sizeof(REAL) * (size_t) n))) {
-    fprintf(stderr, "libgrid: Out of memory in grid_spline_ypp_new().\n");
-    exit(1);
-  }
-  grid_spline_ypp(x, y, n, yp1, ypn, y2);
-  return y2;
-}
-
 /*
  * Spline interpolation 
  *
@@ -186,33 +152,3 @@ EXPORT REAL grid_spline_interpolate(REAL *xa, REAL *ya, REAL *y2a, INT n, REAL x
   return a * ya[klo] + b * ya[khi] + ((a * a * a - a) * y2a[klo] + (b * b * b - b) * y2a[khi]) * (h * h) / 6.0;
 }
 
-/*
- * Integer version of pow().
- *
- */
-
-EXPORT inline REAL ipow(REAL x, INT n) {
-
-  INT ii, sig;
-  REAL value = 1.0;
-
-  if(n == 0) return 1.0;
-  sig = (n < 0) ? -1:1;
-  n = ABS(n);
-  switch(n) {
-    case 1:      
-      break;
-    case 2:
-      x *= x;
-      break;
-    case 3:
-      x *= x * x;
-      break;
-    default:
-      for(ii = 0; ii < n; ii++)
-        value *= x;
-      x = value;
-  }
-  if(sig == -1) x = 1.0 / x;
-  return x;
-}
