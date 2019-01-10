@@ -35,7 +35,7 @@ extern int feenableexcept(int);
  *
  */
 
-EXPORT void grid_set_fftw_flags(unsigned INT f) {
+EXPORT void grid_set_fftw_flags(char f) {
 
   switch (f) {
   case 0:
@@ -63,9 +63,21 @@ EXPORT void grid_set_fftw_flags(unsigned INT f) {
  *
  */
 
-EXPORT unsigned INT grid_get_fftw_flags() {
+EXPORT char grid_get_fftw_flags() {
 
-  return plan_flags;
+  switch (plan_flags) {
+  case FFTW_ESTIMATE:
+    return 0;
+  case FFTW_MEASURE: /* default */
+    return 1;
+  case FFTW_PATIENT:
+    return 2;
+  case FFTW_EXHAUSTIVE:
+    return 3;
+  default:
+    fprintf(stderr, "libgrid: Unknown FFT flags.\n");
+    exit(1);
+  }
 }
 
 /*

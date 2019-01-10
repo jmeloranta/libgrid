@@ -2783,11 +2783,29 @@ This function returns the spline approximation at point $x$.
 
 \chapter{Parallel execution}
 
-% explain model
+libgrid supports parallel execution with both OpenMP (requires shared memory computer) or CUDA (NVIDIA GPUs). On systems with both OpenMP and CUDA available, it can employ both simultaneously without any additional input from the user. For most operations GPUs are much faster than traditional CPUs and therefore libgrid will try to do most computations on the GPU (within the limited memory available on them). Both parallel schemes require their own initialization function call as explained below. A program written to use libgrid usually does not need any additional modification to run on GPUs. The main limitation with GPUs is the amount of memory available and, if user attempts to use more memory than is available, some of the operations may have to run on the CPU (where more memory is available).
 
 \section{OpenMP specific routines}
 
+\subsection{grid\_threads\_init() -- Initialize OpenMP threads}
+
+To initialize OpenMP threads, the user code should always call first this function. It takes one argument that specifies how many threads will be used (INT). For maximum performance, this should be very close to the number of CPU cores available on the system. This function does not return any value.
+
+\subsection{grid\_threads() -- Return number of OpenMP threads in use}
+
+This function returns the current OpenMP threads in use (INT). This function does not take any arguments.
+
+\subsection{grid\_set\_fftw\_flags() -- Set FFT planning flags for FFTW}
+
+Set FFTW specific planning flags (see FFTW documentation). FFTW has many different FFT algorithms implemented and the planning stage will determine (at run time) which of these is fastest for the current system. This function takes one argument that specifies the planning method (char). The following values are possible 0 = Estimate (fast), 1 = Measure (fast; default), 2 = Patient (very slow), 3 = Exhaustive (even slower). The best performance is obtained with modes 2 and 3. This function does not return any value.
+
+\subsection{grid\_get\_fftw\_flags() -- Return current FFTW planning flags}
+
+This function returns the current FFTW planning flags in use (char). This function does not take any arguments.
+
 \section{CUDA specific routines}
+
+
 
 \chapter{Interfacing with other software}
 
