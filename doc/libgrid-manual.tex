@@ -2787,6 +2787,8 @@ libgrid supports parallel execution with both OpenMP (requires shared memory com
 
 \section{OpenMP specific routines}
 
+OpenMP execution employs threads, which show as only one process in ps/top utilities. However, both of them will show 100\% times the number of threads occupation (e.g., 6 threads will result in 600\% CPU usage).
+
 \subsection{grid\_threads\_init() -- Initialize OpenMP threads}
 
 To initialize OpenMP threads, the user code should always call first this function. It takes one argument that specifies how many threads will be used (INT). For maximum performance, this should be very close to the number of CPU cores available on the system. This function does not return any value.
@@ -2805,13 +2807,124 @@ This function returns the current FFTW planning flags in use (char). This functi
 
 \section{CUDA specific routines}
 
+To enable CUDA parallel execution in libgrid, function cuda\_enable() must be called with argument 1 (= enable) first. Once enabled, libgrid will automatically schedule grid operations to CPU or GPU depending on where the grids are currently stored. Libgrid has its own memory management system for keeping track which grids are on CPU and which on GPU. Although this system is more or less invisible to the user, some of its inner details are documented in the following. The GPU memory (which is independent of the CPU memory) is allocated in blocks (usually one block = one grid), which are described by the following structure:
+\begin{verbatim}
+struct gpu_mem_block {
+  void *gpu_mem;             /* GPU memory pointer */
+  void *host_mem;            /* Corresponding host memory pointer */
+  size_t length;             /* Memory block length */
+  time_t created;            /* time(0) value of block creation */
+  time_t last_used;          /* time(0) value of last access */
+  long access_count;         /* How many times has the data been accessed */
+  char locked;               /* Page locked in GPU memory? (1 = yes, 0 = no) */
+  char id[32];               /* String ID describing the block */
+  struct gpu_mem_block *next;/* Next block in linked list (NULL terminated list) */
+}; 
+typedef struct gpu_mem_block gpu_mem_block;
+\end{verbatim}
+The block statistics (creation time, last used, data access count) is used to decide where it is most beneficial to store the grid (CPU or GPU). Memory pointers *gpu\_mem and *host\_mem point to the data stored in GPU/CPU. Setting locked flag will prevent the memory block from being swapped out to the CPU memory (cuda\_lock\_block() and cuda\_unlock\_block() functions). String id can be set by the user to describe the contents of the memory block (useful for debugging). The last entry in the structure is a link to the next memory block. Libgrid keeps track of the memory blocks using a linked list.
 
+Grid operations are divided into one, two, three, and four grid operations. Each of these has its own policy for GPU execution. In addition, FFT and memory copy operations have their own one grid policies. Currently, these policies are as follows:\\
+
+\begin{longtable}{p{.1\textwidth} p{.8\textwidth}}
+Policy & Description\\
+\cline{1-2}
+FFT & Execute FFT on the GPU always (even when other blocks have to be swapped out).\\
+One &  1. Execute the operation on the GPU if there is enough memory left.\\
+    &  2. If the block is alreay on GPU run the operation there.\\
+    &  3. If the block is not on GPU and there is not enough memory left, run on the host (CPU).\\
+Two & 1. Execute the operation on the GPU if there is enough memory available for both blocks.\\
+    & 2. If one of the blocks is already on GPU run the operation there.\\
+    & 3. If neither block is on GPU and there is not enough memory left, run on the host (CPU).\\
+Three & 1. Execute the operation on the GPU if there is enough memory left for all three blocks.\\
+      & 2. If at least two of the blocks are already on GPU run the operation there.\\
+      & 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).\\
+Four & 1. Execute the operation on the GPU if there is enough memory left for all four blocks.\\
+     & 2. If at least two of the blocks are already on GPU run the operation there.\\     
+     & 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).\\
+Copy & 1. Execute the operation on the GPU if there is enough memory left for both blocks. The subsequent ops will be likely on GPU.\\
+     & 2. If the source block is already on GPU run the operation there.\\
+     & 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).\\
+\end{longtable}
+\noindent
+These policies can be modified by changing libgrid/src/cuda.c source file (functions cuda\_*\_policy()). Libgrid calls these policy functions automatically and there is no need for the user to call them. Since memory transfers between CPU and GPU memory are very slow, it is important to have good policies for the execution of the grid operations. Simple statistics of the running CUDA processes can be obtained with nvidia-smi command. The important numbers are the Volatile GPU utilization as well as the power consumption. The old wisdom: ``Tune for maximum smoke" seems to work fairly well. This means that the higher the GPU power consumption, the faster the program usually runs. The GPU utilization does not appear to be as meaningful indication of the GPU efficiency. For more accurate profiling, use the CUDA profiler (nvprof).
+
+Below only the functions that user level libgrid programs may have to call are documented. There are many other functions (e.g., memory block allocation, free, etc.) that are internally used by libgrid. They are also available for users to call, but one must know exactly what to do with them... (should not be needed). Most things are taken care of automatically by libgrid.
+
+\subsection{cuda\_enable() -- Enable CUDA execution}
+
+This function enables (argument value 1) or disables (argument value 0) CUDA execution (argument type char). In order to enable CUDA, this function must be called first with argument 1. No value is returned.
+
+\subsection{cuda\_set\_gpu() -- Set GPU for CUDA execution (multi-GPU systems only)}
+
+This function sets the default CUDA GPU to use. This is specified by the only argument to this function (int). The first GPU is 0, 2nd is 1, etc. This function does not return any value.
+
+\subsection{cuda\_error\_check() -- Perform CUDA error check (slow)}
+
+This will perform CUDA error checking, which is not done by default as it slows down the execution. It will call abort() if something is wrong, so that the stack trace can be used to locate the problem. Users do not usually need to use this function. It has no return value.
+
+\subsection{cuda\_memory() -- Return amount of free GPU memory}
+
+This function returns the currently available GPU memory in bytes (size\_t). It takes no arguments. Libgrid monitors the memory usage automatically and swaps in/out memory blocks as needed.
+
+\subsection{cuda\_statistics() -- Print CUDA memory block statistics}
+
+This function prints CUDA memory block allocation statistics. It takes one argument (char), which controls the output: 0 = print only summary or 1 = print also individual GPU memory block information. This function does not return any value.
+
+\subsection{cuda\_gpu\_info() -- Print GPU information}
+
+This function prints the current GPU information (card model, amount of memory, etc.). It takes no arguments and does not return any value.
 
 \chapter{Interfacing with other software}
 
 \section{External functions}
 
+Users may wish to provide their own functions that operate on grids, which causes a problem for CUDA execution. CUDA wants the functions to be compiled separately using nvcc compiler, which would require libgrid users to consider CUDA coding \& compilation. To work around this inconvenience, libgrid allows users to define their on functions (libgrid/src/ext-cuda directory). These are compiled at the time of libgrid compilation, which also makes them accessible in CUDA. Currently, there are several functions defined using this external mechanism, which are used by libdft library. See ext-cuda directory for examples.
+
 \section{Utilities}
+
+Several utilities are available for converting the libgrid binary grid format to other formats that can be read by 3rd party visualization programs (e.g., visit, paraview, xmgrace, veusz). These programs are located in libgrid/util directory. They have to be compiled and installed separately (i.e., make and make install in that directory). The default installation directory is /usr/local/bin. All NETCDF files created will have x, y, and z fields that describe the grid dimensions.
+
+\subsection{grd2cdf -- Convert libgrid format to NETCDF}
+
+To convert test.grd (created by libgrid) to NETCDF format, use:
+\begin{verbatim}
+% grd2cdf test.grd test.cdf
+\end{verbatim}
+
+\subsection{vector2cdf -- Convert scalar and vector field to NETCDF}
+
+Convert one scalar and one vector field to one NETCDF file. For example:
+\begin{verbatim}
+% vector2cdf density.grd flux_x.grd flux_y.grd flux_z.grd cdffile.cdf
+\end{verbatim}
+where density.grd is a scalar grid and flux\_x, flux\_y, flux\_z correspond to $x$, $y$, $z$ components of the field. All these will be separately accessible in the NETCDF file and they can be overlaid in graphics presentation. To visualize a vector field in visit, it must first be converted (vecfield is the vector field name):
+\begin{enumerate}
+\item Select Controls $\rightarrow$ Expressions
+\item Enter name: vecfield
+\item Type: Vector Mesh Variable
+\item Standard Editor: $\lbrace$fx,fy,fz$\rbrace$
+\item Press Apply.
+\end{enumerate}
+
+\subsection{wf2cdf -- Convert libgrid binary wave function to NETCDF (scalar \& vector field)}
+
+Convert wave function grid to NETCDF file containing: density ($|\psi|^2$) and the three probability flux components: flux\_x, flux\_y, flux\_z. This file can be visualized with visit (see above) or with paraview. In the latter case make sure that the NETCDF file has the extension ``.nc" (rather than ``.cdf"). The fields in NETCDF file are: rho = density, fx = flux\_x, fy = flux\_y, and fz = flux\_z. For example, to convert wave function grid file, use:
+\begin{verbatim}
+% wf2cdf wavefunction.grd wavefunction.nc
+\end{verbatim}
+
+\subsection{wf2cdf2 -- Convert libgrid binary wave function to NETCDF (real \& imaginary parts)}
+
+Similar to wf2cdf but only place real and imaginary parts of the wave function into the NETCDF file (field names re and im). 
+
+\subsection{view/view2 -- Animate 1-D data using xmgrace program}
+
+Both view (may have to type full path as there is also /usr/bin/view) and view2 programs will take an ordered list of files as arguments, which will be displayed in that order. There is a short pause at the first file to allow adjustment of the display. View works for ASCII files of 3-D cuts along x, y, and z axes (as output by grid\_write()). View2 works for 1-D grids (e.g., dimension 1, 1, 256). To animate a set of files bubble-*.z (1-D), use:
+\begin{verbatim}
+% view2 bubble-{?,??,???,????,?????}.z
+\end{verbatim}
+where the files were named bubble-1.z, bubble-2.z, etc. The wildcard above (csh/tcsh syntax; bash is likely different) ensures that the files will appear in the correct order. View2 also allows saving the individual images during view. To get this behavior, add -s option. Programs like ffmpeg can be used to create movies from the resulting jpg files.
 
 \chapter{Examples}
 

@@ -1061,8 +1061,8 @@ EXPORT int cuda_one_block_policy(void *host_mem, size_t length, char *id, char c
  *
  * The two block policy is as follows:
  *
- * 1. Execute the operation on the GPU if there is enough memory left for both blocks.
- * 2. If one of the blocks is alreay on GPU run the operation there.
+ * 1. Execute the operation on the GPU if there is enough memory available for both blocks.
+ * 2. If one of the blocks is already on GPU run the operation there.
  * 3. If neither block is on GPU and there is not enough memory left, run on the host (CPU).
  *
  */
@@ -1120,7 +1120,7 @@ EXPORT int cuda_two_block_policy(void *host_mem1, size_t length1, char *id1, cha
  * The three block policy is as follows:
  *
  * 1. Execute the operation on the GPU if there is enough memory left for all three blocks.
- * 2. If at leaast two of the blocks are alreay on GPU run the operation there.
+ * 2. If at least two of the blocks are already on GPU run the operation there.
  * 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).
  *
  */
@@ -1188,7 +1188,7 @@ EXPORT int cuda_three_block_policy(void *host_mem1, size_t length1, char *id1, c
  * The four block policy is as follows:
  *
  * 1. Execute the operation on the GPU if there is enough memory left for all four blocks.
- * 2. If at leaast two of the blocks are alreay on GPU run the operation there.
+ * 2. If at least two of the blocks are already on GPU run the operation there.
  * 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).
  *
  */
@@ -1251,7 +1251,7 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, char *id1, ch
  * The three block policy is as follows:
  *
  * 1. Execute the operation on the GPU if there is enough memory left for both blocks. The subsequent ops will be likely on GPU.
- * 2. If the source block is alreay on GPU run the operation there.
+ * 2. If the source block is already on GPU run the operation there.
  * 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).
  *
  */

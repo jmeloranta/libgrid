@@ -31,9 +31,9 @@ void reverse_xz(rgrid *in, rgrid *out) {
 
 int main(int argc, char **argv) {
 
-  char *cdffile = argv[3], *gridfile = argv[2];
+  char *cdffile = argv[2], *gridfile = argv[1];
   FILE *fp;
- INT i;
+  INT i;
   int ncid, varid0, varid1, varid2, varid3, dimids[3], retval, dim;
   REAL step, *x, *y, *z;
   INT nx, ny, nz;
