@@ -2634,12 +2634,13 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
  * input = Input grid for averaging (rgrid *; input).
  * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
  * nbins = Number of bins requested (INT; input).
+ * volel = 1: Include 4\pi r^2 volume element or 0: just calculate average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT nbins) {
+EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
   REAL step = input->step, *value = input->value, x0 = input->x0, y0 = input->y0, z0 = input->z0, r, x, y, z;
@@ -2673,8 +2674,13 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
       }
     }
   }
-  for(k = 0, z = 0.0; k < nbins; k++, z += binstep)
-    bins[k] = z * z * bins[k] / (REAL) nvals[k];
+  if(volel) {
+    for(k = 0, z = 0.0; k < nbins; k++, z += binstep)
+      bins[k] = 4.0 * M_PI * z * z * bins[k] / (REAL) nvals[k];
+  } else {
+    for(k = 0; k < nbins; k++)
+      bins[k] = bins[k] / (REAL) nvals[k];
+  }
   free(nvals);
 }
 
@@ -2682,17 +2688,18 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
  * Compute spherical shell average in the reciprocal space of power spectrum with respect to the grid origin
  * (result 1-D grid).
  *
- * E(\tilde{r}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta}) d\tilde{\theta} d\tilde{\phi}
+ * E(k) = \frac{k^2}{4\pi} \int |E(k, \theta_k, \phi_k)|^2 sin(\theta_k}) d\theta_k d\phi_k
  * 
  * input = Input grid for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
  * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
  * nbins = Number of bins requested (INT; input).
+ * volel = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL binstep, INT nbins) {
+EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz / 2 + 1, idx, nxy = nx * ny;
   REAL step = input->step, kx0 = input->kx0, ky0 = input->ky0, kz0 = input->kz0, r, kx, ky, kz;
@@ -2737,8 +2744,12 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL bi
       }
     }
   }
-  for(k = 0, z = 0.0; k < nbins; k++, z += binstep)
-    bins[k] = z * z * bins[k] / (REAL) nvals[k];
-  
+  if(volel) {
+    for(k = 0, kz = 0.0; k < nbins; k++, kz += binstep)
+      bins[k] = 4.0 * M_PI * kz * kz * bins[k] / (REAL) nvals[k];
+  } else {
+    for(k = 0; k < nbins; k++)
+      bins[k] = bins[k] / (REAL) nvals[k];
+  }
   free(nvals);
 }
