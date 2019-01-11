@@ -92,7 +92,7 @@ endif
 
 install:
 	cp libgrid.a $(ROOT)/lib
-	$(RANLIB) $(ROOT)/lib/libgrid.a
+	ranlib $(ROOT)/lib/libgrid.a
 	-mkdir $(ROOT)/include/grid
 	cp *.h $(ROOT)/include/grid
 	-cp cuda.arch $(ROOT)/include/grid

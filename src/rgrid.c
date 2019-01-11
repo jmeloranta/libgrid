@@ -2674,7 +2674,7 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
 }
 
 /*
- * Compute spherical shell average in the resiprocal space of power spectrum with respect to the grid origin
+ * Compute spherical shell average in the reciprocal space of power spectrum with respect to the grid origin
  * (result 1-D grid).
  *
  * E(\tilde{r}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta})\d\tilde{\theta} d\tilde{\phi}
@@ -2687,7 +2687,7 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
  *
  */
 
-EXPORT void rgrid_spherical_average_resiprocal(rgrid *input, REAL *bins, REAL binstep, INT nbins) {
+EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL binstep, INT nbins) {
 
   INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz / 2 + 1, idx, nxy = nx * ny;
   REAL step = input->step, kx0 = input->kx0, ky0 = input->ky0, kz0 = input->kz0, r, kx, ky, kz;
