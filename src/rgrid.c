@@ -2631,10 +2631,11 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
  *
  * E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) sin(\theta) d\theta d\phi
  * 
- * input = Input grid for averaging (rgrid *; input).
- * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
- * nbins = Number of bins requested (INT; input).
- * volel = 1: Include 4\pi r^2 volume element or 0: just calculate average (char; input).
+ * input   = Input grid for averaging (rgrid *; input).
+ * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
+ * binstep = Binning step length (REAL; input).
+ * nbins   = Number of bins requested (INT; input).
+ * volel   = 1: Include 4\pi r^2 volume element or 0: just calculate average (char; input).
  *
  * No return value.
  *
@@ -2690,10 +2691,11 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
  *
  * E(k) = \frac{k^2}{4\pi} \int |E(k, \theta_k, \phi_k)|^2 sin(\theta_k}) d\theta_k d\phi_k
  * 
- * input = Input grid for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
- * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
- * nbins = Number of bins requested (INT; input).
- * volel = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
+ * input   = Input grid for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
+ * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
+ * binstep = Binning step length for k (REAL; input). 
+ * nbins   = Number of bins requested (INT; input).
+ * volel   = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
  *
  * No return value.
  *

@@ -1258,14 +1258,16 @@ This function does not return any value.
 \subsection{rgrid\_spherical\_average() -- Compute spherical average of grid in real space}
 
 Compute spherical shell average in real space with respect to the grid origin with the result stored in 1-D grid:
-$$E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) \sin(\theta) d\theta d\phi$$
+$$E(r) = \frac{1}{4\pi r^2} \int E(r, \theta, \phi) \sin(\theta) d\theta d\phi$$
 This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *input & Input grid for spherical averaging.\\
 REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
+REAL binstep & Binning step length.\\
 INT nbins & Number of bins allocated in bins.\\
+char volel & Whether to include multiplication by the volume element ($4\pi r^2$). 1 = Multiply by the volume element; 0 = no multiplication (i.e., calculate radial average).\\
 \end{longtable}
 \noindent
 This function does not return any value.
@@ -1273,17 +1275,19 @@ This function does not return any value.
 \subsection{rgrid\_spherical\_average\_reciprocal() -- Compute spherical average of grid in reciprocal space}
 
 Compute spherical shell average in reciprocal space with respect to the grid origin with the result stored in 1-D grid:
-$$E(\mathbf{\tilde{r}}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta}) d\tilde{\theta} d\tilde{\phi}$$
+$$E(\mathbf{k}) = \frac{1}{4\pi k^2} \int |E(k, \theta_k, \phi_k)|^2 sin(\theta_k) d\theta_k d\phi_k$$
 This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *input & Input grid for spherical averaging, but this is complex data (i.e., after rgrid\_fft()).\\
 REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
+REAL binstep & Binning step length for $k$.\\
 INT nbins & Number of bins allocated in bins.\\
+char volel & Whether to include multiplication by the volume element ($4\pi k^2$). 1 = Multiply by the volume element; 0 = no multiplication (i.e., calculate radial average).\\
 \end{longtable}
 \noindent
-Note that $\tilde{r} = 2\pi k$ where $k$ is the wave vector (atomic units). This function does not return any value. 
+This function does not return any value. 
 
 \section{Complex grid routines}
 
