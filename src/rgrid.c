@@ -2592,3 +2592,142 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
     }
   }
 }
+
+
+/*
+ * Decompose a vector field into "compressible" (u) and "incompressible" (w) parts:
+ * v = w + u = w + \nabla q  where div w = 0 and u = \nabla q (Hodge's decomposition).
+ *
+ * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
+ * The incompressible part is then w = v - u.
+ *
+ * vx = X component of the vector field to be decomposed (rgrid *; input).
+ * vy = Y component of the vector field to be decomposed (rgrid *; input).
+ * vz = Z component of the vector field to be decomposed (rgrid *; input).
+ * ux = X component of the compressible vector field (rgrid *; output).
+ * uy = Y component of the compressible vector field (rgrid *; output).
+ * uz = Z component of the compressible vector field (rgrid *; output).
+ * wx = X component of the incompressible vector field (rgrid *; output).
+ * wy = Y component of the incompressible vector field (rgrid *; output).
+ * wz = Z component of the incompressible vector field (rgrid *; output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, rgrid *uz, rgrid *wx, rgrid *wy, rgrid *wz) {
+
+  rgrid_div(wx, vx, vy, vz);
+  rgrid_poisson(wx);
+  rgrid_fd_gradient(wx, ux, uy, uz);
+  rgrid_difference(wx, vx, ux);
+  rgrid_difference(wy, vy, uy);
+  rgrid_difference(wz, vz, uz);
+}
+
+/*
+ * Compute spherical shell average in the real space with respect to the grid origin
+ * (result 1-D grid).
+ *
+ * E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) sin(\theta)\d\theta d\phi
+ * 
+ * input = Input grid for averaging (rgrid *; input).
+ * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
+ * nbins = Number of bins requested (INT; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT nbins) {
+
+  INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
+  REAL step = input->step, *value = input->value, x0 = input->x0, y0 = input->y0, z0 = input->z0, r, x, y, z;
+  INT *nvals, ij, i, j, k, ijnz;
+
+  if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
+    fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
+    exit(1);
+  }
+  bzero(nvals, sizeof(INT) * (size_t) nbins);
+  bzero(bins, sizeof(REAL) * (size_t) nbins);
+
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nx2,ny2,nz2,nxy,step,value,x0,y0,z0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,x,y,z,r,idx) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    i = ij / ny;
+    j = ij % ny;
+    x = ((REAL) (i - nx2)) * step - x0;
+    y = ((REAL) (j - ny2)) * step - y0;    
+    for(k = 0; k < nz; k++) {
+      z = ((REAL) (k - nz2)) * step - z0;
+      r = SQRT(x * x + y * y + z * z);
+      idx = (INT) (r / (REAL) binstep);
+      if(idx < nbins) {
+        bins[idx] += value[ijnz + k];
+        nvals[idx]++;
+      }
+    }
+  }
+  for(k = 0; k < nbins; k++) bins[k] = bins[k] / (REAL) nvals[k];
+  free(nvals);
+}
+
+/*
+ * Compute spherical shell average in the resiprocal space of power spectrum with respect to the grid origin
+ * (result 1-D grid).
+ *
+ * E(\tilde{r}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta})\d\tilde{\theta} d\tilde{\phi}
+ * 
+ * input = Input grid for averaging (rgrid *; input), but this *after* FFT (actually complex data).
+ * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
+ * nbins = Number of bins requested (INT; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_spherical_average_resiprocal(rgrid *input, REAL *bins, REAL binstep, INT nbins) {
+
+  INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz / 2 + 1, idx, nxy = nx * ny;
+  REAL step = input->step, kx0 = input->kx0, ky0 = input->ky0, kz0 = input->kz0, r, kx, ky, kz;
+  REAL complex *value = (REAL complex *) input->value;
+  REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
+  INT *nvals, ij, i, j, k, ijnz;
+
+  if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
+    fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
+    exit(1);
+  }
+  bzero(nvals, sizeof(INT) * (size_t) nbins);
+  bzero(bins, sizeof(REAL) * (size_t) nbins);
+
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nxy,step,lx,ly,lz,value,kx0,ky0,kz0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    i = ij / ny;
+    j = ij % ny;
+    if(i < nx/2) 
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = -((REAL) (nx - i)) * lx - kx0;
+    if(j < ny/2)
+      ky = ((REAL) j) * ly - ky0;    
+    else
+      ky = -((REAL) (ny - j)) * ly - ky0;
+    for(k = 0; k < nz; k++) {
+      if(k < nz/2)
+        kz = ((REAL) k) * lz - kz0;
+      else
+        kz = -((REAL) (nz - k)) * lz - kz0;
+      r = SQRT(kx * kx + ky * ky + kz * kz);
+      idx = (INT) (r / (REAL) binstep);
+      if(idx < nbins) {
+        bins[idx] += sqnorm(value[ijnz + k]);
+        nvals[idx]++;
+      }
+    }
+  }
+  for(k = 0; k < nbins; k++) bins[k] = bins[k] / (REAL) nvals[k];
+  free(nvals);
+}
