@@ -1,8 +1,7 @@
 
 include ../make.conf
 
-all: test_wf3d test_wf3d_itp_linear test_wf3d_itp_nonlinear \
-     test_rfft3d test_convolution_r3d lintest1 lintest2 lintest3
+all: test_wf3d test_convolution_r3d lintest1 lintest2 lintest3
 
 lintest1.o: lintest1.c
 lintest1: lintest1.o
@@ -25,19 +24,6 @@ test_wf3d.o: test_wf3d.c
 test_wf3d: test_wf3d.o
 	$(CC) $(CFLAGS) -o test_wf3d test_wf3d.o $(LDFLAGS)
 
-test_wf3d_itp_linear: test_wf3d_itp_linear.o
-	$(CC) $(CFLAGS) -o test_wf3d_itp_linear test_wf3d_itp_linear.o $(LDFLAGS)
-
-test_wf3d_itp_linear.o: test_wf3d_itp_linear.c
-
-test_wf3d_itp_nonlinear: test_wf3d_itp_nonlinear.o
-	$(CC) $(CFLAGS) -o test_wf3d_itp_nonlinear test_wf3d_itp_nonlinear.o $(LDFLAGS)
-
-test_wf3d_itp_nonlinear.o: test_wf3d_itp_nonlinear.c
-
-test_rfft3d: test_rfft3d.o
-	$(CC) $(CFLAGS) -o test_rfft3d test_rfft3d.o $(LDFLAGS)
-
 test_convolution_r3d.o: test_convolution_r3d.c
 
 test_convolution_r3d: test_convolution_r3d.o
@@ -47,6 +33,5 @@ test_convolution_r3d.o: test_convolution_r3d.c
 
 clean:
 	-rm *.o *~ 
-	-rm test_wf3d test_wf3d_itp_linear test_wf3d_itp_nonlinear 
-	-rm cfft-3d cfft-2d test_convolution_r3d test_rfft3d
+	-rm test_wf3d cfft-3d cfft-2d test_convolution_r3d
 	-rm lintest1 lintest2 lintest3

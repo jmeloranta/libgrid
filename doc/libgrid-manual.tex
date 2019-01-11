@@ -138,7 +138,7 @@ This will compile the program specified in test.c and link the appropriate libra
 
 \section{Data types}
 
-The libgrid header file defines the real and integer data types automatically according to those requested during the configuration step (make.conf). Instead of using float, double, int, long etc. directly, use REAL to represent a floating point number and INT to introduce the variables (e.g., REAL x, y; INT i;). To define complex number type, use REAL complex. Since the function names in the system math library vary depending on the floating point precision (e.g., expf(), exp(), expl()), libgrid defines the corresponding function in upper case such that is assigned to the function of the requested precision (e.g., EXP()). So, in order to call the exponential function, use, e.g., y = EXP(x);. Another place where the size of the REAL and INT data types are required is the scanf/printf standard I/O library routines. To print a REAL number with printf, use, for example, printf("value = " FMT\_R "$\backslash$n");. Or to print an INT use FMT\_I.
+The libgrid header file defines the real and integer data types automatically according to those requested during the configuration step (make.conf). Instead of using float, double, int, long etc. directly, use REAL to represent a floating point number and INT to introduce the variables (e.g., REAL x, y; INT i;). To define complex number type, use REAL complex. Since the function names in the system math library vary depending on the floating point precision (e.g., expf(), exp(), expl()), libgrid defines the corresponding function in upper case such that is assigned to the function of the requested precision (e.g., EXP(), SIN()). So, in order to call the exponential function, use, e.g., y = EXP(x);. Another place where the size of the REAL and INT data types are required is the scanf/printf standard I/O library routines. To print a REAL number with printf, use, for example, printf("value = " FMT\_R "$\backslash$n");. Or to print an INT use FMT\_I.
 
 Libgrid has built-in data types for 1-D, 2-D, and 3-D Cartesian REAL ("rgrid") and REAL complex ("cgrid") grids. To allocate such grids in a C program, first introduce them as pointers, e.g., rgrid *abc or cgrid *abc. Then use either rgrid\_alloc() or cgrid\_alloc() functions to allocate the space. For example:
 \begin{verbatim}
@@ -2840,7 +2840,7 @@ OpenMP execution employs threads, which show as only one process in ps/top utili
 
 \subsection{grid\_threads\_init() -- Initialize OpenMP threads}
 
-To initialize OpenMP threads, the user code should always call first this function. It takes one argument that specifies how many threads will be used (INT). For maximum performance, this should be very close to the number of CPU cores available on the system. This function does not return any value.
+To initialize OpenMP threads, the user code should always call first this function. It takes one argument that specifies how many threads will be used (INT). For maximum performance, this should be very close to the number of CPU cores available on the system. This function does not return any value. Using a value of zero for the number of threads will use the same number threads as the system has available cores.
 
 \subsection{grid\_threads() -- Return number of OpenMP threads in use}
 
@@ -2976,6 +2976,140 @@ Both view (may have to type full path as there is also /usr/bin/view) and view2 
 where the files were named bubble-1.z, bubble-2.z, etc. The wildcard above (csh/tcsh syntax; bash is likely different) ensures that the files will appear in the correct order. View2 also allows saving the individual images during view. To get this behavior, add -s option. Programs like ffmpeg can be used to create movies from the resulting jpg files.
 
 \chapter{Examples}
+
+\section{Fourier transform example}
+
+\begin{verbatim}
+/*
+ * FFT Example.
+ *
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <grid/grid.h>
+#include <omp.h>
+
+/* Grid dimensions */
+#define NX 256
+#define NY 256
+#define NZ 256
+
+/* Spatial step length of the grid */
+#define STEP 0.5
+
+/* wave vectors top be mapped onto grid */
+#define KX 1.0
+#define KY 1.0
+#define KZ 1.0
+
+/* Function returning standing wave in x, y, and z directions */
+REAL func(void *NA, REAL x, REAL y, REAL z) {
+
+  return COS(x * 2.0 * M_PI * KX / (NX * STEP)) 
+        + COS(y * 2.0 * M_PI * KY / (NY * STEP)) 
+        + COS(z * 2.0 * M_PI * KZ / (NZ * STEP));
+}
+
+/* Routine to write grid on disk */
+void write_grid(char *base, rgrid *grid) {
+
+  FILE *fp;
+  char file[2048];
+  INT i, j, k;
+  REAL x, y, z;
+
+  /* Write binary grid */
+  sprintf(file, "%s.grd", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  rgrid_write(grid, fp);
+  fclose(fp);
+
+  /* Write cut along x-axis */
+  sprintf(file, "%s.x", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  j = NY/2;
+  k = NZ/2;
+  for(i = 0; i < NX; i++) { 
+    x = ((REAL) (i - NX/2)) * STEP;
+    fprintf(fp, FMT_R " " FMT_R "\n", x, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+
+  /* Write cut along y-axis */
+  sprintf(file, "%s.y", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = NX/2;
+  k = NZ/2;
+  for(j = 0; j < NY; j++) {
+    y = ((REAL) (j - NY/2)) * STEP;
+    fprintf(fp, FMT_R " " FMT_R "\n", y, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+
+  /* Write cut along z-axis */
+  sprintf(file, "%s.z", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = NX/2;
+  j = NY/2;
+  for(k = 0; k < NZ; k++) {
+    z = ((REAL) (k - NZ/2)) * STEP;
+    fprintf(fp, FMT_R " " FMT_R "\n", z, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+}
+
+int main(int argc, char **argv) {
+
+  rgrid *grid;           /* Pointer real grid structure */
+
+  grid_threads_init(0);  /* Use all available cores */
+
+  /* If libgrid was compiled with CUDA support, enable CUDA */
+#ifdef USE_CUDA
+  cuda_enable(1);
+#endif
+
+  /* Allocate real grid with dimensions NX, NY, NZ and spatial step size STEP */
+  /* Periodic boundary condition is assigned to the grid */
+  grid = rgrid_alloc(NX, NY, NZ, STEP, RGRID_PERIODIC_BOUNDARY, NULL, "test grid");
+
+  /* Map the standing wave function onto the grid */
+  rgrid_map(grid, &func, NULL);
+
+  /* Output the grid before FFT */
+  write_grid("before", grid);
+
+  /* Perform FFT */
+  rgrid_fft(grid);
+
+  /* Perform normalize inverse FFT */
+  rgrid_inverse_fft_norm(grid);
+
+  /* Write grid after forward & inverse FFTs (we should get the original grid) */
+  write_grid("after", grid);
+
+  /* If CUDA in use, output usage statistics */
+#ifdef USE_CUDA
+  cuda_statistics(1);
+#endif
+
+  return 0;
+}
+\end{verbatim}
 
 %\section{References}
 
