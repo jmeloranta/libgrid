@@ -2669,7 +2669,7 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
       r = SQRT(x * x + y * y + z * z);
       idx = (INT) (r / (REAL) binstep);
       if(idx < nbins) {
-        bins[idx] += value[ijnz + k];
+        bins[idx] = bins[idx] + value[ijnz + k];
         nvals[idx]++;
       }
     }
@@ -2739,7 +2739,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL bi
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / (REAL) binstep);
       if(idx < nbins) {
-        bins[idx] += sqnorm(value[ijnz + k]);
+        bins[idx] = bins[idx] + sqnorm(value[ijnz + k]);
         nvals[idx]++;
       }
     }
