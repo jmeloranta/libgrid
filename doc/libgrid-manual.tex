@@ -1236,6 +1236,55 @@ REAL lval & Value to set when the lower limit was exceeded.\\
 \noindent
 This function does not return any value. 
 
+\subsection{rgrid\_hodge() -- Hodge's decomposition of vector field}
+
+Decompose a vector field into "compressible" ($u$) and "incompressible" ($w$) parts: $v = w + u = w + \nabla q$ where $\nabla\cdot w = 0$ and $u = \nabla q$ (Hodge's decomposition). This is performed by solving the Poisson equation: $\Delta q = \nabla\cdot v$. Then $u = \nabla q$ and the incompressible part is $w = v - u$. Given vector field $v$, this function computes $u$ and $w$. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *vx & $x$ component of the vector field to be decomposed.\\
+rgrid *vy & $y$ component of the vector field to be decomposed.\\
+rgrid *vz & $z$ component of the vector field to be decomposed.\\
+rgrid *ux & $x$ component of the compressible vector field.\\
+rgrid *uy & $y$ component of the compressible vector field.\\
+rgrid *uz & $z$ component of the compressible vector field.\\
+rgrid *wx & $x$ component of the incompressible vector field.\\
+rgrid *wy & $y$ component of the incompressible vector field.\\
+rgrid *wz & $z$ component of the incompressible vector field.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_spherical\_average() -- Compute spherical average of grid in real space}
+
+Compute spherical shell average in real space with respect to the grid origin with the result stored in 1-D grid:
+$$E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) \sin(\theta) d\theta d\phi$$
+This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *input & Input grid for spherical averaging.\\
+REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
+INT nbins & Number of bins allocated in bins.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_spherical\_average\_reciprocal() -- Compute spherical average of grid in reciprocal space}
+
+Compute spherical shell average in reciprocal space with respect to the grid origin with the result stored in 1-D grid:
+$$E(\mathbf{\tilde{r}}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta}) d\tilde{\theta} d\tilde{\phi}$$
+This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *input & Input grid for spherical averaging, but this is complex data (i.e., after rgrid\_fft()).\\
+REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
+INT nbins & Number of bins allocated in bins.\\
+\end{longtable}
+\noindent
+Note that $\tilde{r} = 2\pi k$ where $k$ is the wave vector (atomic units). This function does not return any value. 
+
 \section{Complex grid routines}
 
 \subsection{cgrid\_alloc() -- Allocate a complex-valued grid}
@@ -2879,7 +2928,7 @@ This function prints the current GPU information (card model, amount of memory, 
 
 \section{External functions}
 
-Users may wish to provide their own functions that operate on grids, which causes a problem for CUDA execution. CUDA wants the functions to be compiled separately using nvcc compiler, which would require libgrid users to consider CUDA coding \& compilation. To work around this inconvenience, libgrid allows users to define their on functions (libgrid/src/ext-cuda directory). These are compiled at the time of libgrid compilation, which also makes them accessible in CUDA. Currently, there are several functions defined using this external mechanism, which are used by libdft library. See ext-cuda directory for examples.
+Users may wish to provide their own functions that operate on grids, which causes a problem for CUDA execution. CUDA wants the functions to be compiled separately using nvcc compiler, which would require libgrid users to consider CUDA coding \& compilation. To work around this inconvenience, libgrid allows users to define their on functions (libgrid/src/ext-cuda directory). These are compiled at the time of libgrid compilation, which also makes them accessible in CUDA. Currently, there are several functions defined using this external mechanism, which are used by libdft library. See libgrid/src/ext-cuda directory for examples.
 
 \section{Utilities}
 

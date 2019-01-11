@@ -2626,10 +2626,10 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
 }
 
 /*
- * Compute spherical shell average in the real space with respect to the grid origin
+ * Compute spherical shell average in real space with respect to the grid origin
  * (result 1-D grid).
  *
- * E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) sin(\theta)\d\theta d\phi
+ * E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) sin(\theta) d\theta d\phi
  * 
  * input = Input grid for averaging (rgrid *; input).
  * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
@@ -2644,6 +2644,10 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
   INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
   REAL step = input->step, *value = input->value, x0 = input->x0, y0 = input->y0, z0 = input->z0, r, x, y, z;
   INT *nvals, ij, i, j, k, ijnz;
+
+#ifdef USE_CUDA
+  cuda_remove_block(value, 1);
+#endif
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
@@ -2669,7 +2673,8 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
       }
     }
   }
-  for(k = 0; k < nbins; k++) bins[k] = bins[k] / (REAL) nvals[k];
+  for(k = 0, z = 0.0; k < nbins; k++, z += binstep)
+    bins[k] = z * z * bins[k] / (REAL) nvals[k];
   free(nvals);
 }
 
@@ -2677,9 +2682,9 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
  * Compute spherical shell average in the reciprocal space of power spectrum with respect to the grid origin
  * (result 1-D grid).
  *
- * E(\tilde{r}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta})\d\tilde{\theta} d\tilde{\phi}
+ * E(\tilde{r}) = \frac{\tilde{r}^2}{4\pi} \int |E(\tilde{r}, \tilde{\theta}, \tilde{\phi})|^2 sin(\tilde{\theta}) d\tilde{\theta} d\tilde{\phi}
  * 
- * input = Input grid for averaging (rgrid *; input), but this *after* FFT (actually complex data).
+ * input = Input grid for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
  * bins  = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
  * nbins = Number of bins requested (INT; input).
  *
@@ -2694,6 +2699,10 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL bi
   REAL complex *value = (REAL complex *) input->value;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
   INT *nvals, ij, i, j, k, ijnz;
+
+#ifdef USE_CUDA
+  cuda_remove_block(value, 1);
+#endif
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
@@ -2728,6 +2737,8 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL bi
       }
     }
   }
-  for(k = 0; k < nbins; k++) bins[k] = bins[k] / (REAL) nvals[k];
+  for(k = 0, z = 0.0; k < nbins; k++, z += binstep)
+    bins[k] = z * z * bins[k] / (REAL) nvals[k];
+  
   free(nvals);
 }
