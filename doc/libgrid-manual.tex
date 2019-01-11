@@ -1258,12 +1258,14 @@ This function does not return any value.
 \subsection{rgrid\_spherical\_average() -- Compute spherical average of grid in real space}
 
 Compute spherical shell average in real space with respect to the grid origin with the result stored in 1-D grid:
-$$E(r) = \frac{1}{4\pi r^2} \int E(r, \theta, \phi) \sin(\theta) d\theta d\phi$$
+$$f(r) = \frac{1}{4\pi r^2}\int \left(f_1(r, \theta, \phi) + f_2(r, \theta, \phi) + f_3(r, \theta, \phi)\right) \sin(\theta) d\theta d\phi$$
 This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
-rgrid *input & Input grid for spherical averaging.\\
+rgrid *input1 & Input grid 1 ($f_1$) for spherical averaging.\\
+rgrid *input2 & Input grid 2 ($f_2$) for spherical averaging (may be NULL).\\
+rgrid *input3 & Input grid 3 ($f_3$) for spherical averaging (may be NULL).\\
 REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
 REAL binstep & Binning step length.\\
 INT nbins & Number of bins allocated in bins.\\

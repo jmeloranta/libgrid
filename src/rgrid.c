@@ -2631,7 +2631,9 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
  *
  * E(r) = \frac{r^2}{4\pi} \int E(r, \theta, \phi) sin(\theta) d\theta d\phi
  * 
- * input   = Input grid for averaging (rgrid *; input).
+ * input1  = Input grid 1 for averaging (rgrid *; input).
+ * input2  = Input grid 2 for averaging (rgrid *; input). Can be NULL if N/A.
+ * input3  = Input grid 3 for averaging (rgrid *; input). Can be NULL if N/A.
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
  * binstep = Binning step length (REAL; input).
  * nbins   = Number of bins requested (INT; input).
@@ -2641,15 +2643,21 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
  *
  */
 
-EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT nbins, char volel) {
+EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
-  INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
-  REAL step = input->step, *value = input->value, x0 = input->x0, y0 = input->y0, z0 = input->z0, r, x, y, z;
+  INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nzz = input1->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
+  REAL step = input1->step, *value1 = input1->value, x0 = input1->x0, y0 = input1->y0, z0 = input1->z0, r, x, y, z;
+  REAL *value2, *value3;
   INT *nvals, ij, i, j, k, ijnz;
 
 #ifdef USE_CUDA
   cuda_remove_block(value, 1);
 #endif
+
+  if(input2) value2 = input2->value;
+  else value2 = NULL;
+  if(input3) value3 = input3->value;
+  else value3 = NULL;
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
@@ -2658,7 +2666,7 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
   bzero(nvals, sizeof(INT) * (size_t) nbins);
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
-#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nx2,ny2,nz2,nxy,step,value,x0,y0,z0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,x,y,z,r,idx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nx2,ny2,nz2,nxy,step,value1,value2,value3,x0,y0,z0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,x,y,z,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
@@ -2670,7 +2678,9 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
       r = SQRT(x * x + y * y + z * z);
       idx = (INT) (r / (REAL) binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + value[ijnz + k];
+        bins[idx] = bins[idx] + value1[ijnz + k];
+        if(value2) bins[idx] = bins[idx] + value2[ijnz + k];
+        if(value3) bins[idx] = bins[idx] + value3[ijnz + k];
         nvals[idx]++;
       }
     }
@@ -2691,7 +2701,9 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
  *
  * E(k) = \frac{k^2}{4\pi} \int |E(k, \theta_k, \phi_k)|^2 sin(\theta_k}) d\theta_k d\phi_k
  * 
- * input   = Input grid for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
+ * input1   = Input grid 1 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
+ * input2   = Input grid 2 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
+ * input3   = Input grid 3 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
  * binstep = Binning step length for k (REAL; input). 
  * nbins   = Number of bins requested (INT; input).
@@ -2701,17 +2713,22 @@ EXPORT void rgrid_spherical_average(rgrid *input, REAL *bins, REAL binstep, INT 
  *
  */
 
-EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL binstep, INT nbins, char volel) {
+EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
-  INT nx = input->nx, ny = input->ny, nz = input->nz, nzz = input->nz / 2 + 1, idx, nxy = nx * ny;
-  REAL step = input->step, kx0 = input->kx0, ky0 = input->ky0, kz0 = input->kz0, r, kx, ky, kz;
-  REAL complex *value = (REAL complex *) input->value;
+  INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nzz = input1->nz / 2 + 1, idx, nxy = nx * ny;
+  REAL step = input1->step, kx0 = input1->kx0, ky0 = input1->ky0, kz0 = input1->kz0, r, kx, ky, kz;
+  REAL complex *value1 = (REAL complex *) input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
   INT *nvals, ij, i, j, k, ijnz;
 
 #ifdef USE_CUDA
   cuda_remove_block(value, 1);
 #endif
+
+  if(input2) value2 = (REAL complex *) input2->value;
+  else value2 = NULL;
+  if(input3) value3 = (REAL complex *) input3->value;
+  else value3 = NULL;
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
@@ -2720,7 +2737,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL bi
   bzero(nvals, sizeof(INT) * (size_t) nbins);
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
-#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nxy,step,lx,ly,lz,value,kx0,ky0,kz0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nxy,step,lx,ly,lz,value1,value2,value3,kx0,ky0,kz0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
@@ -2741,7 +2758,9 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input, REAL *bins, REAL bi
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / (REAL) binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + sqnorm(value[ijnz + k]);
+        bins[idx] = bins[idx] + sqnorm(value1[ijnz + k]);
+        if(value2) bins[idx] = bins[idx] + sqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + sqnorm(value3[ijnz + k]);
         nvals[idx]++;
       }
     }
