@@ -379,6 +379,77 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
 }
 
 /*
+ * Write real grid to disk including cuts along x, y, and z axes.
+ *
+ * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
+ * grid     = Grid to be written to disk (rgrid *; input).
+ * 
+ * No return value.
+ *
+ * See also rgrid_write().
+ *
+ */
+
+EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
+
+  FILE *fp;
+  char file[2048];
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL x, y, z, step = grid->step;
+
+  /* Write binary grid */
+  sprintf(file, "%s.grd", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  rgrid_write(grid, fp);
+  fclose(fp);
+
+  /* Write cut along x-axis */
+  sprintf(file, "%s.x", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  j = ny / 2;
+  k = nz / 2;
+  for(i = 0; i < nx; i++) { 
+    x = ((REAL) (i - nx / 2)) * step;
+    fprintf(fp, FMT_R " " FMT_R "\n", x, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+
+  /* Write cut along y-axis */
+  sprintf(file, "%s.y", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = nx / 2;
+  k = nz / 2;
+  for(j = 0; j < ny; j++) {
+    y = ((REAL) (j - ny / 2)) * step;
+    fprintf(fp, FMT_R " " FMT_R "\n", y, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+
+  /* Write cut along z-axis */
+  sprintf(file, "%s.z", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = nx / 2;
+  j = ny / 2;
+  for(k = 0; k < nz; k++) {
+    z = ((REAL) (k - nz / 2)) * step;
+    fprintf(fp, FMT_R " " FMT_R "\n", z, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+}
+
+/*
  * Copy grid from one grid to another.
  *
  * copy = destination grid (rgrid *; output).
@@ -2676,7 +2747,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
     for(k = 0; k < nz; k++) {
       z = ((REAL) (k - nz2)) * step - z0;
       r = SQRT(x * x + y * y + z * z);
-      idx = (INT) (r / (REAL) binstep);
+      idx = (INT) (r / binstep);
       if(idx < nbins) {
         bins[idx] = bins[idx] + value1[ijnz + k];
         if(value2) bins[idx] = bins[idx] + value2[ijnz + k];
@@ -2687,10 +2758,12 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
   }
   if(volel) {
     for(k = 0, z = 0.0; k < nbins; k++, z += binstep)
-      bins[k] = 4.0 * M_PI * z * z * bins[k] / (REAL) nvals[k];
+      if(nvals[k]) bins[k] = 4.0 * M_PI * z * z * bins[k] / (REAL) nvals[k];
+      else nvals[k] = 0.0;
   } else {
     for(k = 0; k < nbins; k++)
-      bins[k] = bins[k] / (REAL) nvals[k];
+      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+      else nvals[k] = 0.0;
   }
   free(nvals);
 }
@@ -2756,7 +2829,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       else
         kz = -((REAL) (nz - k)) * lz - kz0;
       r = SQRT(kx * kx + ky * ky + kz * kz);
-      idx = (INT) (r / (REAL) binstep);
+      idx = (INT) (r / binstep);
       if(idx < nbins) {
         bins[idx] = bins[idx] + sqnorm(value1[ijnz + k]);
         if(value2) bins[idx] = bins[idx] + sqnorm(value2[ijnz + k]);
@@ -2767,10 +2840,12 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   }
   if(volel) {
     for(k = 0, kz = 0.0; k < nbins; k++, kz += binstep)
-      bins[k] = 4.0 * M_PI * kz * kz * bins[k] / (REAL) nvals[k];
+      if(nvals[k]) bins[k] = 4.0 * M_PI * kz * kz * bins[k] / (REAL) nvals[k];
+      else bins[k] = 0.0;
   } else {
     for(k = 0; k < nbins; k++)
-      bins[k] = bins[k] / (REAL) nvals[k];
+      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+      else bins[k] = 0.0;
   }
   free(nvals);
 }
