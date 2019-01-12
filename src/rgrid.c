@@ -2721,14 +2721,16 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
   REAL *value2, *value3;
   INT *nvals, ij, i, j, k, ijnz;
 
-#ifdef USE_CUDA
-  cuda_remove_block(value, 1);
-#endif
-
   if(input2) value2 = input2->value;
   else value2 = NULL;
   if(input3) value3 = input3->value;
   else value3 = NULL;
+
+#ifdef USE_CUDA
+  cuda_remove_block(value1, 1);
+  if(value2) cuda_remove_block(value2, 1);
+  if(value3) cuda_remove_block(value3, 1);
+#endif
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
@@ -2795,13 +2797,19 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   INT *nvals, ij, i, j, k, ijnz;
 
 #ifdef USE_CUDA
-  cuda_remove_block(value, 1);
+  cuda_remove_block(value1, 1);
 #endif
 
   if(input2) value2 = (REAL complex *) input2->value;
   else value2 = NULL;
   if(input3) value3 = (REAL complex *) input3->value;
   else value3 = NULL;
+
+#ifdef USE_CUDA
+  cuda_remove_block(value1, 1);
+  if(value2) cuda_remove_block(value2, 1);
+  if(value3) cuda_remove_block(value3, 1);
+#endif
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
