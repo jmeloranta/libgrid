@@ -2823,17 +2823,14 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       ky = ((REAL) j) * ly - ky0;    
     else
       ky = -((REAL) (ny - j)) * ly - ky0;
-    for(k = 0; k < nz; k++) {
-      if(k < nz/2)
-        kz = ((REAL) k) * lz - kz0;
-      else
-        kz = -((REAL) (nz - k)) * lz - kz0;
+    for(k = 0; k < nzz; k++) {
+      kz = ((REAL) k) * lz - kz0;
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + sqnorm(value1[ijnz + k]);
-        if(value2) bins[idx] = bins[idx] + sqnorm(value2[ijnz + k]);
-        if(value3) bins[idx] = bins[idx] + sqnorm(value3[ijnz + k]);
+        bins[idx] = bins[idx] + 2.0 * sqnorm(value1[ijnz + k]);  // 2 x Hermitean symmetry - loop is over only half of the data 
+        if(value2) bins[idx] = bins[idx] + 2.0 * sqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + 2.0 * sqnorm(value3[ijnz + k]);
         nvals[idx]++;
       }
     }
