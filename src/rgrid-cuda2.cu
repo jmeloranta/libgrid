@@ -1619,22 +1619,22 @@ extern "C" void rgrid_cuda_threshold_clearW(CUREAL *dest, CUREAL *src, CUREAL ul
  *
  */
 
-__global__ void rgrid_cuda_poisson_gpu(CUREAL *grid, CUREAL norm, CUREAL step2, CUREAL ilx, CUREAL ily, CUREAL ilz, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_poisson_gpu(CUCOMPLEX *grid, CUREAL norm, CUREAL step2, CUREAL ilx, CUREAL ily, CUREAL ilz, INT nx, INT ny, INT nzz) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
   CUREAL kx, ky, kz;
 
-  if(i >= nx || j >= ny || k >= nz) return;
+  if(i >= nx || j >= ny || k >= nzz) return;
 
-  idx = (i * ny + j) * nz + k;
+  idx = (i * ny + j) * nzz + k;
   kx = COS(ilx * (CUREAL) i);
   ky = COS(ily * (CUREAL) j);
   kz = COS(ilz * (CUREAL) k);
   if(i || j || k)
     grid[idx] = grid[idx] * norm * step2 / (2.0 * (kx + ky + kz - 3.0));
   else
-    grid[idx] = 0.0;
+    grid[idx] = CUMAKE(0.0, 0.0);
 }
 
 /*
@@ -1649,14 +1649,15 @@ __global__ void rgrid_cuda_poisson_gpu(CUREAL *grid, CUREAL norm, CUREAL step2, 
  *
  */
 
-extern "C" void rgrid_cuda_poissonW(CUREAL *grid, CUREAL norm, CUREAL step2, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_poissonW(CUCOMPLEX *grid, CUREAL norm, CUREAL step2, INT nx, INT ny, INT nz) {
 
   CUREAL ilx = 2.0 * M_PI / ((CUREAL) nx), ily = 2.0 * M_PI / ((CUREAL) ny), ilz = 2.0 * M_PI / ((CUREAL) nz);
+  INT nzz = nz / 2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks((nzz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_poisson_gpu<<<blocks,threads>>>(grid, norm, step2, ilx, ily, ilz, nx, ny, nz);
+  rgrid_cuda_poisson_gpu<<<blocks,threads>>>(grid, norm, step2, ilx, ily, ilz, nx, ny, nzz);
   cuda_error_check();
 }

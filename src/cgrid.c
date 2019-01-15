@@ -336,6 +336,85 @@ EXPORT void cgrid_read(cgrid *grid, FILE *in) {
 }
 
 /*
+ * Write complex grid to disk including cuts along x, y, and z axes.
+ *
+ * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
+ * grid     = Grid to be written to disk (cgrid *; input).
+ * 
+ * No return value.
+ *
+ * See also cgrid_write().
+ *
+ */
+
+EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
+
+  FILE *fp;
+  char file[2048];
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL x, y, z, step = grid->step;
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 1);
+#endif
+
+  /* Write binary grid */
+  sprintf(file, "%s.grd", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  cgrid_write(grid, fp);
+  fclose(fp);
+
+  /* Write cut along x-axis */
+  sprintf(file, "%s.x", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  j = ny / 2;
+  k = nz / 2;
+  for(i = 0; i < nx; i++) { 
+    x = ((REAL) (i - nx / 2)) * step;
+    tmp = cgrid_value_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", x, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+
+  /* Write cut along y-axis */
+  sprintf(file, "%s.y", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = nx / 2;
+  k = nz / 2;
+  for(j = 0; j < ny; j++) {
+    y = ((REAL) (j - ny / 2)) * step;
+    tmp = cgrid_value_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", y, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+
+  /* Write cut along z-axis */
+  sprintf(file, "%s.z", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = nx / 2;
+  j = ny / 2;
+  for(k = 0; k < nz; k++) {
+    z = ((REAL) (k - nz / 2)) * step;
+    tmp = cgrid_value_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", z, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+}
+
+/*
  * Copy grid from one grid to another.
  *
  * copy = destination grid (cgrid *; input).
@@ -2763,8 +2842,6 @@ EXPORT void cgrid_random(cgrid *grid, REAL scale) {
  *        and function f (output) on exit (cgrid *; input/output).
  *
  * No return value.
- *
- * TODO: CUDA implementation missing.
  *
  */
 

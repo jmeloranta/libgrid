@@ -720,6 +720,8 @@ EXPORT char rgrid_cuda_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll
  *
  * grid = destination grid (rgrid *; input/output).
  *
+ * NOTE: grid must be FFT'd first so that grid->value is complex.
+ *
  */
 
 EXPORT char rgrid_cuda_poisson(rgrid *grid) {
@@ -727,7 +729,7 @@ EXPORT char rgrid_cuda_poisson(rgrid *grid) {
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
   rgrid_cufft_fft(grid);
-  rgrid_cuda_poissonW((CUREAL *) cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_poissonW((CUCOMPLEX *) cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
   rgrid_cufft_fft_inv(grid);
 
   return 0;

@@ -11,7 +11,7 @@
 #define NX 256
 #define NY 256
 #define NZ 256
-#define STEP 0.2
+#define STEP 1.0
 
 /* Right hand side function for Poisson equation (Gaussian) */
 REAL gaussian(void *arg, REAL x, REAL y, REAL z) {
@@ -26,7 +26,6 @@ REAL gaussian(void *arg, REAL x, REAL y, REAL z) {
 int main(int argc, char **argv) {
   
   rgrid *grid;
-  FILE *fp;
   
   /* Initialize with 16 OpenMP threads */
   grid_threads_init(16);
@@ -42,16 +41,14 @@ int main(int argc, char **argv) {
   /* Map the right hand side to the grid */
   rgrid_map(grid, gaussian, NULL);
 
+  /* Writen right hand side grid */
+  rgrid_write_grid("input", grid);
+
   /* Solve the Poisson equation (result written over the right hand side in grid) */
   rgrid_poisson(grid);  
 
   /* Write output file */
-  if(!(fp = fopen("output", "w"))) {
-    fprintf(stderr, "Can't open file for writing.\n");
-    exit(1);
-  }
-  rgrid_write(grid, fp);
-  fclose(fp);
+  rgrid_write_grid("output", grid);
   return 0;
 }
 

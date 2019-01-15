@@ -1250,7 +1250,7 @@ This function does not return any value.
 
 \subsection{rgrid\_hodge() -- Hodge's decomposition of vector field}
 
-Decompose a vector field into "compressible" ($u$) and "incompressible" ($w$) parts: $v = w + u = w + \nabla q$ where $\nabla\cdot w = 0$ and $u = \nabla q$ (Hodge's decomposition). This is performed by solving the Poisson equation: $\Delta q = \nabla\cdot v$. Then $u = \nabla q$ and the incompressible part is $w = v - u$. Given vector field $v$, this function computes $u$ and $w$. This function takes the following arguments:
+Decompose a vector field into ``compressible" ($u$) and ``incompressible" ($w$) parts: $v = w + u = w + \nabla q$ where $\nabla\cdot w = 0$ and $u = \nabla q$ (Hodge's decomposition). This is performed by solving the Poisson equation: $\Delta q = \nabla\cdot v$. Then $u = \nabla q$ and the incompressible part is $w = v - u$. Given vector field $v$, this function computes $u$ and $w$. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
@@ -1421,6 +1421,18 @@ cgrid *grid & Grid where the data is to be read. If NULL, a grid with the correc
 FILE *in & File handle for reading the file I/O.\\
 \end{longtable}
 This function returns a pointer to the grid or NULL pointer on error.
+
+\subsection{cgrid\_write\_grid() -- Write grid to disk with cutoffs along axes}
+
+Write complex grid to disk including cuts along the $x$, $y$, and $z$ axes. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+char *basename & Base filename where the suffixes (.x, .y, .z, and .grd) are added.\\
+cgrid *grid & Grid to be written to disk.\\
+\end{longtable}
+\noindent
+This function does not return any value.
 
 \subsection{cgrid\_copy() -- Copy grid}
 
@@ -3160,7 +3172,7 @@ int main(int argc, char **argv) {
 #define NX 256
 #define NY 256
 #define NZ 256
-#define STEP 0.2
+#define STEP 1.0
 
 /* Right hand side function for Poisson equation (Gaussian) */
 REAL gaussian(void *arg, REAL x, REAL y, REAL z) {
@@ -3175,7 +3187,6 @@ REAL gaussian(void *arg, REAL x, REAL y, REAL z) {
 int main(int argc, char **argv) {
   
   rgrid *grid;
-  FILE *fp;
   
   /* Initialize with 16 OpenMP threads */
   grid_threads_init(16);
@@ -3191,16 +3202,14 @@ int main(int argc, char **argv) {
   /* Map the right hand side to the grid */
   rgrid_map(grid, gaussian, NULL);
 
+  /* Writen right hand side grid */
+  rgrid_write_grid("input", grid);
+
   /* Solve the Poisson equation (result written over the right hand side in grid) */
   rgrid_poisson(grid);  
 
   /* Write output file */
-  if(!(fp = fopen("output", "w"))) {
-    fprintf(stderr, "Can't open file for writing.\n");
-    exit(1);
-  }
-  rgrid_write(grid, fp);
-  fclose(fp);
+  rgrid_write_grid("output", grid);
   return 0;
 }
 \end{verbatim}

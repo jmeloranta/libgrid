@@ -397,6 +397,10 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
   REAL x, y, z, step = grid->step;
 
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 1);
+#endif
+
   /* Write binary grid */
   sprintf(file, "%s.grd", base);
   if(!(fp = fopen(file, "w"))) {
@@ -2390,13 +2394,11 @@ EXPORT void rgrid_random(rgrid *grid, REAL scale) {
  *
  * No return value.
  *
- * TODO: CUDA implementation missing.
- *
  */
 
 EXPORT void rgrid_poisson(rgrid *grid) {
 
-  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx;
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx, nzz = nz / 2 + 1;
   REAL step = grid->step, step2 = step * step, ilx = 2.0 * M_PI / ((REAL) nx), ily = 2.0 * M_PI / ((REAL) ny);
   REAL norm = grid->fft_norm, ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
   REAL complex *val = (REAL complex *) grid->value;
@@ -2406,16 +2408,16 @@ EXPORT void rgrid_poisson(rgrid *grid) {
 #endif
   rgrid_fftw(grid);
   /* the folllowing is in Fourier space -> k = 0, nz */
-#pragma omp parallel for firstprivate(val, nx, ny, nz, grid, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(val, nx, ny, nzz, grid, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
   for(i = 0; i < nx; i++) {
     kx = COS(ilx * (REAL) i);
     for(j = 0; j < ny; j++) {
       ky = COS(ily * (REAL) j);
-      for(k = 0; k < nz; k++) {
+      for(k = 0; k < nzz; k++) {
 	kz = COS(ilz * (REAL) k);
-	idx = (i * ny + j) * nz + k;
+	idx = (i * ny + j) * nzz + k;
 	if(i || j || k)
-	  val[idx] *= norm * step2 / (2.0 * (kx + ky + kz - 3.0));
+	  val[idx] = val[idx] * norm * step2 / (2.0 * (kx + ky + kz - 3.0));
 	else
 	  val[idx] = 0.0;
       }
