@@ -865,3 +865,22 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
   cgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
   return 0;
 }
+
+
+/*
+ * Solve Poisson equation.
+ *
+ * grid = destination grid (cgrid *; input/output).
+ *
+ */
+
+EXPORT char cgrid_cuda_poisson(cgrid *grid) {
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
+
+  cgrid_cufft_fft(grid);
+  cgrid_cuda_poissonW((CUCOMPLEX *) cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cufft_fft_inv(grid);
+
+  return 0;
+}

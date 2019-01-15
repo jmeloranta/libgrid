@@ -2402,7 +2402,7 @@ EXPORT void rgrid_poisson(rgrid *grid) {
   REAL complex *val = (REAL complex *) grid->value;
 
 #ifdef USE_CUDA
-  cuda_remove_block(val, 1);
+  if(cuda_status() && !rgrid_cuda_poisson(grid)) return;
 #endif
   rgrid_fftw(grid);
   /* the folllowing is in Fourier space -> k = 0, nz */

@@ -2770,12 +2770,12 @@ EXPORT void cgrid_random(cgrid *grid, REAL scale) {
 
 EXPORT void cgrid_poisson(cgrid *grid) {
 
-  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx;
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx; // could move some of the computations below past cuda call
   REAL step = grid->step, step2 = step * step, ilx = 2.0 * M_PI / ((REAL) nx), ily = 2.0 * M_PI / ((REAL) ny), ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
   REAL norm = grid->fft_norm;
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);
+  if(cuda_status() && !cgrid_cuda_poisson(grid)) return;  
 #endif
   cgrid_fftw(grid);
 #pragma omp parallel for firstprivate(nx, ny, nz, grid, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)

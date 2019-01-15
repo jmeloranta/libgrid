@@ -1842,3 +1842,51 @@ extern "C" void cgrid_cuda_zero_indexW(CUCOMPLEX *grid, INT lx, INT hx, INT ly, 
   cgrid_cuda_zero_index_gpu<<<blocks,threads>>>(grid, lx, hx, ly, hy, lz, hz, nx, ny, nz);
   cuda_error_check();
 }
+
+
+/*
+ * Poisson equation.
+ *
+ */
+
+__global__ void cgrid_cuda_poisson_gpu(CUCOMPLEX *grid, CUREAL norm, CUREAL step2, CUREAL ilx, CUREAL ily, CUREAL ilz, INT nx, INT ny, INT nz) {
+  
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
+  CUREAL kx, ky, kz;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  kx = COS(ilx * (CUREAL) i);
+  ky = COS(ily * (CUREAL) j);
+  kz = COS(ilz * (CUREAL) k);
+  if(i || j || k)
+    grid[idx] = grid[idx] * norm * step2 / (2.0 * (kx + ky + kz - 3.0));
+  else
+    grid[idx] = CUMAKE(0.0, 0.0);
+}
+
+/*
+ * Solve Poisson.
+ *
+ * grid    = Grid specifying the RHS (CUCOMPLEX *; input/output).
+ * norm    = FFT normalization constant (CUREAL; input).
+ * step2   = Spatial step ^ 2 (CUREAL; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void cgrid_cuda_poissonW(CUCOMPLEX *grid, CUREAL norm, CUREAL step2, INT nx, INT ny, INT nz) {
+
+  CUREAL ilx = 2.0 * M_PI / ((CUREAL) nx), ily = 2.0 * M_PI / ((CUREAL) ny), ilz = 2.0 * M_PI / ((CUREAL) nz);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  cgrid_cuda_poisson_gpu<<<blocks,threads>>>(grid, norm, step2, ilx, ily, ilz, nx, ny, nz);
+  cuda_error_check();
+}
