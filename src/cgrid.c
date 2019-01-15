@@ -2836,7 +2836,7 @@ EXPORT void cgrid_random(cgrid *grid, REAL scale) {
 
 /*
  * Solve Poisson equation: Laplace f = u subject to periodic boundary condition.
- * Uses finite difference for Laplacian (7 point) and FFT.
+ * Uses finite difference for Laplacian (7 point) and FFT. Num. Recip. Sect. 19.4.
  *
  * grid = On entry function u specified over grid (input) 
  *        and function f (output) on exit (cgrid *; input/output).
@@ -2850,12 +2850,13 @@ EXPORT void cgrid_poisson(cgrid *grid) {
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx; // could move some of the computations below past cuda call
   REAL step = grid->step, step2 = step * step, ilx = 2.0 * M_PI / ((REAL) nx), ily = 2.0 * M_PI / ((REAL) ny), ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
   REAL norm = grid->fft_norm;
+  REAL complex *value = grid->value;
 
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_poisson(grid)) return;  
 #endif
   cgrid_fftw(grid);
-#pragma omp parallel for firstprivate(nx, ny, nz, grid, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx, ny, nz, value, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
   for(i = 0; i < nx; i++) {
     kx = COS(ilx * ((REAL) i));
     for(j = 0; j < ny; j++) {
@@ -2864,9 +2865,9 @@ EXPORT void cgrid_poisson(cgrid *grid) {
 	kz = COS(ilz * ((REAL) k));
 	idx = (i * ny + j) * nz + k;
 	if(i || j || k)
-	  grid->value[idx] *= norm * step2 / (2.0 * (kx + ky + kz - 3.0));
+	  value[idx] *= norm * step2 / (2.0 * (kx + ky + kz - 3.0));
 	else
-	  grid->value[idx] = 0.0;
+	  value[idx] = 0.0;
       }
     }
   }
