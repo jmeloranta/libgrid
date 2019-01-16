@@ -2403,6 +2403,11 @@ EXPORT void rgrid_poisson(rgrid *grid) {
   REAL norm = grid->fft_norm, ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
   REAL complex *val = (REAL complex *) grid->value;
 
+  if(grid->value_outside != RGRID_PERIODIC_BOUNDARY) {
+    fprintf(stderr, "libgrid: Only periodic boundary Poisson solver implemented.\n");
+    exit(1);
+  }
+
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_poisson(grid)) return;
 #endif
