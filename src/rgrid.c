@@ -2671,10 +2671,9 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
   }
 }
 
-
 /*
  * Decompose a vector field into "compressible" (u) and "incompressible" (w) parts:
- * v = w + u = w + \nabla q  where div w = 0 and u = \nabla q (Hodge's decomposition).
+ * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
  *
  * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
  * The incompressible part is then w = v - u.
