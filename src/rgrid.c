@@ -2800,7 +2800,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
 EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nzz = input1->nz / 2 + 1, idx, nxy = nx * ny;
-  REAL step = input1->step, kx0 = input1->kx0, ky0 = input1->ky0, kz0 = input1->kz0, r, kx, ky, kz;
+  REAL step = input1->step, r, kx, ky, kz;
   REAL complex *value1 = (REAL complex *) input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
   INT *nvals, ij, i, j, k, ijnz;
@@ -2823,7 +2823,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   bzero(nvals, sizeof(INT) * (size_t) nbins);
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
-#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nxy,step,lx,ly,lz,value1,value2,value3,kx0,ky0,kz0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nxy,step,lx,ly,lz,value1,value2,value3,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
