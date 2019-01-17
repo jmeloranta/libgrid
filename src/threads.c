@@ -5,6 +5,7 @@
 
 #include "grid.h"
 #include "private.h"
+#include "git-version.h"
 
 static INT grid_nthreads = 0;
 static unsigned int plan_flags = FFTW_MEASURE;
@@ -95,6 +96,8 @@ EXPORT void grid_threads_init(INT threads) {
     fprintf(stderr, "libgrid: Error in grid_threads_init(). Number of threads <= 0.\n");
     abort();
   }
+
+  fprintf(stderr, "libgrid: GIT version ID %s\n", VERSION);
 
 #if defined(SINGLE_PREC)
   fprintf(stderr, "libgrid: Single precision floats.\n");

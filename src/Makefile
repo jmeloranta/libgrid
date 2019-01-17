@@ -15,6 +15,7 @@ ifeq ($(CUDA),yes)
 	echo $(CUDA_CC) > cuda.arch
 endif
 	echo $(CUDA) > cuda.status
+	echo "#define VERSION \""`git rev-parse master`"\"" > git-version.h
 	make libgrid.a
 
 SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c ngrid.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c cgrid_bc.c \
@@ -100,4 +101,4 @@ install:
 	cp ../make.conf $(ROOT)/include/grid
 
 clean:
-	-rm libgrid.a *.o *~ proto.h ext-cuda/*.o
+	-rm libgrid.a *.o *~ proto.h ext-cuda/*.o git-version.h
