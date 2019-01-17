@@ -2802,10 +2802,6 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
   INT *nvals, ij, i, j, k, ijnz;
 
-#ifdef USE_CUDA
-  cuda_remove_block(value1, 1);
-#endif
-
   if(input2) value2 = (REAL complex *) input2->value;
   else value2 = NULL;
   if(input3) value3 = (REAL complex *) input3->value;
@@ -2829,16 +2825,17 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
     ijnz = ij * nzz;
     i = ij / ny;
     j = ij % ny;
+    // TODO: Include -kx0, -ky0, -kz0 or NOT?
     if(i < nx/2) 
-      kx = ((REAL) i) * lx - kx0;
+      kx = ((REAL) i) * lx; /* - kx0; */
     else
-      kx = -((REAL) (nx - i)) * lx - kx0;
+      kx = -((REAL) (nx - i)) * lx; /* - kx0; */
     if(j < ny/2)
-      ky = ((REAL) j) * ly - ky0;    
+      ky = ((REAL) j) * ly; /* - ky0; */
     else
-      ky = -((REAL) (ny - j)) * ly - ky0;
+      ky = -((REAL) (ny - j)) * ly; /* - ky0; */
     for(k = 0; k < nzz; k++) {
-      kz = ((REAL) k) * lz - kz0;
+      kz = ((REAL) k) * lz; /* - kz0; */
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
