@@ -1265,7 +1265,7 @@ rgrid *wy & $y$ component of the incompressible vector field.\\
 rgrid *wz & $z$ component of the incompressible vector field.\\
 \end{longtable}
 \noindent
-This function does not return any value.
+This function does not return any value. By noting that $\nabla\times v = \nabla\times w + \nabla\times u = \nabla\times w + \nabla\times\nabla q = \nabla\times w$, we can see that the incompressible part includes rotation whereas the compressible part is irrotational.
 
 \subsection{rgrid\_spherical\_average() -- Compute spherical average of grid in real space}
 

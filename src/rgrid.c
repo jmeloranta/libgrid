@@ -2672,9 +2672,12 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
 }
 
 /*
- * Decompose a vector field into "compressible" (u) and "incompressible" (w) parts:
+ * Decompose a vector field into "compressible (irrotational)" (u) and "incompressible (rotational)" (w) parts:
  * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
  *
+ * One can also take rot of both sides: rot v = rot w + rot u = rot w + rot grad q = rot w. So, 
+ * u = grad q is the irrotational part and w is the is the rotational part.
+ * 
  * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
  * The incompressible part is then w = v - u.
  *
@@ -2825,15 +2828,14 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
     ijnz = ij * nzz;
     i = ij / ny;
     j = ij % ny;
-    // TODO: Include -kx0, -ky0, -kz0 or NOT?
     if(i < nx/2) 
-      kx = ((REAL) i) * lx; /* - kx0; */
+      kx = ((REAL) i) * lx;
     else
-      kx = -((REAL) (nx - i)) * lx; /* - kx0; */
+      kx = -((REAL) (nx - i)) * lx;
     if(j < ny/2)
-      ky = ((REAL) j) * ly; /* - ky0; */
+      ky = ((REAL) j) * ly;
     else
-      ky = -((REAL) (ny - j)) * ly; /* - ky0; */
+      ky = -((REAL) (ny - j)) * ly;
     for(k = 0; k < nzz; k++) {
       kz = ((REAL) k) * lz; /* - kz0; */
       r = SQRT(kx * kx + ky * ky + kz * kz);
