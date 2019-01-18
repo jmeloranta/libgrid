@@ -1,12 +1,12 @@
 CUDA and openmp aware routines for Cartesian 1-D, 2-D, and 3-D grids.
 
-See documentation under doc/ directory.
+See documentation and license information under doc/ directory.
 
 List of people who contributed to the code:
 
 1) Lauri Lehtovaara
 2) David Mateo
-3) Jussi Eloranta
+3) Jussi Eloranta (eloranta@aa6kj.hopto.org)
 
-Project partly funded by National Science Foundation grants CHE-0949057, CHE-1262306 
-and DMR-1205734.
+Project partly funded by National Science Foundation grants CHE-0949057, 
+CHE-1262306 and DMR-1205734.
