@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 
   INT i, j, npts, save;
   FILE *fp;
-  REAL x, x_prev, y, begin, end, step = -1.0, ymax = -1.0, ymin = 0.0;
+  REAL x, x_prev = 0.0, y, begin = 0.0, end, step = -1.0, ymax = -1.0, ymin = 0.0;
 
   if(argv[1][0] == '-' && argv[1][1] == 's') {
     argv = &argv[1];

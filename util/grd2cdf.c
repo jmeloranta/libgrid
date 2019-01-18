@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
   char *cdffile = argv[2], *gridfile = argv[1];
   FILE *fp;
   INT i;
-  int ncid, varid0, varid1, varid2, varid3, dimids[3], retval, dim;
+  int ncid, varid0, varid1, varid2, varid3, dimids[3], retval;
   REAL step, *x, *y, *z;
   INT nx, ny, nz;
   rgrid *orig, *final;
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
   nc_def_dim(ncid, "x", (size_t) nx, &dimids[2]);
   nc_def_var(ncid, "x", DATA_NC, 1, &dimids[2], &varid2);
 
-  nc_def_var(ncid, "density", DATA_NC, dim, dimids, &varid3);
+  nc_def_var(ncid, "density", DATA_NC, 3, dimids, &varid3);
   nc_enddef(ncid);
 #ifdef SINGLE_PREC
   nc_put_var_float(ncid, varid3, final->value);

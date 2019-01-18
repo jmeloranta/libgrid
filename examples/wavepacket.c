@@ -2,16 +2,23 @@
  * Example: Propagate wavepacket in harmonic potential (3D).
  *
  * Try for example:
- * ./wavepacket 1 128 10.0 200 8.0 8.0 8.0 0.25 0.25 0.25 -2.0 -2.0 -2.0 > test.dat
+ * ./wavepacket 0 128 0.01 200 0.0 0.0 0.0 0.25 0.25 0.25 -2.0 0.0 0.0
+ *
+ * Although this is 3-D calculation, the above settings will initiate
+ * the motion along the x-axis. Therefore it can be visualized by:
+ *
+ * gview2 output-{?,??,???}.x
+ * 
+ * (the wildcard syntax is likely different for bash; the above is tcsh)
  *
  * Arguments:
  * 1st  = Number of threads to be used.
  * 2nd  = Number of points in X, Y, Z directions (N x N x N grid).
  * 3rd  = Time step (atomic units).
  * 4th  = Number of iterations to run.
- * 5th  = Force constant along X (harmonic potential).
- * 6th  = Force constant along Y (harmonic potential).
- * 7th  = Force constant along Z (harmonic potential).
+ * 5th  = Initial wave vector (momentum) along X (atomic units).
+ * 6th  = Initial wave vector (momentum) along Y (atomic units).
+ * 7th  = Initial wave vector (momentum) along Z (atomic units).
  * 8th  = Initial wave packet width in X direction (atomic units).
  * 9th  = Initial wave packet width in Y direction (atomic units).
  * 10th = Initial wave packet width in Z direction (atomic units).
@@ -26,6 +33,10 @@
 #include <math.h>
 #include <grid/grid.h>
 #include <omp.h>
+
+/* Define this for 4th order accuracy in time */
+/* Otherwise for 2nd order accuracy */
+#define FOURTH_ORDER_PROPAGATOR
 
 REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
 REAL complex harmonic(void *arg, REAL x, REAL y, REAL z);
@@ -48,7 +59,10 @@ int main(int argc, char *argv[]) {
   REAL step, lx, time_step;
   REAL complex time;
   wf *gwf = NULL;
-  cgrid *potential, *workspace, *workspace2, *sq_grad_pot;
+  cgrid *potential, *workspace, *workspace2;
+#ifdef FOURTH_ORDER_PROPAGATOR
+  cgrid *sq_grad_pot;
+#endif
   rgrid *rworkspace;
   char fname[256];
   pparams potential_params;
@@ -56,7 +70,7 @@ int main(int argc, char *argv[]) {
   
   /* Parameter check */
   if (argc != 14) {
-    fprintf(stderr, "Usage: %s <threads> <points/axis> <time_step> <iterations> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n", argv[0]);
+    fprintf(stderr, "Usage: wavepacket <thr> <npts> <tstep> <iters> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n", argv[0]);
     return -1;
   }
   
@@ -79,19 +93,15 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Width cannot be zero.\n");
     exit(1);
   }
-
-  if(wp_params.kx == 0.0 || wp_params.ky == 0.0 || wp_params.kz == 0.0) {
-    fprintf(stderr, "Force constant cannot be zero.\n");
-    exit(1);
-  }
   
   /* Set spatial grid step length based on number of grid points */
   step = 0.4 / (((REAL) n) / 16.0);
   
   fprintf(stderr, "Grid (" FMT_I "X" FMT_I "X" FMT_I ")\n", n, n, n);
   
-  /* potential parameters */
+  /* Potential parameters */
   lx = ((REAL) n) * step;
+  /* Force constants for the harmonic potential */
   potential_params.kx = lx * 2.0;
   potential_params.ky = lx * 2.0;
   potential_params.kz = lx * 2.0;
@@ -100,12 +110,15 @@ int main(int argc, char *argv[]) {
   grid_threads_init(threads);
   
   /* allocate memory (mass = 1.0) */
-  gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, WF_2ND_ORDER_PROPAGATOR, "WF");
+  gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
+                      WF_2ND_ORDER_PROPAGATOR, "WF");
   potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
   workspace = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace");
   workspace2 = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace2");
-  rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");
+#ifdef FOURTH_ORDER_PROPAGATOR
   sq_grad_pot = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "sq_grad_pot");
+#endif
+  rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");
   
   /* Initialize wave function */
   grid_wf_map(gwf, wavepacket, &wp_params);
@@ -117,13 +130,18 @@ int main(int argc, char *argv[]) {
   /* Propagate */
   time = time_step;
   for(l = 0; l < iterations; l++) {
-    /* Propagate one time step */
-    grid_wf_square_of_potential_gradient(sq_grad_pot, potential, workspace, workspace2);
-    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace);
+    printf("Iteration " FMT_I " with wf norm = " FMT_R "\n", l, grid_wf_norm(gwf));
     /* Write |psi|^2 to output-* files */
     grid_wf_density(gwf, rworkspace);
     sprintf(fname, "output-" FMT_I, l);
     rgrid_write_grid(fname, rworkspace);
+    /* Propagate one time step */
+#ifdef FOURTH_ORDER_PROPAGATOR
+    grid_wf_square_of_potential_gradient(sq_grad_pot,potential, workspace, workspace2);
+    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace);
+#else
+    grid_wf_propagate(gwf, potential, NULL, time, workspace);
+#endif
   }
 
   /* Release resources */
@@ -131,7 +149,6 @@ int main(int argc, char *argv[]) {
   cgrid_free(workspace);
   cgrid_free(workspace2);
   rgrid_free(rworkspace);
-  cgrid_free(sq_grad_pot);
   cgrid_free(potential);
   
   return 0;
@@ -149,12 +166,16 @@ REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z) {
   REAL xc = ((wparams *) arg)->xc;
   REAL yc = ((wparams *) arg)->yc;
   REAL zc = ((wparams *) arg)->zc;
-  
+  REAL x2, y2, z2;
+
   x -= xc;
   y -= yc;
   z -= zc;
+  x2 = x / wx; x2 *= x2;
+  y2 = y / wy; y2 *= y2;
+  z2 = z / wz; z2 *= z2;
 
-  return CEXP(-x / wx * x / wx + I * kx * x - y / wy * y / wy + I * ky * y - z / wz * z / wz + I * kz * z);
+  return CEXP(- x2 + I * kx * x - y2  + I * ky * y - z2 + I * kz * z);
 }
 
 /* Function for harmonic potential */
@@ -162,5 +183,6 @@ REAL complex harmonic(void *arg, REAL x, REAL y, REAL z) {
 
   pparams params = *((pparams *) arg);
 
-  return 0.5 * (params.kx * params.kx * x * x + params.ky * params.ky * y * y + params.kz * params.kz * z * z);
+  return 0.5 * (params.kx * params.kx * x * x + params.ky * params.ky * y * y 
+                + params.kz * params.kz * z * z);
 }

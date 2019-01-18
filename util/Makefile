@@ -1,6 +1,6 @@
 include ../make.conf
 
-PROGS = wf2cdf wf2cdf2 grd2cdf vector2cdf view view2
+PROGS = wf2cdf wf2cdf2 grd2cdf vector2cdf gview gview2
 
 all: $(PROGS)
 
@@ -31,18 +31,18 @@ wf2cdf.o: wf2cdf.c
 wf2cdf2.o: wf2cdf2.c
 	$(CC) $(CFLAGS) -c wf2cdf2.c
 
-view: view.o
-	$(CC) $(CFLAGS) -o view view.o -lgrace_np
+gview: gview.o
+	$(CC) $(CFLAGS) -o gview gview.o -lgrace_np
 
-view.o: view.c
-	$(CC) $(CFLAGS) -c view.c
+gview.o: gview.c
+	$(CC) $(CFLAGS) -c gview.c
 
-view2: view2.o
-	$(CC) $(CFLAGS) -o view2 view2.o -lgrace_np
+gview2: gview2.o
+	$(CC) $(CFLAGS) -o gview2 gview2.o -lgrace_np
 
-view2.o: view2.c
-	$(CC) $(CFLAGS) -c view2.c
+gview2.o: gview2.c
+	$(CC) $(CFLAGS) -c gview2.c
 
 clean:
-	-rm grd2cdf wf2cdf wf2cdf2 *~ *.o vector2cdf view view2
+	-rm grd2cdf wf2cdf wf2cdf2 *~ *.o vector2cdf gview gview2
 

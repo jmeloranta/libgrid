@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 
   INT i, j, npts;
   FILE *fp;
-  REAL x, x_prev, y, y2, begin, end, step = -1.0, ymax = -1.0, ymin = 0.0;
+  REAL x, x_prev = 0.0, y, y2, begin = 0.0, end, step = -1.0, ymax = -1.0, ymin = 0.0;
 
   if(argc < 2) {
     fprintf(stderr, "Usage: view file1 file2...\n");

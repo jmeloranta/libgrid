@@ -27,10 +27,12 @@ Installation of libgrid requires the following packages:
 \item git (a free and open source distributed version control system)
 \item GNU C compiler with OpenMP support (gcc)
 \item FFTW 3.x (Fast Fourier Transform package)
+\item Grace 2-D plotting program (xmgrace) and its development libraries
+\item NETCDF library for converting to CDF format
 \end{itemize}
-To install these packages on Fedora linux, use (\# implies execution with root privileges): 
+To install these packages on Fedora linux, use (\# prompt implies execution with root privileges): 
 \begin{verbatim}
-# dnf install git gcc fftw-*
+# dnf install git gcc fftw-* grace grace-devel netcdf netcdf-devel
 \end{verbatim}
 If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA drivers and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. This installation is compatible with the default settings in make.conf as described below. Currently, libgrid does not support OpenCL.
 
@@ -81,6 +83,15 @@ To compile the library, change to src subdirectory and issue make:
 % make -j
 \end{verbatim}
 Provided that the compilation completed without errors, install the library (as root):
+\begin{verbatim}
+# make install
+\end{verbatim}
+To compile the utilities for file format conversions and graphical applications, compile and install the utilities:
+\begin{verbatim}
+% cd ../util
+% make
+\end{verbatim}
+Once the utilities compile, install them (as root):
 \begin{verbatim}
 # make install
 \end{verbatim}
@@ -2997,11 +3008,11 @@ Convert wave function grid to NETCDF file containing: density ($|\psi|^2$) and t
 
 Similar to wf2cdf but only place real and imaginary parts of the wave function into the NETCDF file (field names re and im). 
 
-\subsection{view/view2 -- Animate 1-D data using xmgrace program}
+\subsection{gview and gview2 -- Animate 1-D data using xmgrace program}
 
-Both view (may have to type full path as there is also /usr/bin/view) and view2 programs will take an ordered list of files as arguments, which will be displayed in that order. There is a short pause at the first file to allow adjustment of the display. View works for ASCII files of 3-D cuts along x, y, and z axes (as output by grid\_write()). View2 works for 1-D grids (e.g., dimension 1, 1, 256). To animate a set of files bubble-*.z (1-D), use:
+Both gview and gview2 programs will take an ordered list of files as arguments, which will be displayed in that order. There is a short pause at the first file to allow adjustment of the display. View works for ASCII files of 3-D cuts along x, y, and z axes (as output by rgrid\_write\_grid()). View2 works for 1-D grids (e.g., dimension 1, 1, 256). To animate a set of files bubble-*.z (1-D), use:
 \begin{verbatim}
-% view2 bubble-{?,??,???,????,?????}.z
+% gview2 bubble-{?,??,???,????,?????}.z
 \end{verbatim}
 where the files were named bubble-1.z, bubble-2.z, etc. The wildcard above (csh/tcsh syntax; bash is likely different) ensures that the files will appear in the correct order. View2 also allows saving the individual images during view. To get this behavior, add -s option. Programs like ffmpeg can be used to create movies from the resulting jpg files.
 
@@ -3220,6 +3231,197 @@ int main(int argc, char **argv) {
 }
 \end{verbatim}
 
-%\section{References}
+\section{Wave packet example}
+
+\begin{verbatim}
+/*
+ * Example: Propagate wavepacket in harmonic potential (3D).
+ *
+ * Try for example:
+ * ./wavepacket 0 128 0.01 200 0.0 0.0 0.0 0.25 0.25 0.25 -2.0 0.0 0.0
+ *
+ * Although this is 3-D calculation, the above settings will initiate
+ * the motion along the x-axis. Therefore it can be visualized by:
+ *
+ * gview2 output-{?,??,???}.x
+ * 
+ * (the wildcard syntax is likely different for bash; the above is tcsh)
+ *
+ * Arguments:
+ * 1st  = Number of threads to be used.
+ * 2nd  = Number of points in X, Y, Z directions (N x N x N grid).
+ * 3rd  = Time step (atomic units).
+ * 4th  = Number of iterations to run.
+ * 5th  = Initial wave vector (momentum) along X (atomic units).
+ * 6th  = Initial wave vector (momentum) along Y (atomic units).
+ * 7th  = Initial wave vector (momentum) along Z (atomic units).
+ * 8th  = Initial wave packet width in X direction (atomic units).
+ * 9th  = Initial wave packet width in Y direction (atomic units).
+ * 10th = Initial wave packet width in Z direction (atomic units).
+ * 11th = Initial wave packet center along X direction (atomic units).
+ * 12th = Initial wave packet center along Y direction (atomic units).
+ * 13th = Initial wave packet center along Z direction (atomic units).
+ *
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <grid/grid.h>
+#include <omp.h>
+
+/* Define this for 4th order accuracy in time */
+/* Otherwise for 2nd order accuracy */
+#define FOURTH_ORDER_PROPAGATOR
+
+REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
+REAL complex harmonic(void *arg, REAL x, REAL y, REAL z);
+
+/* Wave packet structure */
+typedef struct wparams_struct {
+  REAL kx, ky, kz;
+  REAL wx, wy, wz;
+  REAL xc, yc, zc;
+} wparams;
+
+/* Harmonic potential parameters */
+typedef struct pparams_struct {
+  REAL kx, ky, kz;
+} pparams;
+
+int main(int argc, char *argv[]) {
+
+  INT l, n, iterations, threads;
+  REAL step, lx, time_step;
+  REAL complex time;
+  wf *gwf = NULL;
+  cgrid *potential, *workspace, *workspace2;
+#ifdef FOURTH_ORDER_PROPAGATOR
+  cgrid *sq_grad_pot;
+#endif
+  rgrid *rworkspace;
+  char fname[256];
+  pparams potential_params;
+  wparams wp_params;
+  
+  /* Parameter check */
+  if (argc != 14) {
+    fprintf(stderr, "Usage: wavepacket <thr> <npts> <tstep> <iters> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n", argv[0]);
+    return -1;
+  }
+  
+  /* Parse command line arguments */
+  threads = atoi(argv[1]);
+  n = atoi(argv[2]);
+  time_step = atof(argv[3]);
+  iterations = atol(argv[4]);
+  wp_params.kx = atof(argv[5]);
+  wp_params.ky = atof(argv[6]);
+  wp_params.kz = atof(argv[7]);
+  wp_params.wx = atof(argv[8]);
+  wp_params.wy = atof(argv[9]);
+  wp_params.wz = atof(argv[10]);
+  wp_params.xc = atof(argv[11]);
+  wp_params.yc = atof(argv[12]);
+  wp_params.zc = atof(argv[13]);
+
+  if(wp_params.wx == 0.0 || wp_params.wy == 0.0 || wp_params.wz == 0.0) {
+    fprintf(stderr, "Width cannot be zero.\n");
+    exit(1);
+  }
+  
+  /* Set spatial grid step length based on number of grid points */
+  step = 0.4 / (((REAL) n) / 16.0);
+  
+  fprintf(stderr, "Grid (" FMT_I "X" FMT_I "X" FMT_I ")\n", n, n, n);
+  
+  /* Potential parameters */
+  lx = ((REAL) n) * step;
+  /* Force constants for the harmonic potential */
+  potential_params.kx = lx * 2.0;
+  potential_params.ky = lx * 2.0;
+  potential_params.kz = lx * 2.0;
+  
+  /* Initialize OpenMP threads */
+  grid_threads_init(threads);
+  
+  /* allocate memory (mass = 1.0) */
+  gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
+                      WF_2ND_ORDER_PROPAGATOR, "WF");
+  potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
+  workspace = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace");
+  workspace2 = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace2");
+#ifdef FOURTH_ORDER_PROPAGATOR
+  sq_grad_pot = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "sq_grad_pot");
+#endif
+  rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");
+  
+  /* Initialize wave function */
+  grid_wf_map(gwf, wavepacket, &wp_params);
+  grid_wf_normalize(gwf);
+  
+  /* Map potential */
+  cgrid_smooth_map(potential, harmonic, &potential_params, 1);
+  
+  /* Propagate */
+  time = time_step;
+  for(l = 0; l < iterations; l++) {
+    printf("Iteration " FMT_I " with wf norm = " FMT_R "\n", l, grid_wf_norm(gwf));
+    /* Write |psi|^2 to output-* files */
+    grid_wf_density(gwf, rworkspace);
+    sprintf(fname, "output-" FMT_I, l);
+    rgrid_write_grid(fname, rworkspace);
+    /* Propagate one time step */
+#ifdef FOURTH_ORDER_PROPAGATOR
+    grid_wf_square_of_potential_gradient(sq_grad_pot,potential, workspace, workspace2);
+    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace);
+#else
+    grid_wf_propagate(gwf, potential, NULL, time, workspace);
+#endif
+  }
+
+  /* Release resources */
+  grid_wf_free(gwf);
+  cgrid_free(workspace);
+  cgrid_free(workspace2);
+  rgrid_free(rworkspace);
+  cgrid_free(potential);
+  
+  return 0;
+}
+
+/* Function for creating the initial wave packet */
+REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z) {
+
+  REAL kx = ((wparams *) arg)->kx;
+  REAL ky = ((wparams *) arg)->ky;
+  REAL kz = ((wparams *) arg)->kz;
+  REAL wx = ((wparams *) arg)->wx;
+  REAL wy = ((wparams *) arg)->wy;
+  REAL wz = ((wparams *) arg)->wz;
+  REAL xc = ((wparams *) arg)->xc;
+  REAL yc = ((wparams *) arg)->yc;
+  REAL zc = ((wparams *) arg)->zc;
+  REAL x2, y2, z2;
+
+  x -= xc;
+  y -= yc;
+  z -= zc;
+  x2 = x / wx; x2 *= x2;
+  y2 = y / wy; y2 *= y2;
+  z2 = z / wz; z2 *= z2;
+
+  return CEXP(- x2 + I * kx * x - y2  + I * ky * y - z2 + I * kz * z);
+}
+
+/* Function for harmonic potential */
+REAL complex harmonic(void *arg, REAL x, REAL y, REAL z) {
+
+  pparams params = *((pparams *) arg);
+
+  return 0.5 * (params.kx * params.kx * x * x + params.ky * params.ky * y * y 
+                + params.kz * params.kz * z * z);
+}
+\end{verbatim}
 
 \end{document}
