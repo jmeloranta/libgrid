@@ -77,6 +77,8 @@ CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank\\
 CUDA\_DEBUG & Whether to include debug code in libggrid CUDA routines\\
             & ("yes" or "no"; default no).\\
 \end{tabular}
+
+\noindent
 To compile the library, change to src subdirectory and issue make:
 \begin{verbatim}
 % cd src
@@ -96,6 +98,7 @@ Once the utilities compile, install them (as root):
 # make install
 \end{verbatim}
 
+\noindent
 The recommended OpenMP environment variable setting for optimal performance is:
 \begin{verbatim}
 setenv OMP_SCHEDULE auto
