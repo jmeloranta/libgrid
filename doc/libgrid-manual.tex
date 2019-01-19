@@ -2503,6 +2503,16 @@ cgrid *source & Source grid.\\
 \noindent
 This function does not return any value.
 
+\section{Common routines to all grid types}
+
+\subsection{grid\_fft\_read\_wisdom() -- Read FFTW wisdom file}
+
+This routine will read FFTW wisdom file from disk. Wisdom files contain predetermined information about the current system, which helps provide the fastest FFT implementation (and avoids the initial tuning step). It takes one argument, which specifies the wisdom file name (char *). If this is a NULL pointer, the default file name will be used (fftw-hostname.wis). This function does not return any value.
+
+\subsection{grid\_fft\_write\_wisdom() -- Write FFTW wisdom file}
+
+This routine will write FFTW wisdom file to disk. Wisdom files contain predetermined information about the current system, which helps provide the fastest FFT implementation (and avoids the initial tuning step).  It takes one argument, which specifies the wisdom file name (char *). If this is a NULL pointer, the default file name will be used (fftw-hostname.wis). This function does not return any value.
+
 \section{Wave function routines}
 
 The following routines act on wave functions (wf data type).

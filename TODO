@@ -8,5 +8,6 @@
   write CUDA version so that driver.c scale_wf does not have to fetch data from GPU
 - Poisson solver for other than periodic BC
 - multi GPU support (at least be able to select GPU). Can we use streams?
+- Fortran support: iso_c_binding, interface / end interface.
 
 also fgrep TODO *.[ch] to find out more specific issues.
