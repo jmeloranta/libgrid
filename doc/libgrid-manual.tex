@@ -393,6 +393,18 @@ rgrid *grid & Grid to be written to disk.\\
 \noindent
 This function does not return any value.
 
+\subsection{rgrid\_read\_grid() -- Read grid from disk}
+
+Read real grid to disk. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be stored in memory.\\
+char *file & File name for the file.\\
+\end{longtable}
+\noindent
+This function does not return any value. See also grid\_read().
+
 \subsection{rgrid\_copy() -- Copy grid}
 
 Copy a grid to another where the source and destination grids are determined by the arguments:
@@ -1447,6 +1459,18 @@ cgrid *grid & Grid to be written to disk.\\
 \end{longtable}
 \noindent
 This function does not return any value.
+
+\subsection{cgrid\_read\_grid() -- Read grid from disk}
+
+Read complex grid from disk. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Destination grid.\\
+char *file & File name for the grid file to be read.\\
+\end{longtable}
+\noindent
+This function does not return any value. See also cgrid\_read().
 
 \subsection{cgrid\_copy() -- Copy grid}
 

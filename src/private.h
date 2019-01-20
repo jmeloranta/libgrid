@@ -180,4 +180,46 @@ static inline REAL ipow(REAL x, INT n) {
   return x;
 }
 
+static REAL grid_mult_mx(void *xx, REAL x, REAL y, REAL z) {
+
+  rgrid *grid = (rgrid *) xx;
+
+  return -rgrid_value(grid, x, y, z) * (x - grid->x0);
+}
+
+static REAL grid_mult_my(void *xx, REAL x, REAL y, REAL z) {
+
+  rgrid *grid = (rgrid *) xx;
+
+  return -rgrid_value(grid, x, y, z) * (y - grid->y0);
+}
+
+static REAL grid_mult_mz(void *xx, REAL x, REAL y, REAL z) {
+
+  rgrid *grid = (rgrid *) xx;
+
+  return -rgrid_value(grid, x, y, z) * (z - grid->z0);
+}
+
+static REAL grid_mult_x(void *xx, REAL x, REAL y, REAL z) {
+
+  rgrid *grid = (rgrid *) xx;
+
+  return rgrid_value(grid, x, y, z) * (x - grid->x0);
+}
+
+static REAL grid_mult_y(void *xx, REAL x, REAL y, REAL z) {
+
+  rgrid *grid = (rgrid *) xx;
+
+  return rgrid_value(grid, x, y, z) * (y - grid->y0);
+}
+
+static REAL grid_mult_z(void *xx, REAL x, REAL y, REAL z) {
+
+  rgrid *grid = (rgrid *) xx;
+
+  return rgrid_value(grid, x, y, z) * (z - grid->z0);
+}
+
 #endif /*  __GRIDPRIVATE__ */

@@ -379,6 +379,33 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
 }
 
 /*
+ * Read in density from a binary file (.grd).
+ *
+ * grid = place to store the read density (output, rgrid *).
+ * file = filename for the file (char *). Note: the .grd extension must NOT be given (input, char *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_read_grid(rgrid *grid, char *file) {
+
+  FILE *fp;
+
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 0);
+#endif
+
+  if(!(fp = fopen(file, "r"))) {
+    fprintf(stderr, "libgrid: Can't open real grid file %s.\n", file);
+    exit(1);
+  }
+  rgrid_read(grid, fp);
+  fclose(fp);
+  fprintf(stderr, "libgrid: Density read from %s.\n", file);
+}
+
+/*
  * Write real grid to disk including cuts along x, y, and z axes.
  *
  * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).

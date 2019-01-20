@@ -415,6 +415,28 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
 }
 
 /*
+ * Read in a grid from a binary file (.grd).
+ *
+ * grid = grid where the data is placed (cgrid *, output).
+ * file = filename for the file (char *, input). Note: the .grd extension must be given.
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void cgrid_read_grid(cgrid *grid, char *file) {
+
+  FILE *fp;
+
+  if(!(fp = fopen(file, "r"))) {
+    fprintf(stderr, "libgrid: Can't open complex grid file %s.\n", file);
+    exit(1);
+  }
+  cgrid_read(grid, fp);
+  fclose(fp);
+}
+
+/*
  * Copy grid from one grid to another.
  *
  * copy = destination grid (cgrid *; input).
