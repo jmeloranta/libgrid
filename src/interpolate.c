@@ -1,3 +1,8 @@
+/*
+ * Interpolation functions.
+ *
+ */
+
 #include "grid.h"
 #include "private.h"
 

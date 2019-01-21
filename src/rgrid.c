@@ -388,7 +388,7 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
  *
  */
 
-EXPORT void grid_read_grid(rgrid *grid, char *file) {
+EXPORT void rgrid_read_grid(rgrid *grid, char *file) {
 
   FILE *fp;
 
@@ -2714,9 +2714,9 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
  * ux = X component of the compressible vector field (rgrid *; output).
  * uy = Y component of the compressible vector field (rgrid *; output).
  * uz = Z component of the compressible vector field (rgrid *; output).
- * wx = X component of the incompressible vector field (rgrid *; output).
- * wy = Y component of the incompressible vector field (rgrid *; output).
- * wz = Z component of the incompressible vector field (rgrid *; output).
+ * wx = X component of the incompressible vector field (rgrid *; output). May be NULL if not needed.
+ * wy = Y component of the incompressible vector field (rgrid *; output). May be NULL if not needed.
+ * wz = Z component of the incompressible vector field (rgrid *; output). May be NULL if not needed.
  *
  * No return value.
  *
@@ -2727,9 +2727,9 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
   rgrid_div(wx, vx, vy, vz);
   rgrid_poisson(wx);
   rgrid_fd_gradient(wx, ux, uy, uz);
-  rgrid_difference(wx, vx, ux);
-  rgrid_difference(wy, vy, uy);
-  rgrid_difference(wz, vz, uz);
+  if(wx) rgrid_difference(wx, vx, ux);
+  if(wy) rgrid_difference(wy, vy, uy);
+  if(wz) rgrid_difference(wz, vz, uz);
 }
 
 /*
@@ -2885,4 +2885,54 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       else bins[k] = 0.0;
   }
   free(nvals);
+}
+
+/*
+ * Calculate running average to smooth unwanted high freq. components.
+ *
+ * dest   = destination grid (rgrid *).
+ * source = source grid (rgrid *).
+ * npts   = number of points used in running average (int). This smooths over +-npts points (effectively 2 X npts).
+ *
+ * No return value.
+ *
+ * Note: dest and source cannot be the same array.
+ * 
+ */
+
+EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, int npts) {
+
+  INT i, ip, j, jp, k, kp, nx = source->nx, ny = source->ny, nz = source->nz, pts;
+  INT li, ui, lj, uj, lk, uk;
+  REAL ave;
+
+  if(npts < 2) {
+    rgrid_copy(dest, source);
+    return; /* nothing to do */
+  }
+  if(dest == source) {
+    fprintf(stderr, "libgrid: dft_driver_npoint_smooth() - dest and source cannot be equal.\n");
+    exit(1);
+  }
+
+  for (i = 0; i < nx; i++) 
+    for (j = 0; j < ny; j++) 
+      for (k = 0; k < nz; k++) {
+        ave = 0.0;
+        pts = 0;
+        if(i - npts < 0) li = 0; else li = i - npts;
+        if(j - npts < 0) lj = 0; else lj = j - npts;
+        if(k - npts < 0) lk = 0; else lk = k - npts;
+        if(i + npts > nx) ui = nx; else ui = i + npts;
+        if(j + npts > ny) uj = ny; else uj = j + npts;
+        if(k + npts > nz) uk = nz; else uk = k + npts;
+        for(ip = li; ip < ui; ip++)
+          for(jp = lj; jp < uj; jp++)
+            for(kp = lk; kp < uk; kp++) {
+              pts++;
+              ave += rgrid_value_at_index(source, ip, jp, kp);
+            }
+        ave /= (REAL) pts;
+        rgrid_value_to_index(dest, i, j, k, ave);
+      }
 }

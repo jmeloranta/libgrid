@@ -227,8 +227,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, cgrid *sq_grad_pot, REA
   
   if (gwf->boundary == WF_DIRICHLET_BOUNDARY && gwf->propagator == WF_2ND_ORDER_PROPAGATOR) {    
     grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-    if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-    grid_wf_propagate_cn(gwf, NULL, time, NULL, potential, gwf->cworkspace->value, ((INT) sizeof(REAL complex)) * gwf->cworkspace->nx * gwf->cworkspace->ny * gwf->cworkspace->nz);
+    grid_wf_propagate_cn(gwf, NULL, time, NULL, potential);
     grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
   } else if ((gwf->boundary == WF_PERIODIC_BOUNDARY || gwf->boundary == WF_NEUMANN_BOUNDARY || gwf->boundary == WF_VORTEX_X_BOUNDARY || gwf->boundary == WF_VORTEX_Y_BOUNDARY || gwf->boundary == WF_VORTEX_Z_BOUNDARY)
 	     && gwf->propagator == WF_2ND_ORDER_PROPAGATOR) {

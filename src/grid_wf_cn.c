@@ -44,8 +44,6 @@ EXPORT REAL grid_wf_energy_cn(wf *gwf, cgrid *potential) {
  * tstep     = base time step length (REAL complex).
  * privdata  = additional private data form time step function (void *).
  * potential = potential grid (cgrid *; NULL if not needed).
- * workspace = additional storage space needed (REAL complex *) with size at least 3 * MAX(nx,ny,nz) * (number of threads).
- * worklen   = workspace length (INT).
  *
  * exp( -i (Tx + Ty + Tz) dt / hbar ) 
  *   = exp( -i (Tx+V) dt / hbar ) exp( -i (Ty+V) dt / hbar ) exp( -i (Tz+V) dt / hbar ) + O(dt^2)
@@ -58,11 +56,16 @@ EXPORT REAL grid_wf_energy_cn(wf *gwf, cgrid *potential) {
  *
  */
 
-EXPORT void grid_wf_propagate_cn(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential, REAL complex *workspace, INT worklen) {
+EXPORT void grid_wf_propagate_cn(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential) {
 
-  if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, time, tstep, privdata, potential, workspace, worklen);
-  if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, time, tstep, privdata, potential, workspace, worklen);
-  if(gwf->grid->nz != 1) grid_wf_propagate_cn_z(gwf, time, tstep, privdata, potential, workspace, worklen);
+  cgrid *grid = gwf->grid, *cworkspace;
+  INT worklen = ((INT) sizeof(REAL complex)) * gwf->cworkspace->nx * gwf->cworkspace->ny * gwf->cworkspace->nz;
+
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  cworkspace = gwf->cworkspace;
+  if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, time, tstep, privdata, potential, cworkspace->value, worklen);
+  if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, time, tstep, privdata, potential, cworkspace->value, worklen);
+  if(gwf->grid->nz != 1) grid_wf_propagate_cn_z(gwf, time, tstep, privdata, potential, cworkspace->value, worklen);
 }
 
 /*
