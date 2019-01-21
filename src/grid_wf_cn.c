@@ -11,28 +11,29 @@
  * Auxiliary routine for calculating the energy (Crank-Nicolson).
  * Users should rather call grid_wf_energy().
  *
- * gwfa      = (left) wavefunction for the energy calculation (wf *).
- * gwfb      = (right) wavefunction for the energy calculation (wf *).
- *             Normally gwfa = gwfb.
+ * gwf       = Wavefunction for the energy calculation (wf *).
  * potential = Potential grid (cgrid *).
- * workspace = Additional workspace needed for the operation (cgrid *).
  * 
  * Returns the energy.
  *
  */
 
-EXPORT REAL grid_wf_energy_cn(wf *gwfa, wf *gwfb, cgrid *potential, cgrid *workspace) {
-  
+EXPORT REAL grid_wf_energy_cn(wf *gwf, cgrid *potential) {  
+
+  cgrid *grid = gwf->grid;
+
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+
   /* (-2m/hbar^2) T psi */
-  cgrid_fd_laplace(gwfb->grid, workspace);
-  cgrid_multiply(workspace, -HBAR * HBAR / (2.0 * gwfb->mass));
+  cgrid_fd_laplace(gwf->grid, gwf->cworkspace);
+  cgrid_multiply(gwf->cworkspace, -HBAR * HBAR / (2.0 * gwf->mass));
 
   /* V psi */
   if(potential)
-    cgrid_add_scaled_product(workspace, 1.0, potential, gwfb->grid);
+    cgrid_add_scaled_product(gwf->cworkspace, 1.0, potential, gwf->grid);
   
   /* int psi^* (T + V) psi d^3r */
-  return CREAL(cgrid_integral_of_conjugate_product(gwfa->grid, workspace));
+  return CREAL(cgrid_integral_of_conjugate_product(gwf->grid, gwf->cworkspace));
 }
 
 /*

@@ -240,9 +240,9 @@ EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
  *
  * No return value.
  *
- * NOTE: This is not the liquid velocity! Divide by density (rho) to get v (velocity):
- *       v_i = flux_i / rho (i = x, y, z).
- *
+ * NOTES: - This is not the liquid velocity! Divide by density (rho) to get v (velocity):
+ *          v_i = flux_i / rho (i = x, y, z).
+ *        - This is in units of # of particles. Multiply by gwf->mass to get this in terms of mass.
  */
 
 EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {

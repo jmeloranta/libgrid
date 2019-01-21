@@ -60,12 +60,14 @@ typedef struct rgrid_struct { /* real grid data type */
   char flag;
 } rgrid;
 
-typedef struct wf_struct { /*  wavefunction */
+typedef struct wf_struct { /* wavefunction */
   cgrid *grid;
   REAL mass;
   REAL norm;
   char boundary;
   char propagator;
+  cgrid *cworkspace;
+  cgrid *cworkspace2;
 } wf;
 
 typedef struct grid_timer_struct { /* wall clock timing structure */

@@ -87,6 +87,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->norm = 1.0;
   gwf->boundary = boundary;
   gwf->propagator = propagator;
+  gwf->cworkspace = NULL;
   
   return gwf;
 }
@@ -104,6 +105,7 @@ EXPORT void grid_wf_free(wf *gwf) {
 
   if (gwf) {
     if (gwf->grid) cgrid_free(gwf->grid);
+    if (gwf->cworkspace) cgrid_free(gwf->cworkspace);
     free(gwf);
   }
 }
@@ -165,27 +167,26 @@ EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data, REAL complex
  *
  * gwf       = wavefunction for the energy calculation (wf *).
  * potential = grid containing the potential (cgrid *).
- * workspace = additional storage needed (cgrid *).
  *
  * Returns the energy (REAL).
  *
  */
 
-EXPORT REAL grid_wf_energy(wf *gwf, cgrid *potential, cgrid *workspace) {
+EXPORT REAL grid_wf_energy(wf *gwf, cgrid *potential) {
 
-  REAL mass=gwf->mass, kx = gwf->grid->kx0, ky = gwf->grid->ky0, kz = gwf->grid->kz0;
+  REAL mass = gwf->mass, kx = gwf->grid->kx0, ky = gwf->grid->ky0, kz = gwf->grid->kz0;
   REAL ekin = -HBAR * HBAR * (kx * kx + ky * ky + kz * kz) / (2.0 * mass);
 
   if(ekin != 0.0) ekin *= CREAL(cgrid_integral_of_square(gwf->grid));
 
   if (gwf->boundary == WF_DIRICHLET_BOUNDARY)
-    return grid_wf_energy_cn(gwf, gwf, potential, workspace) + ekin;
+    return grid_wf_energy_cn(gwf, potential) + ekin;
   else if (gwf->boundary == WF_PERIODIC_BOUNDARY
 		  || gwf->boundary == WF_NEUMANN_BOUNDARY
 		  || gwf->boundary == WF_VORTEX_X_BOUNDARY
 		  || gwf->boundary == WF_VORTEX_Y_BOUNDARY
 		  || gwf->boundary == WF_VORTEX_Z_BOUNDARY)
-      	  return grid_wf_energy_fft(gwf, potential, workspace) + ekin;
+      	  return grid_wf_energy_fft(gwf, potential) + ekin;
   else
     abort();
 }
@@ -212,21 +213,22 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, cgrid *potential) {
  * potential   = grid containing the potential (cgrid *).
  * sq_grad_pot = grid containing square of potential gradient (cgrid *).
  * time        = time step (REAL complex). Note this may be either real or imaginary.
- * workspace   = additional workspace needed for the operation (cgrid *).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, cgrid *sq_grad_pot, REAL complex time, cgrid *workspace) {  
+EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, cgrid *sq_grad_pot, REAL complex time) {  
   
   REAL complex half_time = 0.5 * time;
   REAL complex one_sixth_time = time / 6.0;
   REAL complex two_thirds_time = 2.0 * time / 3.0;
+  cgrid *grid = gwf->grid;
   
   if (gwf->boundary == WF_DIRICHLET_BOUNDARY && gwf->propagator == WF_2ND_ORDER_PROPAGATOR) {    
     grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-    grid_wf_propagate_cn(gwf, NULL, time, NULL, potential, workspace->value, ((INT) sizeof(REAL complex)) * workspace->nx * workspace->ny * workspace->nz);
+    if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+    grid_wf_propagate_cn(gwf, NULL, time, NULL, potential, gwf->cworkspace->value, ((INT) sizeof(REAL complex)) * gwf->cworkspace->nx * gwf->cworkspace->ny * gwf->cworkspace->nz);
     grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
   } else if ((gwf->boundary == WF_PERIODIC_BOUNDARY || gwf->boundary == WF_NEUMANN_BOUNDARY || gwf->boundary == WF_VORTEX_X_BOUNDARY || gwf->boundary == WF_VORTEX_Y_BOUNDARY || gwf->boundary == WF_VORTEX_Z_BOUNDARY)
 	     && gwf->propagator == WF_2ND_ORDER_PROPAGATOR) {
@@ -235,12 +237,12 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, cgrid *sq_grad_pot, REA
     grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
   } else if (gwf->boundary == WF_PERIODIC_BOUNDARY
             && gwf->propagator == WF_4TH_ORDER_PROPAGATOR) {
+    if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
     grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
     grid_wf_propagate_kinetic_fft(gwf, half_time);    
-    cgrid_copy(workspace, potential);
-    cgrid_add_scaled(workspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), sq_grad_pot);	
-    grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, workspace);
-    
+    cgrid_copy(gwf->cworkspace, potential);
+    cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), sq_grad_pot);	
+    grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, gwf->cworkspace);
     grid_wf_propagate_kinetic_fft(gwf, half_time);
     grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
   } else {
@@ -266,7 +268,6 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, 
 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
-  
   
 #ifdef USE_CUDA
   if(cuda_status() && !grid_cuda_wf_propagate_potential(gwf, time, tstep, privdata, potential)) return;
