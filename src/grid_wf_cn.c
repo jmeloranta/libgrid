@@ -18,7 +18,26 @@
  *
  */
 
-EXPORT REAL grid_wf_energy_cn(wf *gwf, cgrid *potential) {  
+EXPORT REAL grid_wf_energy_cn(wf *gwf, rgrid *potential) {  
+
+  REAL en;
+
+  en = grid_wf_energy_cn_kinetic(gwf);
+  if(potential) en += grid_wf_potential_energy(gwf, potential);
+  return en;    
+}
+
+/*
+ * Auxiliary routine for calculating the kinetic energy (Crank-Nicolson).
+ * Users should rather call grid_wf_energy().
+ *
+ * gwf       = Wavefunction for the energy calculation (wf *).
+ * 
+ * Returns the energy.
+ *
+ */
+
+EXPORT REAL grid_wf_energy_cn_kinetic(wf *gwf) {  
 
   cgrid *grid = gwf->grid;
 
@@ -28,10 +47,6 @@ EXPORT REAL grid_wf_energy_cn(wf *gwf, cgrid *potential) {
   cgrid_fd_laplace(gwf->grid, gwf->cworkspace);
   cgrid_multiply(gwf->cworkspace, -HBAR * HBAR / (2.0 * gwf->mass));
 
-  /* V psi */
-  if(potential)
-    cgrid_add_scaled_product(gwf->cworkspace, 1.0, potential, gwf->grid);
-  
   /* int psi^* (T + V) psi d^3r */
   return CREAL(cgrid_integral_of_conjugate_product(gwf->grid, gwf->cworkspace));
 }

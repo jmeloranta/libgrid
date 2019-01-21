@@ -88,6 +88,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->boundary = boundary;
   gwf->propagator = propagator;
   gwf->cworkspace = NULL;
+  gwf->cworkspace2 = NULL;
   
   return gwf;
 }
@@ -166,13 +167,13 @@ EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data, REAL complex
  * Includes -E_{kin} * n if the frame of reference has momentum != 0.
  *
  * gwf       = wavefunction for the energy calculation (wf *).
- * potential = grid containing the potential (cgrid *).
+ * potential = grid containing the potential (rgrid *).
  *
  * Returns the energy (REAL).
  *
  */
 
-EXPORT REAL grid_wf_energy(wf *gwf, cgrid *potential) {
+EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 
   REAL mass = gwf->mass, kx = gwf->grid->kx0, ky = gwf->grid->ky0, kz = gwf->grid->kz0;
   REAL ekin = -HBAR * HBAR * (kx * kx + ky * ky + kz * kz) / (2.0 * mass);
@@ -195,15 +196,21 @@ EXPORT REAL grid_wf_energy(wf *gwf, cgrid *potential) {
  * Auxiliary routine for calculating potential energy.
  * 
  * gwf       = wavefunction for potential energy calculation (wf *).
- * workspace = additional workspace required for the operation (cgrid *).
+ * potential = potential energy (rgrid *).
  *
  * Returns the potential energy.
  *
  */
 
-EXPORT REAL grid_wf_potential_energy(wf *gwf, cgrid *potential) {
+EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
 
-  return CREAL(cgrid_grid_expectation_value(gwf->grid, potential));
+  cgrid *grid = gwf->grid;
+
+  // TODO: This should be done better...
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  grid_real_to_complex_re(gwf->cworkspace, potential);
+
+  return CREAL(cgrid_grid_expectation_value(gwf->grid, gwf->cworkspace));
 }
 
 /*

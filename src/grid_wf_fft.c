@@ -105,28 +105,18 @@ EXPORT void grid_wf_momentum(wf *gwf, rgrid *momentum_x, rgrid *momentum_y, rgri
  * Users should rather call grid_wf_energy().
  *
  * gwf       = wavefunction for the energy calculation (wf *).
- * potential = Potential grid (cgrid *).
+ * potential = Potential grid (rgrid *).
  * 
  * Returns the energy.
  *
  */
 
-EXPORT REAL grid_wf_energy_fft(wf *gwf, cgrid *potential) {
+EXPORT REAL grid_wf_energy_fft(wf *gwf, rgrid *potential) {
 
   REAL en;
-  cgrid *cworkspace, *grid = gwf->grid;
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  cworkspace = gwf->cworkspace;
-  /* delta (- k^2) fft[f(x)] / N */
-  cgrid_copy(cworkspace, gwf->grid);
-  cgrid_fft(cworkspace);
-  
-  en = -HBAR * HBAR / (2.0 * gwf->mass) * cgrid_fft_laplace_expectation_value(cworkspace, cworkspace);
-
-  if(potential)
-    en += CREAL(cgrid_grid_expectation_value(gwf->grid, potential));
-
+  en = grid_wf_kinetic_energy_fft(gwf);
+  if(potential) en += grid_wf_potential_energy(gwf, potential);
   return en;
 }
 
@@ -142,7 +132,7 @@ EXPORT REAL grid_wf_energy_fft(wf *gwf, cgrid *potential) {
 
 EXPORT REAL grid_wf_kinetic_energy_fft(wf *gwf) {
 
-  cgrid *cworkspace, *grid = gwf->grid;;
+  cgrid *cworkspace, *grid = gwf->grid;
 
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   cworkspace = gwf->cworkspace;
