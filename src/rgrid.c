@@ -2727,9 +2727,71 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
   rgrid_div(wx, vx, vy, vz);
   rgrid_poisson(wx);
   rgrid_fd_gradient(wx, ux, uy, uz);
-  if(wx) rgrid_difference(wx, vx, ux);
-  if(wy) rgrid_difference(wy, vy, uy);
-  if(wz) rgrid_difference(wz, vz, uz);
+  rgrid_difference(wx, vx, ux);
+  rgrid_difference(wy, vy, uy);
+  rgrid_difference(wz, vz, uz);
+}
+
+/*
+ * Decompose a vector field into "compressible (irrotational)" (u) and "incompressible (rotational)" (w) parts:
+ * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
+ *
+ * One can also take rot of both sides: rot v = rot w + rot u = rot w + rot grad q = rot w. So, 
+ * u = grad q is the irrotational part and w is the is the rotational part.
+ * 
+ * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
+ * The incompressible part is then w = v - u.
+ *
+ * This is special version of rgrid_hodge() such that it only computes the compressible part.
+ *
+ * vx        = X component of the vector field to be decomposed (rgrid *; input). Output: X component of compressible part.
+ * vy        = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of compressible part.
+ * vz        = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of compressible part.
+ * workspace = Additional workspace required (rgrid *; output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) {
+
+  rgrid_div(workspace, vx, vy, vz);
+  rgrid_poisson(workspace);
+  rgrid_fd_gradient(workspace, vx, vy, vz);
+}
+
+/*
+ * Decompose a vector field into "compressible (irrotational)" (u) and "incompressible (rotational)" (w) parts:
+ * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
+ *
+ * One can also take rot of both sides: rot v = rot w + rot u = rot w + rot grad q = rot w. So, 
+ * u = grad q is the irrotational part and w is the is the rotational part.
+ * 
+ * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
+ * The incompressible part is then w = v - u.
+ *
+ * This is special version of rgrid_hodge() such that it only computes the incompressible part.
+ *
+ * vx         = X component of the vector field to be decomposed (rgrid *; input). Output: X component of incompressible part.
+ * vy         = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of incompressible part.
+ * vz         = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of incompressible part.
+ * workspace  = Additional workspace required (rgrid *; output).
+ * workspace2 = Additional workspace required (rgrid *; output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
+
+  rgrid_div(workspace, vx, vy, vz);
+  rgrid_poisson(workspace);
+  rgrid_fd_gradient_x(workspace, workspace2);
+  rgrid_difference(vx, vx, workspace2);
+  rgrid_fd_gradient_y(workspace, workspace2);
+  rgrid_difference(vy, vy, workspace2);
+  rgrid_fd_gradient_z(workspace, workspace2);
+  rgrid_difference(vz, vz, workspace2);
 }
 
 /*

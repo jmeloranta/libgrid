@@ -420,36 +420,31 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * workspace4 = Workspace 4 (rgrid *; input/output).
  * workspace5 = Workspace 5 (rgrid *; input/output).
- * workspace6 = Workspace 6 (rgrid *; input/output).
- * workspace7 = Workspace 7 (rgrid *; input/output).
- * workspace8 = Workspace 8 (rgrid *; input/output).
- * workspace9 = Workspace 9 (rgrid *; input/output).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, rgrid *workspace6, rgrid *workspace7, rgrid *workspace8, rgrid *workspace9) {
+EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
 
   INT i;
 
+  /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
+  /* workspace2 = flux_y / sqrt(rho) = sqrt(rho) * v_y */
+  /* workspace3 = flux_z / sqrt(rho) = sqrt(rho) * v_z */
   grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
   grid_wf_density(gwf, workspace4);
   rgrid_power(workspace4, workspace4, 0.5);
   rgrid_division_eps(workspace1, workspace1, workspace4, 1E-5);
   rgrid_division_eps(workspace2, workspace2, workspace4, 1E-5);
   rgrid_division_eps(workspace3, workspace3, workspace4, 1E-5);
-  /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
-  /* workspace2 = flux_y / sqrt(rho) = sqrt(rho) * v_y */
-  /* workspace3 = flux_z / sqrt(rho) = sqrt(rho) * v_z */
-  rgrid_hodge(workspace1, workspace2, workspace3, workspace4, workspace5, workspace6, workspace7, workspace8, workspace9);
+  rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
 
-  /* workspaces 4, 5, 6 = compressible; workspaces 7, 8, 9 = incompressible */
   /* FFT each component */
-  rgrid_fft(workspace7); rgrid_multiply(workspace7, workspace7->step);
-  rgrid_fft(workspace8); rgrid_multiply(workspace8, workspace8->step);
-  rgrid_fft(workspace9); rgrid_multiply(workspace9, workspace9->step);
-  rgrid_spherical_average_reciprocal(workspace7, workspace8, workspace9, bins, binstep, nbins, 1);
+  rgrid_fft(workspace1); rgrid_multiply(workspace1, workspace1->step);
+  rgrid_fft(workspace2); rgrid_multiply(workspace2, workspace2->step);
+  rgrid_fft(workspace3); rgrid_multiply(workspace3, workspace3->step);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
   
   for (i = 0; i < nbins; i++)
     bins[i] = bins[i] * 0.5 * gwf->mass / (4.0 * M_PI);
@@ -466,34 +461,32 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * workspace4 = Workspace 4 (rgrid *; input/output).
- * workspace5 = Workspace 5 (rgrid *; input/output).
- * workspace6 = Workspace 6 (rgrid *; input/output).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, rgrid *workspace6) {
+EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
 
   INT i;
 
+  /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
+  /* workspace2 = flux_y / sqrt(rho) = sqrt(rho) * v_y */
+  /* workspace3 = flux_z / sqrt(rho) = sqrt(rho) * v_z */
   grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
   grid_wf_density(gwf, workspace4);
   rgrid_power(workspace4, workspace4, 0.5);
   rgrid_division_eps(workspace1, workspace1, workspace4, GRID_EPS);
   rgrid_division_eps(workspace2, workspace2, workspace4, GRID_EPS);
   rgrid_division_eps(workspace3, workspace3, workspace4, GRID_EPS);
-  /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
-  /* workspace2 = flux_y / sqrt(rho) = sqrt(rho) * v_y */
-  /* workspace3 = flux_z / sqrt(rho) = sqrt(rho) * v_z */
-  rgrid_hodge(workspace1, workspace2, workspace3, workspace4, workspace5, workspace6, NULL, NULL, NULL);
+  rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
 
-  /* workspaces 4, 5, 6 = compressible; workspaces 7, 8, 9 = incompressible */
-  /* FFT each component */
-  rgrid_fft(workspace4); rgrid_multiply(workspace4, workspace4->step);
-  rgrid_fft(workspace5); rgrid_multiply(workspace5, workspace5->step);
-  rgrid_fft(workspace6); rgrid_multiply(workspace6, workspace6->step);
-  rgrid_spherical_average_reciprocal(workspace4, workspace5, workspace6, bins, binstep, nbins, 1);
+  /* FFT each component & multiply by step length */
+  rgrid_fft(workspace1); rgrid_multiply(workspace1, workspace1->step);
+  rgrid_fft(workspace2); rgrid_multiply(workspace2, workspace2->step);
+  rgrid_fft(workspace3); rgrid_multiply(workspace3, workspace3->step);
+
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
   
   for (i = 0; i < nbins; i++)
     bins[i] = bins[i] * 0.5 * gwf->mass / (4.0 * M_PI);
