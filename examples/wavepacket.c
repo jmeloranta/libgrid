@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
   REAL step, lx, time_step;
   REAL complex time;
   wf *gwf = NULL;
-  cgrid *potential, *workspace, *workspace2;
+  cgrid *potential;
 #ifdef FOURTH_ORDER_PROPAGATOR
   cgrid *sq_grad_pot;
 #endif
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
   
   /* Parameter check */
   if (argc != 14) {
-    fprintf(stderr, "Usage: wavepacket <thr> <npts> <tstep> <iters> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n", argv[0]);
+    fprintf(stderr, "Usage: wavepacket <thr> <npts> <tstep> <iters> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n");
     return -1;
   }
   
@@ -113,8 +113,6 @@ int main(int argc, char *argv[]) {
   gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
                       WF_2ND_ORDER_PROPAGATOR, "WF");
   potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
-  workspace = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace");
-  workspace2 = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace2");
 #ifdef FOURTH_ORDER_PROPAGATOR
   sq_grad_pot = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "sq_grad_pot");
 #endif
@@ -137,8 +135,8 @@ int main(int argc, char *argv[]) {
     rgrid_write_grid(fname, rworkspace);
     /* Propagate one time step */
 #ifdef FOURTH_ORDER_PROPAGATOR
-    grid_wf_square_of_potential_gradient(sq_grad_pot,potential, workspace, workspace2);
-    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace);
+    grid_wf_square_of_potential_gradient(gwf, sq_grad_pot, potential);
+    grid_wf_propagate(gwf, potential, sq_grad_pot, time);
 #else
     grid_wf_propagate(gwf, potential, NULL, time, workspace);
 #endif
@@ -146,8 +144,6 @@ int main(int argc, char *argv[]) {
 
   /* Release resources */
   grid_wf_free(gwf);
-  cgrid_free(workspace);
-  cgrid_free(workspace2);
   rgrid_free(rworkspace);
   cgrid_free(potential);
   
