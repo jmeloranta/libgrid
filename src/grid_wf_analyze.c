@@ -339,7 +339,7 @@ EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  *
  * Return <L_z>.
  *
- * TODO: CUDA
+ * TODO: CUDA (map)
  *
  */
  
@@ -371,12 +371,15 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  * Calculate angular momentum expectation values <L_x>, <L_y>, <L_z>.
  *
  * wf         = Wavefunction (gwf *).
- * lx         = Value of lx (REAL *).
- * ly         = Value of ly (REAL *).
- * lz         = Value of lz (REAL *).
+ * lx         = Value of l_x (REAL *).
+ * ly         = Value of l_y (REAL *).
+ * lz         = Value of l_z (REAL *).
  * workspace1 = Worspace required for the operation (rgrid *).
  * workspace2 = Worspace required for the operation (rgrid *).
  *
+ * NOTE: The old df_driver_L() routine returned angular momentum * mass.
+ *       This routine does not include the mass.
+ * 
  * No return value.
  *
  */
