@@ -68,6 +68,7 @@ typedef struct wf_struct { /* wavefunction */
   char propagator;
   cgrid *cworkspace;
   cgrid *cworkspace2;
+  REAL complex (*ts_func)(INT, INT, INT, void *, REAL complex);
 } wf;
 
 typedef struct grid_timer_struct { /* wall clock timing structure */

@@ -192,7 +192,7 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
         kz = ((REAL) k) * lz - kz0;
         
         /* psi(k, t+dt) = psi(k, t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */	  
-        value[ijnz + k] *= norm * CEXP(time_mass * (kx*kx + ky*ky + kz*kz));
+        value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
       }
     }
   } else {

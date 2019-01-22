@@ -18,9 +18,13 @@
  *              WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition.
  *              WF_NEUMANN_BOUNDARY   = Neumann boundary condition.
  *              WF_PERIODIC_BOUNDARY  = Periodic boundary condition.
+ *              WF_VORTEX_X_BOUNDARY  = Vortex line along X.
+ *              WF_VORTEX_Y_BOUNDARY  = Vortex line along Y.
+ *              WF_VORTEX_Z_BOUNDARY  = Vortex line along Z.
  * propagator = which time propagator to use for this wavefunction (char):
- *              WF_2ND_ORDER_PROPAGATOR = 2nd order in time.
- *              WF_4TH_ORDER_PROPAGATOR = 4th order in time.
+ *              WF_2ND_ORDER_PROPAGATOR = 2nd order in time (FFT).
+ *              WF_4TH_ORDER_PROPAGATOR = 4th order in time (FFT).
+ *              WF_CRANK_NICOLSON       = Crank-Nicolson propagator.
  * id         = String identifier for the grid (for debugging; char *; input).
  *
  * Return value is a pointer to the allocated wavefunction.
@@ -44,43 +48,46 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   }
   
   if(propagator != WF_2ND_ORDER_PROPAGATOR 
-       && propagator != WF_4TH_ORDER_PROPAGATOR) {
+       && propagator != WF_4TH_ORDER_PROPAGATOR && propagator != WF_CRANK_NICOLSON) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Unknown propagator.\n");
     return 0;
   }
   
-  if ((boundary == WF_DIRICHLET_BOUNDARY || boundary == WF_NEUMANN_BOUNDARY)
-      && propagator == WF_4TH_ORDER_PROPAGATOR) {
-    fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Invalid boundary condition - propagator combination. 4th order propagator can be used only with periodic boundary conditions.\n");
+  if (boundary == WF_DIRICHLET_BOUNDARY && propagator != WF_CRANK_NICOLSON) {
+    fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Invalid boundary condition - propagator combination. Dirichlet condition can only be used with Crank-Nicolson propagator.\n");
     return 0;
   }
   
-  gwf = (wf *) malloc(sizeof(wf));
-  if (!gwf) {
+  if(!(gwf = (wf *) malloc(sizeof(wf)))) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Could not allocate memory for wf.\n");
     return 0;
   }
   
-  value_outside = NULL;
-  if (boundary == WF_DIRICHLET_BOUNDARY)
-    value_outside = cgrid_value_outside_constantdirichlet;
-  else if (boundary == WF_NEUMANN_BOUNDARY)
-    value_outside = cgrid_value_outside_neumann;
-  else if (boundary == WF_PERIODIC_BOUNDARY)
-    value_outside = cgrid_value_outside;
-  else if (boundary == WF_VORTEX_X_BOUNDARY)
-    value_outside = cgrid_value_outside_vortex_x;
-  else if (boundary == WF_VORTEX_Y_BOUNDARY)
-    value_outside = cgrid_value_outside_vortex_y;
-  else if (boundary == WF_VORTEX_Z_BOUNDARY)
-    value_outside = cgrid_value_outside_vortex_z;
+  switch(boundary) {
+    case WF_DIRICHLET_BOUNDARY:
+      value_outside = cgrid_value_outside_constantdirichlet;
+      break;
+    case WF_NEUMANN_BOUNDARY:
+      value_outside = cgrid_value_outside_neumann;
+      break;
+    case WF_PERIODIC_BOUNDARY:
+      value_outside = cgrid_value_outside;
+      break;
+    case WF_VORTEX_X_BOUNDARY:
+      value_outside = cgrid_value_outside_vortex_x;
+      break;
+    case WF_VORTEX_Y_BOUNDARY:
+      value_outside = cgrid_value_outside_vortex_y;
+      break;
+    case WF_VORTEX_Z_BOUNDARY:
+      value_outside = cgrid_value_outside_vortex_z;
+      break;
+  }
   
-  gwf->grid = cgrid_alloc(nx, ny, nz, step, value_outside, 0, id);
-  
-  if (!gwf->grid) {
+  if(!(gwf->grid = cgrid_alloc(nx, ny, nz, step, value_outside, 0, id))) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Could not allocate memory for wf->grid.\n");
     free(gwf);
-    return 0;
+    return NULL;
   }
   
   gwf->mass = mass;
@@ -89,6 +96,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->propagator = propagator;
   gwf->cworkspace = NULL;
   gwf->cworkspace2 = NULL;
+  gwf->ts_func = NULL;
   
   return gwf;
 }
@@ -188,8 +196,7 @@ EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 		  || gwf->boundary == WF_VORTEX_Y_BOUNDARY
 		  || gwf->boundary == WF_VORTEX_Z_BOUNDARY)
       	  return grid_wf_energy_fft(gwf, potential) + ekin;
-  else
-    abort();
+  else abort();
 }
 
 /*

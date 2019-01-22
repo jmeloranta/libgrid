@@ -36,9 +36,9 @@ static char cgrid_bc_conv(cgrid *grid) {
  *                      CGRID_DIRICHLET_BOUNDARY: Dirichlet boundary
  *                      or CGRID_NEUMANN_BOUNDARY: Neumann boundary
  *                      or CGRID_PERIODIC_BOUNDARY: Periodic boundary
- *                      or CGRID_VORTEX_X_BOUNDARY: Vortex long X
- *                      or CGRID_VORTEX_Y_BOUNDARY: Vortex long y
- *                      or CGRID_VORTEX_Z_BOUNDARY: Vortex long z
+ *                      or CGRID_VORTEX_X_BOUNDARY: Vortex along X
+ *                      or CGRID_VORTEX_Y_BOUNDARY: Vortex along Y
+ *                      or CGRID_VORTEX_Z_BOUNDARY: Vortex along Z
  *                      or user supplied function with pointer to grid and
  *                         grid index as parameters to provide boundary access.
  * outside_params_ptr = pointer for passing parameters for the given boundary
