@@ -74,7 +74,7 @@ EXPORT REAL grid_wf_energy_cn_kinetic(wf *gwf) {
 EXPORT void grid_wf_propagate_cn(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential) {
 
   cgrid *grid = gwf->grid, *cworkspace;
-  INT worklen = ((INT) sizeof(REAL complex)) * gwf->cworkspace->nx * gwf->cworkspace->ny * gwf->cworkspace->nz;
+  INT worklen = ((INT) sizeof(REAL complex)) * grid->nx * grid->ny * grid->nz;
 
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   cworkspace = gwf->cworkspace;

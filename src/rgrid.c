@@ -182,7 +182,7 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
     exit(1);
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
-  if(!(ngrid->value = (REAL *) malloc(sizeof(REAL) * (size_t) (grid->nx * grid->ny * grid->nz)))) {
+  if(!(ngrid->value = (REAL *) malloc(sizeof(REAL) * (size_t) (grid->nx * grid->ny * grid->nz2)))) {
     fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");
     free(ngrid);
     return NULL;

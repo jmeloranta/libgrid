@@ -60,9 +60,6 @@ int main(int argc, char *argv[]) {
   REAL complex time;
   wf *gwf = NULL;
   cgrid *potential;
-#ifdef FOURTH_ORDER_PROPAGATOR
-  cgrid *sq_grad_pot;
-#endif
   rgrid *rworkspace;
   char fname[256];
   pparams potential_params;
@@ -113,9 +110,6 @@ int main(int argc, char *argv[]) {
   gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
                       WF_2ND_ORDER_PROPAGATOR, "WF");
   potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
-#ifdef FOURTH_ORDER_PROPAGATOR
-  sq_grad_pot = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "sq_grad_pot");
-#endif
   rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");
   
   /* Initialize wave function */
@@ -135,8 +129,7 @@ int main(int argc, char *argv[]) {
     rgrid_write_grid(fname, rworkspace);
     /* Propagate one time step */
 #ifdef FOURTH_ORDER_PROPAGATOR
-    grid_wf_square_of_potential_gradient(gwf, sq_grad_pot, potential);
-    grid_wf_propagate(gwf, potential, sq_grad_pot, time);
+    grid_wf_propagate(gwf, potential, time);
 #else
     grid_wf_propagate(gwf, potential, NULL, time, workspace);
 #endif

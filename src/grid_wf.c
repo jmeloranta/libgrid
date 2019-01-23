@@ -259,6 +259,10 @@ EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex t
   
   switch(gwfp->propagator) {
     case WF_2ND_ORDER_PROPAGATOR:
+      if(gwfp->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        exit(1);
+      }
       grid_wf_propagate_kinetic_fft(gwfp, half_time);
       grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
       /* continue with correct cycle */
@@ -267,15 +271,12 @@ EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex t
       fprintf(stderr, "libgrid: 4th order propagator not implemented.\n");
       exit(1);
     case WF_CRANK_NICOLSON:
-      if(gwfp->ts_func) {
-        grid_wf_propagate_cn(gwfp, grid_wf_absorb, half_time, &(gwfp->abs_data), potential);
-        grid_wf_propagate_potential(gwfp, grid_wf_absorb, time, &(gwfp->abs_data), potential);
+      if(gwfp->ts_func)
+        grid_wf_propagate_cn(gwfp, grid_wf_absorb, time, &(gwfp->abs_data), potential);
         /* continue with correct cycle */
-      } else {
-        grid_wf_propagate_cn(gwfp, NULL, half_time, NULL, potential);
-        grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
+      else
+        grid_wf_propagate_cn(gwfp, NULL, time, NULL, potential);
         /* continue with correct cycle */
-      }
       break;        
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
@@ -300,6 +301,10 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
   
   switch(gwf->propagator) {
     case WF_2ND_ORDER_PROPAGATOR:
+      if(gwf->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        exit(1);
+      }
       grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       /* continue with correct cycle */
@@ -308,15 +313,12 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
       fprintf(stderr, "libgrid: 4th order propagator not implemented.\n");
       exit(1);
     case WF_CRANK_NICOLSON:
-      if(gwf->ts_func) {
-        grid_wf_propagate_potential(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
-        grid_wf_propagate_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+      if(gwf->ts_func)
+        grid_wf_propagate_cn(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
         /* continue with correct cycle */
-      } else {
-        grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
-        grid_wf_propagate_cn(gwf, NULL, half_time, NULL, potential);
+      else
+        grid_wf_propagate_cn(gwf, NULL, time, NULL, potential);
         /* continue with correct cycle */
-      }
       break;        
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
@@ -344,11 +346,19 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
   
   switch(gwf->propagator) {
     case WF_2ND_ORDER_PROPAGATOR:
+      if(gwf->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        exit(1);
+      }
       grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential); // TODO: should we switch the order of kin & pe?
       grid_wf_propagate_kinetic_fft(gwf, time);
       grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
       break;
     case WF_4TH_ORDER_PROPAGATOR:
+      if(gwf->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        exit(1);
+      }
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
       if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
       grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
@@ -361,15 +371,10 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
       break;
     case WF_CRANK_NICOLSON:
-      if(gwf->ts_func) {
-        grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+      if(gwf->ts_func)
         grid_wf_propagate_cn(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
-        grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
-      } else {
-        grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
+      else
         grid_wf_propagate_cn(gwf, NULL, time, NULL, potential);
-        grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-      }
       break;        
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
@@ -378,7 +383,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
 }
 
 /*
- * Auxiliary routine to propagate potential energy.
+ * Auxiliary routine to propagate potential energy (only used with FFT propagation of kinetic energy; CN includes potential).
  *
  * gwf       = wavefunction to be propagated (wf *).
  * time      = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
