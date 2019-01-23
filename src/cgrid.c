@@ -162,6 +162,10 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
     free(ngrid);
     return NULL;
   }
+#ifdef USE_CUDA
+  ngrid->cufft_handle = -1;
+#endif
+  ngrid->plan = ngrid->iplan = ngrid->implan = ngrid->iimplan = NULL;
   return ngrid;
 }
 

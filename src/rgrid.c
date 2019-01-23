@@ -187,6 +187,11 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
     free(ngrid);
     return NULL;
   }
+#ifdef USE_CUDA
+  ngrid->cufft_handle_r2c = ngrid->cufft_handle_c2r = -1;
+#endif
+  ngrid->plan = ngrid->iplan = NULL;
+
   return ngrid;
 }
 

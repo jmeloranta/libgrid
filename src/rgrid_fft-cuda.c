@@ -56,20 +56,50 @@ static void error_check(cufftResult value) {
   case CUFFT_SUCCESS:
     fprintf(stderr, "Success.\n");
     break;
+  case CUFFT_INVALID_PLAN:
+    fprintf(stderr, "Invalid plan.\n");
+    break;
   case CUFFT_ALLOC_FAILED:
     fprintf(stderr, "GPU memory allocation failed.\n");
     break;
+  case CUFFT_INVALID_TYPE:
+    fprintf(stderr, "Invalid parameter types (invalid type).\n");
+    break;
   case CUFFT_INVALID_VALUE:
-    fprintf(stderr, "Invalid parameter values.\n");
+    fprintf(stderr, "Invalid parameter values (invalid value).\n");
     break;
   case CUFFT_INTERNAL_ERROR:
     fprintf(stderr, "Internal driver error.\n");
+    break;
+  case CUFFT_EXEC_FAILED:
+    fprintf(stderr, "Exec failed.\n");
     break;
   case CUFFT_SETUP_FAILED:
     fprintf(stderr, "Library failed to initialize.\n");
     break;
   case CUFFT_INVALID_SIZE:
-    fprintf(stderr, "Dimeion of nx, ny, or nz not supported.\n");
+    fprintf(stderr, "Dimension of nx, ny, or nz not supported (invalid size).\n");
+    break;
+  case CUFFT_UNALIGNED_DATA:
+    fprintf(stderr, "Unaligned data.\n");
+    break;
+  case CUFFT_INCOMPLETE_PARAMETER_LIST:
+    fprintf(stderr, "Incomplete parameter list.\n");
+    break;
+  case CUFFT_PARSE_ERROR:
+    fprintf(stderr, "Parse error.\n");
+    break;
+  case CUFFT_NO_WORKSPACE:
+    fprintf(stderr, "No workspace.\n");
+    break;
+  case CUFFT_NOT_IMPLEMENTED:
+    fprintf(stderr, "Not implemented.\n");
+    break;
+  case CUFFT_LICENSE_ERROR:
+    fprintf(stderr, "License error.\n");
+    break;
+  case CUFFT_NOT_SUPPORTED:
+    fprintf(stderr, "Not supported.\n");
     break;
   default:
     fprintf(stderr, "Unknown cufft error code.\n");    

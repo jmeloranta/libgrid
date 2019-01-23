@@ -9,7 +9,10 @@
 #include <time.h>
 #include "cuda.h"
 
- /* Lock all pages in memory (for debugging) */
+/* Debugging */
+/* #define CUDA_DEBUG */
+
+/* Lock all pages in memory (for debugging) */
 /* #define CUDA_LOCK_BLOCKS */
 
 static gpu_mem_block *gpu_blocks_head = NULL;
