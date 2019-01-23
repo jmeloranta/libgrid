@@ -164,6 +164,33 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 }
 
 /*
+ * "Clone" a real grid with the parameters idential to the given grid (except new grid->value is allocated).
+ *
+ * grid = Grid to be cloned (rgrid *; input).
+ * id   = ID string describing the grid (char *; input);
+ *
+ * Returns pointer to the new grid (rgrid *).
+ *
+ */
+
+EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
+
+  rgrid *ngrid;
+
+  if(!(ngrid = (rgrid *) malloc(sizeof(rgrid)))) {
+    fprintf(stderr, "libgrid: Out of memory in rgrid_clone().\n");
+    exit(1);
+  }
+  bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
+  if(!(ngrid->value = (REAL *) malloc(sizeof(REAL) * (size_t) (grid->nx * grid->ny * grid->nz)))) {
+    fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");
+    free(ngrid);
+    return NULL;
+  }
+  return ngrid;
+}
+
+/*
  * Claim grid (simple locking system for the workspace model).
  *
  * grid = Grid to be claimed (rgrid *).

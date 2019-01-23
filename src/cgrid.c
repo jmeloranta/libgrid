@@ -57,8 +57,7 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   INT i;
   size_t len;
   
-  grid = (cgrid *) malloc(sizeof(cgrid));
-  if (!grid) {
+  if(!(grid = (cgrid *) malloc(sizeof(cgrid)))) {
     fprintf(stderr, "libgrid: Error in cgrid_alloc(). Could not allocate memory for grid structure.\n");
     abort();
   }
@@ -139,6 +138,32 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   return grid;
 }
 
+/*
+ * "Clone" a complex grid with the parameters idential to the given grid (except new grid->value is allocated).
+ *
+ * grid = Grid to be cloned (cgrid *; input).
+ * id   = ID string describing the grid (char *; input);
+ *
+ * Returns pointer to the new grid (rgrid *).
+ *
+ */
+
+EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
+
+  cgrid *ngrid;
+
+  if(!(ngrid = (cgrid *) malloc(sizeof(cgrid)))) {
+    fprintf(stderr, "libgrid: Out of memory in cgrid_clone().\n");
+    exit(1);
+  }
+  bcopy((void *) grid, (void *) ngrid, sizeof(cgrid));
+  if(!(ngrid->value = (REAL complex *) malloc(sizeof(REAL complex) * (size_t) (grid->nx * grid->ny * grid->nz)))) {
+    fprintf(stderr, "libgrid: Error in cgrid_clone(). Could not allocate memory for ngrid->value.\n");
+    free(ngrid);
+    return NULL;
+  }
+  return ngrid;
+}
 
 /*
  * Claim grid (simple locking system for the workspace model).

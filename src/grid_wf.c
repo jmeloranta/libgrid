@@ -102,6 +102,34 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
 }
 
 /*
+ * "Clone" a wave function: Allocate a wave function with idential parameters.
+ *
+ * gwf = Wavefunction to be cloned (wf *; input).
+ * id  = Comment string describing the WF (char *; input).
+ *
+ * Returns pointer to new wave function (wf *).
+ *
+ */
+
+EXPORT wf *grid_wf_clone(wf *gwf, char *id) {
+
+  wf *nwf;
+  cgrid *grid = gwf->grid;
+
+  if(!(nwf = (wf *) malloc(sizeof(wf)))) {
+    fprintf(stderr, "libgrid: Out of memory in grid_wf_clone().\n");
+    exit(1);
+  }
+  bcopy((void *) gwf, (void *) nwf, sizeof(wf));
+  if(!(nwf->grid = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, 0, id))) {
+    fprintf(stderr, "libgrid: Error in grid_wf_clone(). Could not allocate memory for nwf->grid.\n");
+    free(nwf);
+    return NULL;
+  }
+  return nwf;
+}
+
+/*
  * Free wavefunction.
  *
  * gwf = wavefunction to be freed (wf *).
@@ -115,6 +143,7 @@ EXPORT void grid_wf_free(wf *gwf) {
   if (gwf) {
     if (gwf->grid) cgrid_free(gwf->grid);
     if (gwf->cworkspace) cgrid_free(gwf->cworkspace);
+    if (gwf->cworkspace2) cgrid_free(gwf->cworkspace2);
     free(gwf);
   }
 }
@@ -188,15 +217,8 @@ EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 
   if(ekin != 0.0) ekin *= CREAL(cgrid_integral_of_square(gwf->grid));
 
-  if (gwf->boundary == WF_DIRICHLET_BOUNDARY)
-    return grid_wf_energy_cn(gwf, potential) + ekin;
-  else if (gwf->boundary == WF_PERIODIC_BOUNDARY
-		  || gwf->boundary == WF_NEUMANN_BOUNDARY
-		  || gwf->boundary == WF_VORTEX_X_BOUNDARY
-		  || gwf->boundary == WF_VORTEX_Y_BOUNDARY
-		  || gwf->boundary == WF_VORTEX_Z_BOUNDARY)
-      	  return grid_wf_energy_fft(gwf, potential) + ekin;
-  else abort();
+  if (gwf->propagator == WF_CRANK_NICOLSON) return grid_wf_energy_cn(gwf, potential) + ekin;
+  else return grid_wf_energy_fft(gwf, potential) + ekin;
 }
 
 /*
@@ -221,46 +243,137 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
 }
 
 /*
- * Propagate wavefunction in time subject to given potential.
+ * Propagate (PREDICT) wavefunction in time subject to given potential.
  *
- * gwf         = wavefunction to be propagated (wf *).
+ * gwfp        = wavefunction to be propagated (wf *).
  * potential   = grid containing the potential (cgrid *).
- * sq_grad_pot = grid containing square of potential gradient (cgrid *).
  * time        = time step (REAL complex). Note this may be either real or imaginary.
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, cgrid *sq_grad_pot, REAL complex time) {  
+EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex time) {  
+  
+  REAL complex half_time = 0.5 * time;
+  
+  switch(gwfp->propagator) {
+    case WF_2ND_ORDER_PROPAGATOR:
+      grid_wf_propagate_kinetic_fft(gwfp, half_time);
+      grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
+      /* continue with correct cycle */
+      break;
+    case WF_4TH_ORDER_PROPAGATOR:
+      fprintf(stderr, "libgrid: 4th order propagator not implemented.\n");
+      exit(1);
+    case WF_CRANK_NICOLSON:
+      if(gwfp->ts_func) {
+        grid_wf_propagate_cn(gwfp, grid_wf_absorb, half_time, &(gwfp->abs_data), potential);
+        grid_wf_propagate_potential(gwfp, grid_wf_absorb, time, &(gwfp->abs_data), potential);
+        /* continue with correct cycle */
+      } else {
+        grid_wf_propagate_cn(gwfp, NULL, half_time, NULL, potential);
+        grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
+        /* continue with correct cycle */
+      }
+      break;        
+    default:
+      fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
+      abort();
+  }
+}
+
+/*
+ * Propagate (CORRECT) wavefunction in time subject to given potential.
+ *
+ * gwf         = wavefunction to be propagated (wf *).
+ * potential   = grid containing the potential (cgrid *).
+ * time        = time step (REAL complex). Note this may be either real or imaginary.
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex time) {  
+  
+  REAL complex half_time = 0.5 * time;
+  
+  switch(gwf->propagator) {
+    case WF_2ND_ORDER_PROPAGATOR:
+      grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
+      grid_wf_propagate_kinetic_fft(gwf, half_time);
+      /* continue with correct cycle */
+      break;
+    case WF_4TH_ORDER_PROPAGATOR:
+      fprintf(stderr, "libgrid: 4th order propagator not implemented.\n");
+      exit(1);
+    case WF_CRANK_NICOLSON:
+      if(gwf->ts_func) {
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
+        grid_wf_propagate_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+        /* continue with correct cycle */
+      } else {
+        grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
+        grid_wf_propagate_cn(gwf, NULL, half_time, NULL, potential);
+        /* continue with correct cycle */
+      }
+      break;        
+    default:
+      fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
+      abort();
+  }
+}
+
+/*
+ * Propagate wavefunction in time subject to given potential.
+ *
+ * gwf         = wavefunction to be propagated (wf *).
+ * potential   = grid containing the potential (cgrid *).
+ * time        = time step (REAL complex). Note this may be either real or imaginary.
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {  
   
   REAL complex half_time = 0.5 * time;
   REAL complex one_sixth_time = time / 6.0;
   REAL complex two_thirds_time = 2.0 * time / 3.0;
   cgrid *grid = gwf->grid;
   
-  if (gwf->boundary == WF_DIRICHLET_BOUNDARY && gwf->propagator == WF_2ND_ORDER_PROPAGATOR) {    
-    grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-    grid_wf_propagate_cn(gwf, NULL, time, NULL, potential);
-    grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-  } else if ((gwf->boundary == WF_PERIODIC_BOUNDARY || gwf->boundary == WF_NEUMANN_BOUNDARY || gwf->boundary == WF_VORTEX_X_BOUNDARY || gwf->boundary == WF_VORTEX_Y_BOUNDARY || gwf->boundary == WF_VORTEX_Z_BOUNDARY)
-	     && gwf->propagator == WF_2ND_ORDER_PROPAGATOR) {
-    grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-    grid_wf_propagate_kinetic_fft(gwf, time);
-    grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-  } else if (gwf->boundary == WF_PERIODIC_BOUNDARY
-            && gwf->propagator == WF_4TH_ORDER_PROPAGATOR) {
-    if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-    grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
-    grid_wf_propagate_kinetic_fft(gwf, half_time);    
-    cgrid_copy(gwf->cworkspace, potential);
-    cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), sq_grad_pot);	
-    grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, gwf->cworkspace);
-    grid_wf_propagate_kinetic_fft(gwf, half_time);
-    grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
-  } else {
-    fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator - boundary value combination.\n");
-    abort();
+  switch(gwf->propagator) {
+    case WF_2ND_ORDER_PROPAGATOR:
+      grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential); // TODO: should we switch the order of kin & pe?
+      grid_wf_propagate_kinetic_fft(gwf, time);
+      grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
+      break;
+    case WF_4TH_ORDER_PROPAGATOR:
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
+      grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
+      grid_wf_propagate_kinetic_fft(gwf, half_time);    
+      cgrid_copy(gwf->cworkspace, potential);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
+      cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+      grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, gwf->cworkspace);
+      grid_wf_propagate_kinetic_fft(gwf, half_time);
+      grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
+      break;
+    case WF_CRANK_NICOLSON:
+      if(gwf->ts_func) {
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+        grid_wf_propagate_cn(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+      } else {
+        grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
+        grid_wf_propagate_cn(gwf, NULL, time, NULL, potential);
+        grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
+      }
+      break;        
+    default:
+      fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
+      abort();
   }
 }
 
@@ -271,7 +384,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, cgrid *sq_grad_pot, REA
  * time      = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
  * tstep     = time step (REAL complex).
  * privdata  = private data for time step function (void *).
- * potential = grid containing the potential (cgrid *).
+ * potential = grid containing the potential (cgrid *). If NULL, no propagation needed.
  *
  * No return value.
  *
@@ -282,6 +395,7 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
   
+  if(!potential) return;
 #ifdef USE_CUDA
   if(cuda_status() && !grid_cuda_wf_propagate_potential(gwf, time, tstep, privdata, potential)) return;
 #endif

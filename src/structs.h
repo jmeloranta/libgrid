@@ -6,6 +6,16 @@
 #ifndef __GRID_STRUCTS__
 #define __GRID_STRUCTS__
 
+typedef struct grid_timer_struct { /* wall clock timing structure */
+  struct timeval zero_time;
+  clock_t zero_clock;
+} grid_timer;
+
+struct grid_abs {
+  REAL amp;
+  INT data[6];
+};
+
 typedef struct cgrid_struct { /* complex grid data type */
   REAL complex *value;
   char id[32];
@@ -69,12 +79,8 @@ typedef struct wf_struct { /* wavefunction */
   cgrid *cworkspace;
   cgrid *cworkspace2;
   REAL complex (*ts_func)(INT, INT, INT, void *, REAL complex);
+  struct grid_abs abs_data;
 } wf;
-
-typedef struct grid_timer_struct { /* wall clock timing structure */
-  struct timeval zero_time;
-  clock_t zero_clock;
-} grid_timer;
 
 typedef struct rotation_struct {  /* structure for rotating grids */
   rgrid *rgrid;
@@ -82,10 +88,5 @@ typedef struct rotation_struct {  /* structure for rotating grids */
   REAL sinth;
   REAL costh;
 } rotation;
-
-struct grid_abs {
-  REAL amp;
-  INT data[6];
-};
 
 #endif /* __GRID_STRUCTS__ */
