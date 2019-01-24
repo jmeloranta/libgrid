@@ -145,6 +145,7 @@ EXPORT void grid_wf_free(wf *gwf) {
     if (gwf->grid) cgrid_free(gwf->grid);
     if (gwf->cworkspace) cgrid_free(gwf->cworkspace);
     if (gwf->cworkspace2) cgrid_free(gwf->cworkspace2);
+    if (gwf->cworkspace3) cgrid_free(gwf->cworkspace3);
     free(gwf);
   }
 }

@@ -317,16 +317,22 @@ EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
   grid_wf_probability_flux_y(wf, workspace1);
   grid_wf_probability_flux_z(wf, workspace2);
-  x0 = workspace1->x0; workspace1->x0 = wf->grid->x0;
-  y0 = workspace1->y0; workspace1->y0 = wf->grid->y0;
-  z0 = workspace1->z0; workspace1->z0 = wf->grid->z0;
+  x0 = workspace1->x0; 
+  workspace1->x0 = wf->grid->x0;
+  y0 = workspace1->y0; 
+  workspace1->y0 = wf->grid->y0;
+  z0 = workspace1->z0; 
+  workspace1->z0 = wf->grid->z0;
   rgrid_map(workspace1, grid_mult_mz, workspace1);      // -z * p_y
   workspace1->x0 = x0;
   workspace1->y0 = y0;
   workspace1->z0 = z0;
-  x0 = workspace2->x0; workspace2->x0 = wf->grid->x0;
-  y0 = workspace2->y0; workspace2->y0 = wf->grid->y0;
-  z0 = workspace2->z0; workspace2->z0 = wf->grid->z0;
+  x0 = workspace2->x0; 
+  workspace2->x0 = wf->grid->x0;
+  y0 = workspace2->y0; 
+  workspace2->y0 = wf->grid->y0;
+  z0 = workspace2->z0; 
+  workspace2->z0 = wf->grid->z0;
   rgrid_map(workspace2, grid_mult_y, workspace2);       // y * p_z
   workspace2->x0 = x0;
   workspace2->y0 = y0;
@@ -354,16 +360,22 @@ EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
   grid_wf_probability_flux_z(wf, workspace1);
   grid_wf_probability_flux_x(wf, workspace2);
-  x0 = workspace1->x0; workspace1->x0 = wf->grid->x0;
-  y0 = workspace1->y0; workspace1->y0 = wf->grid->y0;
-  z0 = workspace1->z0; workspace1->z0 = wf->grid->z0;
+  x0 = workspace1->x0; 
+  workspace1->x0 = wf->grid->x0;
+  y0 = workspace1->y0; 
+  workspace1->y0 = wf->grid->y0;
+  z0 = workspace1->z0;
+   workspace1->z0 = wf->grid->z0;
   rgrid_map(workspace1, grid_mult_mx, workspace1);      // -x * p_z
   workspace1->x0 = x0;
   workspace1->y0 = y0;
   workspace1->z0 = z0;
-  x0 = workspace2->x0; workspace2->x0 = wf->grid->x0;
-  y0 = workspace2->y0; workspace2->y0 = wf->grid->y0;
-  z0 = workspace2->z0; workspace2->z0 = wf->grid->z0;
+  x0 = workspace2->x0; 
+  workspace2->x0 = wf->grid->x0;
+  y0 = workspace2->y0; 
+  workspace2->y0 = wf->grid->y0;
+  z0 = workspace2->z0; 
+  workspace2->z0 = wf->grid->z0;
   rgrid_map(workspace2, grid_mult_z, workspace2);       // z * p_x
   workspace2->x0 = x0;
   workspace2->y0 = y0;
@@ -391,16 +403,22 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
   grid_wf_probability_flux_x(wf, workspace1);
   grid_wf_probability_flux_y(wf, workspace2);
-  x0 = workspace1->x0; workspace1->x0 = wf->grid->x0;
-  y0 = workspace1->y0; workspace1->y0 = wf->grid->y0;
-  z0 = workspace1->z0; workspace1->z0 = wf->grid->z0;
+  x0 = workspace1->x0; 
+  workspace1->x0 = wf->grid->x0;
+  y0 = workspace1->y0; 
+  workspace1->y0 = wf->grid->y0;
+  z0 = workspace1->z0; 
+  workspace1->z0 = wf->grid->z0;
   rgrid_map(workspace1, grid_mult_my, workspace1);      // -y * p_x
   workspace1->x0 = x0;
   workspace1->y0 = y0;
   workspace1->z0 = z0;
-  x0 = workspace2->x0; workspace2->x0 = wf->grid->x0;
-  y0 = workspace2->y0; workspace2->y0 = wf->grid->y0;
-  z0 = workspace2->z0; workspace2->z0 = wf->grid->z0;
+  x0 = workspace2->x0; 
+  workspace2->x0 = wf->grid->x0;
+  y0 = workspace2->y0; 
+  workspace2->y0 = wf->grid->y0;
+  z0 = workspace2->z0; 
+  workspace2->z0 = wf->grid->z0;
   rgrid_map(workspace2, grid_mult_x, workspace2);       // x * p_y
   workspace2->x0 = x0;
   workspace2->y0 = y0;
