@@ -93,7 +93,7 @@ To compile the utilities for file format conversions and graphical applications,
 % cd ../util
 % make
 \end{verbatim}
-Once the utilities compile, install them (as root):
+Once the utilities compile, install them (as root unless you changed ROOT above to point to your own directories):
 \begin{verbatim}
 # make install
 \end{verbatim}
@@ -104,6 +104,12 @@ The recommended OpenMP environment variable setting for optimal performance is:
 setenv OMP_SCHEDULE auto
 setenv OMP_PROC_BIND TRUE
 setenv OMP_WAIT_POLICY ACTIVE
+\end{verbatim}
+These can be added to your .tcshrc (tcsh) or .profile (bash) file. For the latter, the bash compatible syntax is:
+\begin{verbatim}
+export OMP_SCHEDULE=auto
+export OMP_PROC_BIND=TRUE
+export OMP_WAIT_POLICY=ACTIVE
 \end{verbatim}
 
 \chapter{Programming interface}
