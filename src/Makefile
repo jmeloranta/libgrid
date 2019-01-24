@@ -94,9 +94,10 @@ else
 endif
 
 install:
+	-mkdir -p $(ROOT)/lib
 	cp libgrid.a $(ROOT)/lib
 	ranlib $(ROOT)/lib/libgrid.a
-	-mkdir $(ROOT)/include/grid
+	-mkdir -p $(ROOT)/include/grid
 	cp *.h $(ROOT)/include/grid
 	-cp cuda.arch $(ROOT)/include/grid
 	-cp cuda.status $(ROOT)/include/grid
