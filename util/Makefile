@@ -5,7 +5,8 @@ PROGS = wf2cdf wf2cdf2 grd2cdf vector2cdf gview gview2
 all: $(PROGS)
 
 install: all
-	cp $(PROGS) /usr/local/bin
+	-mkdir -p $(ROOT)/bin
+	cp $(PROGS) $(ROOT)/bin
 
 vector2cdf: vector2cdf.o
 	$(CC) $(CFLAGS) -o vector2cdf vector2cdf.o $(LDFLAGS) -lnetcdf
