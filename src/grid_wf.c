@@ -22,9 +22,10 @@
  *              WF_VORTEX_Y_BOUNDARY  = Vortex line along Y.
  *              WF_VORTEX_Z_BOUNDARY  = Vortex line along Z.
  * propagator = which time propagator to use for this wavefunction (char):
- *              WF_2ND_ORDER_PROPAGATOR = 2nd order in time (FFT).
- *              WF_4TH_ORDER_PROPAGATOR = 4th order in time (FFT).
- *              WF_CRANK_NICOLSON       = Crank-Nicolson propagator.
+ *              WF_2ND_ORDER_FFT      = 2nd order in time (FFT).
+ *              WF_4TH_ORDER_FFT      = 4th order in time (FFT).
+ *              WF_2ND_ORDER_CN       = 2nd order in time with Crank-Nicolson propagator.
+ *              WF_4TH_ORDER_CN       = 4th order in time with Crank-Nicolson propagator.
  * id         = String identifier for the grid (for debugging; char *; input).
  *
  * Return value is a pointer to the allocated wavefunction.
@@ -47,13 +48,12 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
     return 0;
   }
   
-  if(propagator != WF_2ND_ORDER_PROPAGATOR 
-       && propagator != WF_4TH_ORDER_PROPAGATOR && propagator != WF_CRANK_NICOLSON) {
+  if(propagator < WF_2ND_ORDER_FFT || propagator > WF_4TH_ORDER_CN) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Unknown propagator.\n");
     return 0;
   }
   
-  if (boundary == WF_DIRICHLET_BOUNDARY && propagator != WF_CRANK_NICOLSON) {
+  if (boundary == WF_DIRICHLET_BOUNDARY && propagator < WF_2ND_ORDER_CN) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Invalid boundary condition - propagator combination. Dirichlet condition can only be used with Crank-Nicolson propagator.\n");
     return 0;
   }
@@ -217,8 +217,8 @@ EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 
   if(ekin != 0.0) ekin *= CREAL(cgrid_integral_of_square(gwf->grid));
 
-  if (gwf->propagator == WF_CRANK_NICOLSON) return grid_wf_energy_cn(gwf, potential) + ekin;
-  else return grid_wf_energy_fft(gwf, potential) + ekin;
+  if (gwf->propagator == WF_2ND_ORDER_CN || gwf->propagator == WF_4TH_ORDER_CN) return grid_wf_energy_cn(gwf, potential) + ekin;
+  else return grid_wf_energy_fft(gwf, potential) + ekin; /* else FFT */
 }
 
 /*
@@ -258,25 +258,26 @@ EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex t
   REAL complex half_time = 0.5 * time;
   
   switch(gwfp->propagator) {
-    case WF_2ND_ORDER_PROPAGATOR:
+    case WF_2ND_ORDER_FFT:
       if(gwfp->grid->omega != 0.0) {
-        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         exit(1);
       }
       grid_wf_propagate_kinetic_fft(gwfp, half_time);
       grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
       /* continue with correct cycle */
       break;
-    case WF_4TH_ORDER_PROPAGATOR:
-      fprintf(stderr, "libgrid: 4th order propagator not implemented.\n");
+    case WF_4TH_ORDER_FFT:
+    case WF_4TH_ORDER_CN:
+      fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
       exit(1);
-    case WF_CRANK_NICOLSON:
+    case WF_2ND_ORDER_CN:
       if(gwfp->ts_func) {
-        grid_wf_propagate_cn(gwfp, grid_wf_absorb, half_time, &(gwfp->abs_data), NULL);
+        grid_wf_propagate_kinetic_cn(gwfp, grid_wf_absorb, half_time, &(gwfp->abs_data));
         grid_wf_propagate_potential(gwfp, grid_wf_absorb, time, &(gwfp->abs_data), potential);
       /* continue with correct cycle */
       } else {
-        grid_wf_propagate_cn(gwfp, NULL, half_time, NULL, NULL);
+        grid_wf_propagate_kinetic_cn(gwfp, NULL, half_time, NULL);
         grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
         /* continue with correct cycle */
       }
@@ -303,26 +304,23 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
   REAL complex half_time = 0.5 * time;
   
   switch(gwf->propagator) {
-    case WF_2ND_ORDER_PROPAGATOR:
-      if(gwf->grid->omega != 0.0) {
-        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
-        exit(1);
-      }
+    case WF_2ND_ORDER_FFT:
       grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       /* end correct cycle */
       break;
-    case WF_4TH_ORDER_PROPAGATOR:
-      fprintf(stderr, "libgrid: 4th order propagator not implemented.\n");
+    case WF_4TH_ORDER_FFT:
+    case WF_4TH_ORDER_CN:
+      fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
       exit(1);
-    case WF_CRANK_NICOLSON:
+    case WF_2ND_ORDER_CN:
       if(gwf->ts_func) {
         grid_wf_propagate_potential(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
-        grid_wf_propagate_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), NULL);
+        grid_wf_propagate_kinetic_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data));
         /* end correct cycle */
       } else {
         grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
-        grid_wf_propagate_cn(gwf, NULL, half_time, NULL, NULL);
+        grid_wf_propagate_kinetic_cn(gwf, NULL, half_time, NULL);
         /* end correct cycle */
       }
       break;        
@@ -351,18 +349,18 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
   cgrid *grid = gwf->grid;
   
   switch(gwf->propagator) {
-    case WF_2ND_ORDER_PROPAGATOR:
+    case WF_2ND_ORDER_FFT:
       if(gwf->grid->omega != 0.0) {
-        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         exit(1);
       }
       grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential); // TODO: should we switch the order of kin & pe?
       grid_wf_propagate_kinetic_fft(gwf, time);
       grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
       break;
-    case WF_4TH_ORDER_PROPAGATOR:
+    case WF_4TH_ORDER_FFT:
       if(gwf->grid->omega != 0.0) {
-        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_CRANK_NICOLSON.\n");
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         exit(1);
       }
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
@@ -376,14 +374,37 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
       break;
-    case WF_CRANK_NICOLSON:
+    case WF_4TH_ORDER_CN:
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
+      if(gwf->ts_func) {
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, one_sixth_time, &(gwf->abs_data), potential);
+        grid_wf_propagate_kinetic_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data));    
+        cgrid_copy(gwf->cworkspace, potential);
+        grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
+        cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, two_thirds_time, &(gwf->abs_data), gwf->cworkspace);
+        grid_wf_propagate_kinetic_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data));
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, one_sixth_time, &(gwf->abs_data), potential);
+      } else {
+        grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
+        grid_wf_propagate_kinetic_cn(gwf, NULL, half_time, NULL);    
+        cgrid_copy(gwf->cworkspace, potential);
+        grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
+        cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+        grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, gwf->cworkspace);
+        grid_wf_propagate_kinetic_cn(gwf, grid_wf_absorb, half_time, &(gwf->abs_data));
+        grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);    
+      }
+      break;
+    case WF_2ND_ORDER_CN:
       if(gwf->ts_func) {
         grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
-        grid_wf_propagate_cn(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
+        grid_wf_propagate_kinetic_cn(gwf, grid_wf_absorb, time, &(gwf->abs_data));
         grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
       } else {
         grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
-        grid_wf_propagate_cn(gwf, NULL, time, NULL, potential);
+        grid_wf_propagate_kinetic_cn(gwf, NULL, time, NULL);
         grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
       }
       break;        

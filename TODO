@@ -11,3 +11,8 @@
 - Fortran support: iso_c_binding, interface / end interface.
 
 also fgrep TODO *.[ch] to find out more specific issues.
+
+New:
+
+- Allow installation under user home directory
+- remove potential from CN (complicates code & only useful for 1-D)

@@ -65,7 +65,7 @@ __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp, INT lx
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, CUCOMPLEX *psi, char bc, CUCOMPLEX *pot, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX cb, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT i, k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
   CUREAL y;
@@ -86,14 +86,12 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
     cp = c / tim;
     ind = i * nyz + tid;
     /* Left-hand side (+) */
-    /* (C + dx^2 laplace + CB V + C2 grad + C3 y grad) -- only C and laplace have diag elements */
+    /* (C + dx^2 laplace + C2 grad + C3 y grad) -- only C and laplace have diag elements */
     d[i] = cp - 2.0;  // -2 from Laplacian, C = cp = c / dt
-    if(pot) d[i] = d[i] + cb * pot[ind];
     /* Right-hand side (-) */
-    /* (C - dy^2 laplace - CB V - C2 grad - C3 y grad)psi */
+    /* (C - dy^2 laplace - C2 grad - C3 y grad)psi */
     b[i] = cp * psi[ind] - (psi[ind + nyz] - 2.0 * psi[ind] + psi[ind - nyz]) 
              - c2 * (psi[ind + nyz] - psi[ind - nyz]) - c3 * y * (psi[ind + nyz] - psi[ind - nyz]);
-    if(pot) b[i] = b[i] - cb * pot[ind] * psi[ind];
   }
 
   // Boundary conditions
@@ -118,10 +116,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
     break;
   }
   d[0] = cp - 2.0;  // LHS: -2 diag elem from Laplacian (x C)
-  if(pot) {
-    b[0] = b[0] - cb * pot[ind] * psi[ind];   // RHS(-)
-    d[0] = d[0] + cb * pot[ind];              // LHS(+)
-  }
 
   ind = (nx - 1) * nyz + j * nz + k;  // i = nx - 1, right boundary
   if(amp != 0.0) tim = grid_cuda_wf_absorb(nx-1, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
@@ -144,10 +138,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
     break;
   }      
   d[nx-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
-  if(pot) {
-    b[nx-1] = b[nx-1] - cb * pot[ind] * psi[ind]; // RHS(-)
-    d[nx-1] = d[nx-1] + cb * pot[ind];            // LHS(+)
-  }
 
   if(bc == WF_PERIODIC_BOUNDARY)
     grid_cuda_solve_tridiagonal_system_cyclic2(nx, d, b, &psi[j * nz + k], c2 + c3 * y, nyz, pwrk);
@@ -164,7 +154,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
  * tstep      = time step length (REAL; input).
  * wf         = Source/destination grid for operation (CUCOMPLEX *; input).
  * bc         = boundary condition (gwf->boundary) (char; input).
- * pot        = external potential (CUCOMPLEX *; input). May be NULL.
  * mass       = gwf mass (REAL; input).
  * step       = spatial step (REAL; input).
  * kx0        = base momentum along x (REAL; input).
@@ -181,27 +170,26 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
  * 
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, CUCOMPLEX *pot, REAL mass, REAL step, REAL kx0, REAL omega, REAL y0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL kx0, REAL omega, REAL y0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
               (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
-  CUCOMPLEX c, cb, c2, c3;
+  CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, ny2 = ny / 2;
 
   /*
    * (1 + .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t) <=> A x = b
-   * (C + dx^2 laplace + CB V + C2 grad + C3 y grad) psi(t+dt) 
-   *         = (C - dx^2 laplace - CB V - C2 grad - C3 y grad) psi(t)
-   * where C = 4 i m dx^2 / (hbar dt), CB = -2m dx^2 / hbar^2, C2 = -i dx kx, C3 = m \omega i dx / hbar
+   * (C + dx^2 laplace + C2 grad + C3 y grad) psi(t+dt) 
+   *         = (C - dx^2 laplace - C2 grad - C3 y grad) psi(t)
+   * where C = 4 i m dx^2 / (hbar dt), C2 = -i dx kx, C3 = m \omega i dx / hbar
    *
    */
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
-  cb = CUMAKE(-2.0 * mass * step * step / (HBAR * HBAR), 0.0);  // diag element coefficient for the potential
   c2 = CUMAKE(0.0, -step * kx0); // coeff for moving background
   c3 = CUMAKE(0.0, mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
-  grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, gwf, bc, pot, wrk, c, cb, c2, c3, step, y0, tstep, amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, gwf, bc, wrk, c, c2, c3, step, y0, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
 
@@ -213,7 +201,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, CUCOMPLEX *psi, char bc, CUCOMPLEX *pot, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX cb, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
   CUREAL x;
@@ -234,14 +222,12 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
     cp = c / tim;
     ind = i * nyz + j * nz + k;
     /* Left-hand side (+) */
-    /* (C + dy^2 laplace + CB V + C2 grad + C3 x grad) */
+    /* (C + dy^2 laplace + C2 grad + C3 x grad) */
     d[j] = cp - 2.0; // -2 from Laplacian, cp = c / dt, LHS(+)
-    if(pot) d[j] = d[j] + cb * pot[ind];
     /* Right-hand side (-) */
-    /* (C - dx^2 laplace - CB V - C2 grad - C3 x grad) */
+    /* (C - dx^2 laplace - C2 grad - C3 x grad) */
     b[j] = cp * psi[ind] - (psi[ind + nz] - 2.0 * psi[ind] + psi[ind - nz]) 
            - c2 * (psi[ind + nz] - psi[ind - nz]) - c3 * x * (psi[ind + nz] - psi[ind - nz]);
-    if(pot) b[j] = b[j] - cb * pot[ind] * psi[ind];
   }
   
   // Boundary conditions
@@ -267,10 +253,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
    break;
   }
   d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
-  if(pot) {
-    b[0] = b[0] - cb * pot[ind] * psi[ind];  // RHS(-)
-    d[0] = d[0] + cb * pot[ind];             // LHS(+)
-  }
 
   ind = i * nyz + (ny-1) * nz + k;  // j = ny - 1 - right boundary
   if(amp != 0.0) tim = grid_cuda_wf_absorb(i, ny-1, k, amp, lx, hx, ly, hy, lz, hz, tstep);
@@ -293,10 +275,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
     break;
   }
   d[ny-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
-  if(pot) {
-    b[ny-1] = b[ny-1] - cb * pot[ind] * psi[ind]; // RHS(-)
-    d[ny-1] = d[ny-1] + cb * pot[ind];            // LHS(+)
-  }
 
   if(bc == WF_PERIODIC_BOUNDARY)
     grid_cuda_solve_tridiagonal_system_cyclic2(ny, d, b, &psi[i * nyz + k], c2 + c3 * x, nz, pwrk);
@@ -313,7 +291,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
  * tstep      = time step length (REAL; input).
  * wf         = Source/destination grid for operation (CUCOMPLEX *; input/output).
  * bc         = boundary condition (gwf->boundary) (char; input).
- * pot        = external potential (CUCOMPLEX *; input). May be NULL.
  * mass       = gwf mass (REAL; input).
  * step       = spatial step (REAL; input).
  * ky0        = base momentum along y (REAL; input).
@@ -330,28 +307,27 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
  * 
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, CUCOMPLEX *pot, REAL mass, REAL step, REAL ky0, REAL omega, REAL x0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL ky0, REAL omega, REAL x0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
               (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
-  CUCOMPLEX c, cb, c2, c3;
+  CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, nx2 = nx / 2;
 
   /*
    * (1 + .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t) <=> A x = b
-   * (C + dy^2 laplace + CB V + C2 grad + C3 x grad) psi(t+dt) 
-   *         = (C - dx^2 laplace - CB V - C2 grad - C3 x grad) psi(t)
-   * where C = 4 i m dy^2 / (hbar dt), CB = -2m dy^2 / hbar^2, C2 = -i dy ky, C3 = -m \omega i dy / hbar
+   * (C + dy^2 laplace + C2 grad + C3 x grad) psi(t+dt) 
+   *         = (C - dx^2 laplace - C2 grad - C3 x grad) psi(t)
+   * where C = 4 i m dy^2 / (hbar dt), C2 = -i dy ky, C3 = -m \omega i dy / hbar
    *
    */
  
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
-  cb = CUMAKE(-2.0 * mass * step * step / (HBAR * HBAR), 0.0);  // diag element coefficient for the potential
   c2 = CUMAKE(0.0, -step * ky0); // coeff for moving background
   c3 = CUMAKE(0.0, -mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
-  grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, gwf, bc, pot, wrk, c, cb, c2, c3, step, x0, tstep, amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, gwf, bc, wrk, c, c2, c3, step, x0, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
 
@@ -363,7 +339,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, CUCOMPLEX *psi, char bc, CUCOMPLEX *pot, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX cb, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT k, j = blockIdx.x * blockDim.x + threadIdx.x, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
   CUCOMPLEX *d, *b, *pwrk, cp, tim;
@@ -382,14 +358,12 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
     cp = c / tim;
     ind = i * nyz + j * nz + k;
     /* Left-hand side (+) */
-    /* (C + dz^2 laplace + CB V + C2 grad) */
+    /* (C + dz^2 laplace + C2 grad) */
     d[k] = cp - 2.0; // Diagonal: -2 from Laplacian, cp = c / dt
-    if(pot) d[k] = d[k] + cb * pot[ind]; // add possible potential to diagonal
     /* Right-hand side (-) */
-    /* (C - dz^2 laplace - CB V - C2 grad) */
+    /* (C - dz^2 laplace - C2 grad) */
     b[k] = cp * psi[ind] - (psi[ind + 1] - 2.0 * psi[ind] + psi[ind - 1]) 
            - c2 * (psi[ind + 1] - psi[ind - 1]); // NOTE: No rotation term as the rotation is about the z-axis
-    if(pot) b[k] = b[k] - cb * pot[ind] * psi[ind];
   }
 
   // Boundary conditions
@@ -415,10 +389,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
     break;
   }
   d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
-  if(pot) {
-    b[0] = b[0] - cb * pot[ind] * psi[ind];  // RHS(-)
-    d[0] = d[0] + cb * pot[ind];             // LHS(+)
-  }
 
   ind = i * nyz + j * nz + (nz - 1);  // k = nz-1 - right boundary
   if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, nz-1, amp, lx, hx, ly, hy, lz, hz, tstep);
@@ -440,10 +410,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
     break;
   }      
   d[nz-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
-  if(pot) {
-    b[nz-1] = b[nz-1] - cb * pot[ind] * psi[ind]; // RHS(-)
-    d[nz-1] = d[nz-1] + cb * pot[ind];            // LHS(+)
-  }
 
   if(bc == WF_PERIODIC_BOUNDARY)
     grid_cuda_solve_tridiagonal_system_cyclic2(nz, d, b, &psi[i * nyz + j * nz], c2, 1, pwrk);
@@ -460,7 +426,6 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
  * tstep      = time step length (REAL; input).
  * wf         = Source/destination grid for operation (CUCOMPLEX *; input/output).
  * bc         = boundary condition (gwf->boundary) (char; input).
- * pot        = external potential (CUCOMPLEX *; input). May be NULL.
  * mass       = gwf mass (REAL; input).
  * step       = spatial step (REAL; input).
  * kz0        = base momentum along z (REAL; input).
@@ -475,26 +440,25 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
  * 
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, CUCOMPLEX *pot, REAL mass, REAL step, REAL kz0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL kz0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
               (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
-  CUCOMPLEX c, cb, c2;
+  CUCOMPLEX c, c2;
   INT nyz = ny * nz, nxy = nx * ny;
 
   /*
    * (1 + .5 i (T + V - v0 pz) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - v0 pz) dt / hbar) psi(t) <=> A x = b
-   * (C + dz^2 laplace + CB V + C2 grad) psi(t+dt) 
-   *         = (C - dz^2 laplace - CB V - C2 grad) psi(t)
+   * (C + dz^2 laplace + C2 grad) psi(t+dt) 
+   *         = (C - dz^2 laplace - C2 grad) psi(t)
    * where C = 4 i m dz^2 / (hbar dt), CB = -2m dz^2 / hbar^2, C2 = -i dz kz.
    *
    */
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
-  cb = CUMAKE(-2.0 * mass * step * step / (HBAR * HBAR), 0.0);  // diag element coefficient for the potential
   c2 = CUMAKE(0.0, -step * kz0); // coeff for moving background
 
-  grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, pot, wrk, c, cb, c2, step, tstep, amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, wrk, c, c2, step, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
 

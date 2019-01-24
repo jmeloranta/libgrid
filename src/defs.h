@@ -26,6 +26,7 @@
 #define WF_VORTEX_Y_BOUNDARY      5
 #define WF_VORTEX_Z_BOUNDARY      6
 
-#define WF_2ND_ORDER_PROPAGATOR 1
-#define WF_4TH_ORDER_PROPAGATOR 2
-#define WF_CRANK_NICOLSON       3
+#define WF_2ND_ORDER_FFT	1
+#define WF_4TH_ORDER_FFT	2
+#define WF_2ND_ORDER_CN		3
+#define WF_4TH_ORDER_CN		4

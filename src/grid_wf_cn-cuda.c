@@ -15,7 +15,7 @@
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential, REAL complex *workspace, INT worklen) {
+EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, REAL complex *workspace, INT worklen) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;
@@ -41,14 +41,10 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(IN
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
   
-  if(potential) {
-    if(cuda_three_block_policy(grid->value, grid->grid_len, grid->id, 1, potential->value, potential->grid_len, potential->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
-  } else {
-    if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
-  }
+  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
 
   if(time != grid_wf_absorb) amp = 0.0;
-  grid_cuda_wf_propagate_kinetic_cn_xW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, potential?cuda_block_address(potential->value):NULL, gwf->mass, grid->step, grid->kx0, grid->omega, grid->y0, (CUCOMPLEX *) cuda_block_address(workspace), amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_xW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, gwf->mass, grid->step, grid->kx0, grid->omega, grid->y0, (CUCOMPLEX *) cuda_block_address(workspace), amp, lx, hx, ly, hy, lz, hz);
   return 0;
 }
 
@@ -57,7 +53,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(IN
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential, REAL complex *workspace, INT worklen) {
+EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, REAL complex *workspace, INT worklen) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;
@@ -83,14 +79,10 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(IN
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
   
-  if(potential) {
-    if(cuda_three_block_policy(grid->value, grid->grid_len, grid->id, 1, potential->value, potential->grid_len, potential->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
-  } else {
-    if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
-  }
+  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
 
   if(time != grid_wf_absorb) amp = 0.0;
-  grid_cuda_wf_propagate_kinetic_cn_yW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, potential?cuda_block_address(potential->value):NULL, gwf->mass, grid->step, grid->ky0, grid->omega, grid->x0, (CUCOMPLEX *) cuda_block_address(workspace), amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_yW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, gwf->mass, grid->step, grid->ky0, grid->omega, grid->x0, (CUCOMPLEX *) cuda_block_address(workspace), amp, lx, hx, ly, hy, lz, hz);
 
   return 0;
 }
@@ -100,7 +92,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(IN
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential, REAL complex *workspace, INT worklen) {
+EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, REAL complex *workspace, INT worklen) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;
@@ -126,13 +118,9 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex (*time)(IN
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
   
-  if(potential) {
-    if(cuda_three_block_policy(grid->value, grid->grid_len, grid->id, 1, potential->value, potential->grid_len, potential->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
-  } else {
-    if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
-  }
+  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, workspace, (size_t) worklen, "CN workspace", 0) < 0) return -1;
 
   if(time != grid_wf_absorb) amp = 0.0;
-  grid_cuda_wf_propagate_kinetic_cn_zW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, potential?cuda_block_address(potential->value):NULL,gwf->mass, grid->step, grid->kz0, (CUCOMPLEX *) cuda_block_address(workspace), amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_zW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, gwf->mass, grid->step, grid->kz0, (CUCOMPLEX *) cuda_block_address(workspace), amp, lx, hx, ly, hy, lz, hz);
   return 0;
 }
