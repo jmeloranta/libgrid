@@ -65,7 +65,7 @@ __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp, INT lx
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT i, k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
   CUREAL y;
@@ -74,9 +74,9 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
   if(j >= ny || k >= nz) return;
 
   tid = j * nz + k;
-  d = &wrk[nx * (3 * tid + 0)];
-  b = &wrk[nx * (3 * tid + 1)];
-  pwrk = &wrk[nx * (3 * tid + 2)];
+  d = &wrk[nx * tid];
+  b = &wrk2[nx * tid];
+  pwrk = &wrk3[nx * tid];
   y = ((REAL) (j - ny2)) * step - y0;    
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
@@ -160,6 +160,8 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
  * omega      = rotation freq (REAL; input).
  * y0         = y0 grid spatial offset (REAL; input).
  * wrk        = Workspace (CUCOMPLEX *; input).
+ * wrk2       = Workspace (CUCOMPLEX *; input).
+ * wrk3       = Workspace (CUCOMPLEX *; input).
  * amp        = Absorbing amplitude (REAL; input). If equal to 0.0, constant time step is used.
  * lx         = Absorbing low boundary index x (INT; input).
  * hx         = Absorbing high boundary index x (INT; input).
@@ -170,7 +172,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
  * 
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL kx0, REAL omega, REAL y0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL kx0, REAL omega, REAL y0, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
@@ -189,7 +191,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
   c2 = CUMAKE(0.0, -step * kx0); // coeff for moving background
   c3 = CUMAKE(0.0, mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
-  grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, gwf, bc, wrk, c, c2, c3, step, y0, tstep, amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, gwf, bc, wrk, wrk2, wrk3, c, c2, c3, step, y0, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
 
@@ -201,7 +203,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
   CUREAL x;
@@ -211,9 +213,9 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
 
   x = ((REAL) (i - nx2)) * step - x0;    
   tid = i * nz + k;
-  d = &wrk[ny * (3 * tid + 0)];
-  b = &wrk[ny * (3 * tid + 1)];
-  pwrk = &wrk[ny * (3 * tid + 2)];
+  d = &wrk[ny * tid];
+  b = &wrk2[ny * tid];
+  pwrk = &wrk3[ny * tid];
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(j = 1; j < ny - 1; j++) {
@@ -297,6 +299,8 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
  * omega      = rotation freq (REAL; input).
  * x0         = x0 grid spatial offset (REAL; input).
  * wrk        = Workspace (CUCOMPLEX *; scratch space).
+ * wrk2       = Workspace (CUCOMPLEX *; scratch space).
+ * wrk3       = Workspace (CUCOMPLEX *; scratch space).
  * amp        = Absorbing amplitude (REAL; input). If equal to 0.0, constant time step is used.
  * lx         = Absorbing low boundary index x (INT; input).
  * hx         = Absorbing high boundary index x (INT; input).
@@ -307,7 +311,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
  * 
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL ky0, REAL omega, REAL x0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL ky0, REAL omega, REAL x0, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
@@ -327,7 +331,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
   c2 = CUMAKE(0.0, -step * ky0); // coeff for moving background
   c3 = CUMAKE(0.0, -mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
-  grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, gwf, bc, wrk, c, c2, c3, step, x0, tstep, amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, gwf, bc, wrk, wrk2, wrk3, c, c2, c3, step, x0, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
 
@@ -339,7 +343,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX c, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT k, j = blockIdx.x * blockDim.x + threadIdx.x, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
   CUCOMPLEX *d, *b, *pwrk, cp, tim;
@@ -347,9 +351,9 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   if(i >= nx || j >= ny) return;
 
   tid = i * ny + j;
-  d = &wrk[nz * (3 * tid + 0)];
-  b = &wrk[nz * (3 * tid + 1)];
-  pwrk = &wrk[nz * (3 * tid + 2)];
+  d = &wrk[nz * tid];
+  b = &wrk2[nz * tid];
+  pwrk = &wrk3[nz * tid];
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(k = 1; k < nz - 1; k++) {
@@ -430,6 +434,8 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
  * step       = spatial step (REAL; input).
  * kz0        = base momentum along z (REAL; input).
  * wrk        = Workspace (CUCOMPLEX *; scratch space).
+ * wrk2       = Workspace (CUCOMPLEX *; scratch space).
+ * wrk3       = Workspace (CUCOMPLEX *; scratch space).
  * amp        = Absorbing amplitude (REAL; input).  If equal to 0.0, constant time step is used.
  * lx         = Absorbing low boundary index x (INT; input).
  * hx         = Absorbing high boundary index x (INT; input).
@@ -440,7 +446,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
  * 
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL kz0, CUCOMPLEX *wrk, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, CUCOMPLEX *gwf, char bc, REAL mass, REAL step, REAL kz0, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
@@ -458,7 +464,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
   c2 = CUMAKE(0.0, -step * kz0); // coeff for moving background
 
-  grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, wrk, c, c2, step, tstep, amp, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, wrk, wrk2, wrk3, c, c2, step, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
 

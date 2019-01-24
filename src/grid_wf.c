@@ -96,6 +96,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->propagator = propagator;
   gwf->cworkspace = NULL;
   gwf->cworkspace2 = NULL;
+  gwf->cworkspace3 = NULL;
   gwf->ts_func = NULL;
   
   return gwf;

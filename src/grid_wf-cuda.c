@@ -17,7 +17,7 @@
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_potential(wf *gwf,  REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *pot) {
+EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *pot) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;

@@ -78,6 +78,7 @@ typedef struct wf_struct { /* wavefunction */
   char propagator;
   cgrid *cworkspace;
   cgrid *cworkspace2;
+  cgrid *cworkspace3;
   REAL complex (*ts_func)(INT, INT, INT, void *, REAL complex);
   struct grid_abs abs_data;
 } wf;

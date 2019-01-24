@@ -72,14 +72,15 @@ EXPORT REAL grid_wf_energy_cn_kinetic(wf *gwf) {
 
 EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata) {
 
-  cgrid *grid = gwf->grid, *cworkspace;
-  INT worklen = ((INT) sizeof(REAL complex)) * grid->nx * grid->ny * grid->nz;
+  cgrid *grid = gwf->grid;
 
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  cworkspace = gwf->cworkspace;
-  if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, time, tstep, privdata, cworkspace->value, worklen);
-  if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, time, tstep, privdata, cworkspace->value, worklen);
-  if(gwf->grid->nz != 1) grid_wf_propagate_cn_z(gwf, time, tstep, privdata, cworkspace->value, worklen);
+  if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+
+  if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, time, tstep, privdata, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
+  if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, time, tstep, privdata, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
+  if(gwf->grid->nz != 1) grid_wf_propagate_cn_z(gwf, time, tstep, privdata, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
 }
 
 /*
@@ -90,14 +91,15 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex (*time)(INT, INT,
  * time       = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex); input). If NULL, tstep will be used.
  * tstep      = base time step length (REAL complex; input).
  * privdata   = additional private data form time step function (void *; input).
- * workspace  = additional storage space needed (REAL complex *; overwritten) with size at least 3 * nx * (number of threads).
- * worklen    = workspace length (INT; input).
+ * workspace  = additional storage space needed (cgrid *; overwritten).
+ * workspace2 = additional storage space needed (cgrid *; overwritten).
+ * workspace3 = additional storage space needed (cgrid *; overwritten).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, REAL complex *workspace, INT worklen) {
+EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, c3, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, kx0 = gwf->grid->kx0, y, y0 = gwf->grid->y0;
@@ -106,24 +108,15 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   INT j, ny = gwf->grid->ny, ny2 = ny / 2;
   INT k, jk;
   INT nz = gwf->grid->nz, nyz = ny * nz;
-  REAL complex *d, *b, *pwrk, tim, cp;
+  REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-  if(worklen < 3 * nx * nyz * (INT) sizeof(REAL complex)) {
-    fprintf(stderr, "libgrid(CUDA): CN worskspace too small.\n");
-    exit(1);
-  }
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_x(gwf, time, tstep, privdata, workspace, worklen)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_x(gwf, time, tstep, privdata, workspace, workspace2, workspace3)) return;
 #endif
-
-  if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * nx) {
-    fprintf(stderr, "libgrid: grid_wf_propagate_cn_x workspace too small.\n");
-    exit(1);
-  }
 
   /*
    * (1 + .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t) <=> A x = b
@@ -135,16 +128,19 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   c = 4.0 * I * gwf->mass * step * step / HBAR; // division by dt included separately below
   c2 = -I * step * kx0; // coeff for moving background
   c3 = gwf->mass * gwf->grid->omega * I * step / HBAR; // coeff for rotating liquid around Z
+  wrk = workspace->value;
+  wrk2 = workspace2->value;
+  wrk3 = workspace3->value;
 
-#pragma omp parallel for firstprivate(c2,c3,nx,ny,ny2,nz,nyz,y0,psi,workspace,c,step,time,tstep,privdata,gwf) private(tid,i,j,k,jk,d,b,ind,tim,cp,pwrk,y) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(c2,c3,nx,ny,ny2,nz,nyz,y0,psi,wrk,wrk2,wrk3,c,step,time,tstep,privdata,gwf) private(tid,i,j,k,jk,d,b,ind,tim,cp,pwrk,y) default(none) schedule(runtime)
   for (jk = 0; jk < nyz; jk++) {  /* for each (y,z) */
     j = jk / nz;
     k = jk % nz;  
     y = ((REAL) (j - ny2)) * step - y0;
     tid = omp_get_thread_num();
-    d = &workspace[nx * (3 * tid + 0)];
-    b = &workspace[nx * (3 * tid + 1)];
-    pwrk = &workspace[nx * (3 * tid + 2)];
+    d = &wrk[nx * tid];
+    b = &wrk2[nx * tid];
+    pwrk = &wrk3[nx * tid];
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(i = 1; i < nx - 1; i++) {
@@ -221,14 +217,15 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
  * time      = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
  * privdata  = additional private data form time step function (void *).
- * workspace = additional storage space needed (REAL complex *) with size at least 3 * ny * (number of threads).
- * worklen   = workspace length (INT).
+ * workspace = additional storage space needed (cgrid *).
+ * workspace2= additional storage space needed (cgrid *).
+ * workspace3= additional storage space needed (cgrid *).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, REAL complex *workspace, INT worklen) {
+EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, c3, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, ky0 = gwf->grid->ky0, x, x0 = gwf->grid->x0;
@@ -237,24 +234,15 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   INT j, ny = gwf->grid->ny;
   INT k, ik;
   INT nz = gwf->grid->nz, nyz = ny * nz, nxz = nx * nz;
-  REAL complex *d, *b, *pwrk, tim, cp;
+  REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-  if(worklen < 3 * nx * nyz * (INT) sizeof(REAL complex)) {
-    fprintf(stderr, "libgrid(CUDA): CN worskspace too small.\n");
-    exit(1);
-  }
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, time, tstep, privdata, workspace, worklen)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, time, tstep, privdata, workspace, workspace2, workspace3)) return;
 #endif
-
-  if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * ny) {
-    fprintf(stderr, "libgrid: grid_wf_propagate_cn_y workspace too small.\n");
-    exit(1);
-  }
 
   /*
    * (1 + .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t) <=> A x = b
@@ -266,16 +254,19 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   c = 4.0 * I * gwf->mass * step * step / HBAR; // division by dt included separately below
   c2 = -I * step * ky0;
   c3 = -gwf->mass * gwf->grid->omega * I * step / HBAR;
+  wrk = workspace->value;
+  wrk2 = workspace2->value;
+  wrk3 = workspace3->value;
   
-#pragma omp parallel for firstprivate(c2,c3,nx,nx2,ny,nz,nyz,nxz,x0,psi,workspace,c,step,time,tstep,privdata,gwf) private(tid,i,j,k,ik,d,b,ind,tim,cp,x,pwrk) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(c2,c3,nx,nx2,ny,nz,nyz,nxz,x0,psi,wrk,wrk2,wrk3,c,step,time,tstep,privdata,gwf) private(tid,i,j,k,ik,d,b,ind,tim,cp,x,pwrk) default(none) schedule(runtime)
   for (ik = 0; ik < nxz; ik++) {  /* for each (x,z) */
     i = ik / nz;
     k = ik % nz;
     x = ((REAL) (i - nx2)) * step - x0;    
     tid = omp_get_thread_num();
-    d = &workspace[ny * (3 * tid + 0)];
-    b = &workspace[ny * (3 * tid + 1)];
-    pwrk = &workspace[ny * (3 * tid + 2)];
+    d = &wrk[ny * tid];
+    b = &wrk2[ny * tid];
+    pwrk = &wrk3[ny * tid];
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(j = 1; j < ny - 1; j++) {
@@ -353,14 +344,15 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
  * time      = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
  * privdata  = additional private data form time step function (void *).
- * workspace = additional storage space needed (REAL complex *) with size at least 3 * nz * (number of threads).
- * worklen   = workspace length (INT).
+ * workspace = additional storage space needed (cgrid *).
+ * workspace2= additional storage space needed (cgrid *).
+ * workspace3= additional storage space needed (cgrid *).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, REAL complex *workspace, INT worklen) {
+EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, kz0 = gwf->grid->kz0;
@@ -369,24 +361,15 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
   INT j, ny = gwf->grid->ny;
   INT k, ij;
   INT nz = gwf->grid->nz, nyz = ny * nz, nxy = nx * ny;
-  REAL complex *d, *b, *pwrk, tim, cp;
+  REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-  if(worklen < 3 * nx * nyz * (INT) sizeof(REAL complex)) {
-    fprintf(stderr, "libgrid(CUDA): CN worskspace too small.\n");
-    exit(1);
-  }
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, time, tstep, privdata, workspace, worklen)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, time, tstep, privdata, workspace, workspace2, workspace3)) return;
 #endif
-
-  if(worklen < ((INT) sizeof(REAL complex)) * grid_threads() * nz) {
-    fprintf(stderr, "libgrid: grid_wf_propagate_cn_z workspace too small.\n");
-    exit(1);
-  }
 
   /*
    * (1 + .5 i (T + V - v0 pz) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - v0 pz) dt / hbar) psi(t) <=> A x = b
@@ -397,15 +380,18 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
    */
   c = 4.0 * I * gwf->mass * step * step / HBAR; // division by dt included separately below
   c2 = -I * step * kz0;
+  wrk = workspace->value;
+  wrk2 = workspace2->value;
+  wrk3 = workspace3->value;
 
-#pragma omp parallel for firstprivate(c2,nx,ny,nz,nyz,nxy,psi,workspace,c,step,time,tstep,privdata,gwf) private(tid,i,j,k,ij,d,b,ind,tim,cp,pwrk) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(c2,nx,ny,nz,nyz,nxy,psi,wrk,wrk2,wrk3,c,step,time,tstep,privdata,gwf) private(tid,i,j,k,ij,d,b,ind,tim,cp,pwrk) default(none) schedule(runtime)
   for (ij = 0; ij < nxy; ij++) {  /* for each (x,y) */
     i = ij / ny;
     j = ij % ny;
     tid = omp_get_thread_num();
-    d = &workspace[nz * (3 * tid + 0)];
-    b = &workspace[nz * (3 * tid + 1)];
-    pwrk = &workspace[nz * (3 * tid + 2)];
+    d = &wrk[nz * tid];
+    b = &wrk2[nz * tid];
+    pwrk = &wrk3[nz * tid];
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(k = 1; k < nz - 1; k++) {
