@@ -356,7 +356,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         exit(1);
       }
-      grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential); // TODO: should we switch the order of kin & pe?
+      grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential); // TODO: oreder of pot and ke matters?
       grid_wf_propagate_kinetic_fft(gwf, time);
       grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
       break;
