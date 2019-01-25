@@ -151,13 +151,24 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
 EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 
   cgrid *ngrid;
+  size_t len = sizeof(REAL complex) * (size_t) (grid->nx * grid->ny * grid->nz);
 
   if(!(ngrid = (cgrid *) malloc(sizeof(cgrid)))) {
     fprintf(stderr, "libgrid: Out of memory in cgrid_clone().\n");
     exit(1);
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(cgrid));
-  if(!(ngrid->value = (REAL complex *) malloc(sizeof(REAL complex) * (size_t) (grid->nx * grid->ny * grid->nz)))) {
+#ifdef USE_CUDA
+  if(cudaMallocHost((void **) &(ngrid->value), len) != cudaSuccess) { /* Use page-locked grids */
+#else
+#if defined(SINGLE_PREC)
+  if (!(ngrid->value = (REAL complex *) fftwf_malloc(len))) {
+#elif defined(DOUBLE_PREC)
+  if (!(ngrid->value = (REAL complex *) fftw_malloc(len))) {
+#elif defined(QUAD_PREC)
+  if (!(ngrid->value = (REAL complex *) fftwl_malloc(len))) {
+#endif
+#endif
     fprintf(stderr, "libgrid: Error in cgrid_clone(). Could not allocate memory for ngrid->value.\n");
     free(ngrid);
     return NULL;
@@ -283,10 +294,7 @@ EXPORT void cgrid_free(cgrid *grid) {
 #ifdef USE_CUDA
     cuda_remove_block(grid->value, 0);
     if(grid->value) cudaFreeHost(grid->value);
-    if(grid->cufft_handle != -1) {
-      cufftDestroy(grid->cufft_handle);
-      grid->cufft_handle = -1;
-    }
+    if(grid->cufft_handle != -1) cufftDestroy(grid->cufft_handle);
 #else
 #if defined(SINGLE_PREC)
     if (grid->value) fftwf_free(grid->value);

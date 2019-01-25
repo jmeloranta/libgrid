@@ -176,13 +176,25 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
 
   rgrid *ngrid;
+  size_t len = ((size_t) (grid->nx * grid->ny * grid->nz2)) * sizeof(REAL);
 
   if(!(ngrid = (rgrid *) malloc(sizeof(rgrid)))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_clone().\n");
     exit(1);
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
-  if(!(ngrid->value = (REAL *) malloc(sizeof(REAL) * (size_t) (grid->nx * grid->ny * grid->nz2)))) {
+
+#ifdef USE_CUDA
+  if(cudaMallocHost((void **) &(grid->value), len) != cudaSuccess) { /* Use page-locked grids */
+#else
+#if defined(SINGLE_PREC)
+  if (!(grid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
+#elif defined(DOUBLE_PREC)
+  if (!(grid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
+#elif defined(QUAD_PREC)
+  if (!(grid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
+#endif
+#endif
     fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");
     free(ngrid);
     return NULL;
@@ -315,14 +327,8 @@ EXPORT void rgrid_free(rgrid *grid) {
 #ifdef USE_CUDA
     cuda_remove_block(grid->value, 0);
     if(grid->value) cudaFreeHost(grid->value);
-    if(grid->cufft_handle_r2c != -1) {
-      cufftDestroy(grid->cufft_handle_r2c);
-      grid->cufft_handle_r2c = -1;
-    }
-    if(grid->cufft_handle_c2r != -1) {
-      cufftDestroy(grid->cufft_handle_c2r);
-      grid->cufft_handle_c2r = -1;
-    }
+    if(grid->cufft_handle_r2c != -1) cufftDestroy(grid->cufft_handle_r2c);
+    if(grid->cufft_handle_c2r != -1) cufftDestroy(grid->cufft_handle_c2r);
 #else
 #if defined(SINGLE_PREC)
     if (grid->value) fftwf_free(grid->value);
