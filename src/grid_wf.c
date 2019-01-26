@@ -247,7 +247,8 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
 /*
  * Propagate (PREDICT) wavefunction in time subject to given potential.
  *
- * gwfp        = wavefunction to be propagated (wf *).
+ * gwf         = wavefunction to be propagated; wf up to kinetic propagation (wf *).
+ * gwfp        = wavefunction to be propagated; predicted (wf *).
  * potential   = grid containing the potential (cgrid *).
  * time        = time step (REAL complex). Note this may be either real or imaginary.
  *
@@ -255,7 +256,7 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
  *
  */
 
-EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex time) {  
+EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL complex time) {  
   
   REAL complex half_time = 0.5 * time;
   
@@ -266,6 +267,7 @@ EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex t
         exit(1);
       }
       grid_wf_propagate_kinetic_fft(gwfp, half_time);
+      cgrid_copy(gwf->grid, gwfp->grid);
       grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
       /* continue with correct cycle */
       break;
@@ -276,10 +278,12 @@ EXPORT void grid_wf_propagate_predict(wf *gwfp, cgrid *potential, REAL complex t
     case WF_2ND_ORDER_CN:
       if(gwfp->ts_func) {
         grid_wf_propagate_kinetic_cn(gwfp, grid_wf_absorb, half_time, &(gwfp->abs_data));
+        cgrid_copy(gwf->grid, gwfp->grid);
         grid_wf_propagate_potential(gwfp, grid_wf_absorb, time, &(gwfp->abs_data), potential);
       /* continue with correct cycle */
       } else {
         grid_wf_propagate_kinetic_cn(gwfp, NULL, half_time, NULL);
+        cgrid_copy(gwf->grid, gwfp->grid);
         grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
         /* continue with correct cycle */
       }
