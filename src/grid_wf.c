@@ -266,8 +266,8 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         exit(1);
       }
-      grid_wf_propagate_kinetic_fft(gwfp, half_time);
-      cgrid_copy(gwf->grid, gwfp->grid);
+      grid_wf_propagate_kinetic_fft(gwf, half_time);
+      cgrid_copy(gwfp->grid, gwf->grid);
       grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
       /* continue with correct cycle */
       break;
@@ -277,13 +277,13 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       exit(1);
     case WF_2ND_ORDER_CN:
       if(gwfp->ts_func) {
-        grid_wf_propagate_kinetic_cn(gwfp, grid_wf_absorb, half_time, &(gwfp->abs_data));
-        cgrid_copy(gwf->grid, gwfp->grid);
+        grid_wf_propagate_kinetic_cn(gwf, grid_wf_absorb, half_time, &(gwfp->abs_data));
+        cgrid_copy(gwfp->grid, gwf->grid);
         grid_wf_propagate_potential(gwfp, grid_wf_absorb, time, &(gwfp->abs_data), potential);
       /* continue with correct cycle */
       } else {
-        grid_wf_propagate_kinetic_cn(gwfp, NULL, half_time, NULL);
-        cgrid_copy(gwf->grid, gwfp->grid);
+        grid_wf_propagate_kinetic_cn(gwf, NULL, half_time, NULL);
+        cgrid_copy(gwfp->grid, gwf->grid);
         grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
         /* continue with correct cycle */
       }
