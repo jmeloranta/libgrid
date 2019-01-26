@@ -36,7 +36,7 @@
 
 /* Define this for 4th order accuracy in time */
 /* Otherwise for 2nd order accuracy */
-#define FOURTH_ORDER_PROPAGATOR
+#define FOURTH_ORDER_FFT
 
 REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
 REAL complex harmonic(void *arg, REAL x, REAL y, REAL z);
@@ -108,7 +108,11 @@ int main(int argc, char *argv[]) {
   
   /* allocate memory (mass = 1.0) */
   gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
-                      WF_2ND_ORDER_PROPAGATOR, "WF");
+#ifdef FOURTH_ORDER_FFT
+                      WF_4TH_ORDER_FFT, "WF");
+#else
+                      WF_2ND_ORDER_FFT, "WF");
+#endif
   potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
   rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");
   
@@ -128,11 +132,7 @@ int main(int argc, char *argv[]) {
     sprintf(fname, "output-" FMT_I, l);
     rgrid_write_grid(fname, rworkspace);
     /* Propagate one time step */
-#ifdef FOURTH_ORDER_PROPAGATOR
     grid_wf_propagate(gwf, potential, time);
-#else
-    grid_wf_propagate(gwf, potential, NULL, time, workspace);
-#endif
   }
 
   /* Release resources */
