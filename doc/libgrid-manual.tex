@@ -154,7 +154,7 @@ test: test.o
 
 test.o: test.c
 \end{verbatim}
-This will compile the program specified in test.c and link the appropriate libraries automatically. Both CFLAGS and LDFLAGS are obtained automatically from libgrid's make.conf. 
+This will compile the program specified in test.c and link the appropriate libraries automatically. Both CFLAGS and LDFLAGS are obtained automatically from libgrid's make.conf. If you used a different installation ROOT setting, replace /usr above with that.
 
 \section{Data types}
 
@@ -260,8 +260,8 @@ Member & Description\\
 cgrid *grid & Complex grid containing the wave function values.\\
 REAL mass & Particle mass that is represented by this wave function.\\
 REAL norm & Requested normalization of the wave function.\\
-char boundary & Boundary condition to be used for time propagation. WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition.\\
-char propagator & Time propagator. WF\_2ND\_ORDER\_PROPAGATOR = 2nd order in time, WF\_4TH\_ORDER\_PROPAGATOR = 4th order in time.\\
+char boundary & Boundary condition to be used for time propagation. WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition, WF\_VORTEX\_X\_BOUNDARY = Vortex line along $x$-axis, WF\_VORTEX\_Y\_BOUNDARY = Vortex line along $y$-axis, or WF\_VORTEX\_Z\_BOUNDARY = Vortex line along $z$-axis,.\\
+char propagator & Time propagator. WF\_2ND\_ORDER\_FFT = FFT propagator with 2nd order accuracy in time, WF\_4TH\_ORDER\_FFT = FFT propagator with 4th order accuracy in time, WF\_2ND\_ORDER\_CN = Crank-Nicolson propagator with 2nd order accuracy in time, or WF\_4TH\_ORDER\_CN = Crank-Nicolson propagator with 4th order accuracy in time.\\
 \end{longtable}
 
 \chapter{Library functions}
@@ -285,7 +285,19 @@ void *outside\_params\_ptr & Pointer for passing parameters for the given bounda
 char *id & String ID describing the grid.
 \end{longtable}
 \noindent
-The return value is a pointer to the allocated grid (rgrid *) or NULL on allocation error. \textit{Note that the grid is kept in padded form, which can be directly used for in-place FFT.}
+The return value is a pointer to the allocated grid (rgrid *) or NULL on allocation error. \textit{Note that the grid data is kept in padded form, which can be directly used for in-place FFT.}
+
+\subsection{rgrid\_clone() -- Allocate a new grid using existing grid as template}
+
+``Clone" a real grid with the parameters identical to the grid given as argument,  except that new grid data is allocated. This function takes the following arguments:
+\begin{longtable}{p{.28\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be used as a template.\\
+char *id & ID string describing the grid (comment; useful for debugging).\\
+\end{longtable}
+\noindent
+This function returns a pointer to the new grid (rgrid *).
 
 \subsection{rgrid\_claim() -- Mark grid to be in use}
 
@@ -1299,6 +1311,35 @@ rgrid *wz & $z$ component of the incompressible vector field.\\
 \noindent
 This function does not return any value. By noting that $\nabla\times v = \nabla\times w + \nabla\times u = \nabla\times w + \nabla\times\nabla q = \nabla\times w$, we can see that the incompressible part includes rotation whereas the compressible part is irrotational.
 
+\subsection{rgrid\_hodge\_comp() -- Hodge's decomposition of vector field (compressible part)}
+
+Decompose a vector field into ``compressible" ($u$) and ``incompressible" ($w$) parts: $v = w + u = w + \nabla q$ where $\nabla\cdot w = 0$ and $u = \nabla q$ (Hodge's decomposition). Only the compressible part is computed. This is performed by solving the Poisson equation: $\Delta q = \nabla\cdot v$. Then $u = \nabla q$ and the incompressible part is $w = v - u$. Given vector field $v$, this function computes $u$ and $w$. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *vx & $x$ component of the vector field to be decomposed. On exit, contains the compressible part $x$ component.\\
+rgrid *vy & $y$ component of the vector field to be decomposed. On exit, contains the compressible part $y$ component.\\
+rgrid *vz & $z$ component of the vector field to be decomposed. On exit, contains the compressible part $z$ component.\\
+rgrid *workspace & workspace required by the function.\\
+\end{longtable}
+\noindent
+This function does not return any value. See also comments in rgrid\_hodge().
+
+\subsection{rgrid\_hodge\_incomp() -- Hodge's decomposition of vector field (incompressible part)}
+
+Decompose a vector field into ``compressible" ($u$) and ``incompressible" ($w$) parts: $v = w + u = w + \nabla q$ where $\nabla\cdot w = 0$ and $u = \nabla q$ (Hodge's decomposition). Only the incompressible part is computed. This is performed by solving the Poisson equation: $\Delta q = \nabla\cdot v$. Then $u = \nabla q$ and the incompressible part is $w = v - u$. Given vector field $v$, this function computes $u$ and $w$. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *vx & $x$ component of the vector field to be decomposed. On exit, contains the compressible part $x$ component.\\
+rgrid *vy & $y$ component of the vector field to be decomposed. On exit, contains the compressible part $y$ component.\\
+rgrid *vz & $z$ component of the vector field to be decomposed. On exit, contains the compressible part $z$ component.\\
+rgrid *workspace1 & first workspace required by the function.\\
+rgrid *workspace2 & second workspace required by the function.\\
+\end{longtable}
+\noindent
+This function does not return any value. See also comments in rgrid\_hodge().
+
 \subsection{rgrid\_spherical\_average() -- Compute spherical average of grid in real space}
 
 Compute spherical shell average in real space with respect to the grid origin with the result stored in 1-D grid:
@@ -1335,6 +1376,19 @@ char volel & Whether to include multiplication by the volume element ($4\pi k^2$
 \noindent
 This function does not return any value. 
 
+\subsection{rgrid\_npoint\_smooth() -- $n$ point running average of grid}
+
+Calculate running average to smooth unwanted high frequency components in a grid. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dest & Destination grid.\\
+rgrid *source & Source data grid.\\
+INT npts & Number of points to be used in taking the running average. This smooths over +-npts points (so effectively 2 X npts).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
 \section{Complex grid routines}
 
 \subsection{cgrid\_alloc() -- Allocate a complex-valued grid}
@@ -1353,6 +1407,18 @@ char *id & String ID describing the grid.
 \end{longtable}
 \noindent
 The return value is a pointer to the allocated grid (cgrid *) or NULL on allocation error.
+
+\subsection{cgrid\_clone() -- Allocate a new grid using existing grid as template}
+
+``Clone" a complex grid with the parameters identical to the grid given as argument,  except that new grid data is allocated. This function takes the following arguments:
+\begin{longtable}{p{.28\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid to be used as a template.\\
+char *id & ID string describing the grid (comment; useful for debugging).\\
+\end{longtable}
+\noindent
+This function returns a pointer to the new grid (cgrid *).
 
 \subsection{cgrid\_claim() -- Mark grid to be in use}
 
@@ -2559,11 +2625,23 @@ INT nz & Number of spatial grid points along $z$ (3rd index).\\
 REAL step & Spatial step size for wave function grid.\\
 REAL mass & Mass of the particle corresponding to this wave function (in atomic units).\\
 char boundary & Boundary condition for wave function: WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition.\\
-char propagator & Which time propagator to use for this wave function: WF\_2ND\_ORDER\_PROPAGATOR = 2nd order in time, WF\_4TH\_ORDER\_PROPAGATOR = 4th order in time.\\
+char propagator & Which time propagator to use for this wave function: WF\_2ND\_ORDER\_FFT = FFT with 2nd order in time, WF\_4TH\_ORDER\_FFT = FFT with 4th order in time, WF\_2ND\_ORDER\_CN = Crank-Nicolson with 2nd order in time, WF\_4TH\_ORDER\_CN = Crank-Nicolson with 4th order in time.\\
 char *id & String identifier describing the grid (for debugging; char *; input).
 \end{longtable}
 \noindent
 This function returns a pointer to the allocated wave function structure (wf *). If memory allocation fails, NULL is returned.
+
+\subsection{grid\_wf\_clone() -- Allocate a new wave function using existing wave function as template}
+
+``Clone" a wave function with the parameters identical to the wave function given as argument, except that new grid data is allocated. This function takes the following arguments:
+\begin{longtable}{p{.28\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *wf & Wave function to be used as a template.\\
+char *id & ID string describing the wave function (comment; useful for debugging).\\
+\end{longtable}
+\noindent
+This function returns a pointer to the new grid (wf *).
 
 \subsection{grid\_wf\_free() -- Free wave function}
 
@@ -2702,6 +2780,112 @@ rgrid *flux\_z & $z$ component of the flux.\\
 \noindent
 This function has no return value.
 
+\subsection{grid\_wf\_lx() -- Angular momentum expectation value about $x$-axis}
+
+Calculate angular momentum expectation value $\left<L_x\right>$. This function takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *wf & Wavefunction for the calculation.\\
+rgrid *workspace1 & Workspace required for the operation.\\
+rgrid *workspace2 & Workspace required for the operation.\\
+\end{longtable}
+\noindent
+This function returns the requested expectation value. Note that this function respects the origin specified for the wave function grid.
+
+\subsection{grid\_wf\_ly() -- Angular momentum expectation value about $y$-axis}
+
+Calculate angular momentum expectation value $\left<L_y\right>$. This function takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *wf & Wavefunction for the calculation.\\
+rgrid *workspace1 & Workspace required for the operation.\\
+rgrid *workspace2 & Workspace required for the operation.\\
+\end{longtable}
+\noindent
+This function returns the requested expectation value. Note that this function respects the origin specified for the wave function grid.
+
+\subsection{grid\_wf\_lz() -- Angular momentum expectation value about $z$-axis}
+
+Calculate angular momentum expectation value $\left<L_z\right>$. This function takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *wf & Wavefunction for the calculation.\\
+rgrid *workspace1 & Workspace required for the operation.\\
+rgrid *workspace2 & Workspace required for the operation.\\
+\end{longtable}
+\noindent
+This function returns the requested expectation value. Note that this function respects the origin specified for the wave function grid.
+
+\subsection{grid\_wf\_l() -- Angular momentum expectation value about $x,y,z$-axes}
+
+Calculate angular momentum expectation values $\left<L_x\right>$, $\left<L_y\right>$, $\left<L_z\right>$. This function takes the following arguments:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *wf & Wavefunction for the calculation.\\
+REAL *lx & $x$ component of the angular momentum.\\
+REAL *ly & $y$ component of the angular momentum.\\
+REAL *lz & $z$ component of the angular momentum.\\
+rgrid *workspace1 & Workspace required for the operation.\\
+rgrid *workspace2 & Workspace required for the operation.\\
+\end{longtable}
+\noindent
+This function does not return any value. Note that this function respects the origin specified for the wave function grid.
+
+\subsection{grid\_wf\_rotational\_energy() -- Calculate rotational energy}
+
+Calculate the energy from the rotation constraint, $-\left<\omega L\right>$. The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wavefunction for the calculation.\\
+REAL omega\_x & Angular frequency in a.u., about the $x$-axis.\\
+REAL omega\_y & angular frequency in a.u., about the $y$-axis.\\
+REAL omega\_z & angular frequency in a.u., about the $z$-axis.\\
+\end{longtable}
+\noindent
+The return value is the rotational energy (REAL).
+
+\subsection{grid\_wf\_incomp\_KE -- Incompressible kinetic energy density}
+
+Calculate the incompressible kinetic energy density as a function of wave vector $\left|k\right|$ (atomic unis). The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function to be analyzed.\\
+REAL *bins & Averages in $k$-space. The array length is nbins.\\
+REAL binstep & Step length in $k$-space in atomic units.\\
+INT nbins & Number of bins to use to build the distribution.\\
+rgrid *workspace1 & Workspace required for the operation.\\
+rgrid *workspace2 & Workspace required for the operation.\\
+rgrid *workspace3 & Workspace required for the operation.\\
+rgrid *workspace4 & Workspace required for the operation.\\
+rgrid *workspace5 & Workspace required for the operation.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{grid\_wf\_comp\_KE -- Compressible kinetic energy density}
+
+Calculate the compressible kinetic energy density as a function of wave vector $\left|k\right|$ (atomic unis). The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function to be analyzed.\\
+REAL *bins & Averages in $k$-space. The array length is nbins.\\
+REAL binstep & Step length in $k$-space in atomic units.\\
+INT nbins & Number of bins to use to build the distribution.\\
+rgrid *workspace1 & Workspace required for the operation.\\
+rgrid *workspace2 & Workspace required for the operation.\\
+rgrid *workspace3 & Workspace required for the operation.\\
+rgrid *workspace4 & Workspace required for the operation.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
 \subsection{grid\_wf\_energy() -- Total energy of wave function}
 
 Calculate the total energy (kinetic + potential) for the wave function. This includes also the energy of the possible moving background. The arguments are as follows:
@@ -2709,8 +2893,7 @@ Calculate the total energy (kinetic + potential) for the wave function. This inc
 Argument & Description\\
 \cline{1-2}
 wf *gwf & Wave function for the energy calculation.\\
-cgrid *potential & Grid containing the potential function.\\
-cgrid *workspace & Additional storage needed for the operation.\\
+rgrid *potential & Grid containing the potential function.\\
 \end{longtable}
 \noindent
 This function returns the total energy (REAL).
@@ -2722,10 +2905,37 @@ This function calculates the potential energy of a given wave function. The argu
 Argument & Description\\
 \cline{1-2}
 wf *gwf & Wave function for the potential energy calculation.\\
-cgrid *potential & Grid containing the potential function.\\
+rgrid *potential & Grid containing the potential function.\\
 \end{longtable}
 \noindent
 This function returns the potential energy (REAL).
+
+\subsection{grid\_wf\_propagate\_predict() -- Propagate wave function in time (predict)}
+
+Propagate the wave function in time subject to a given potential to obtain prediction of the future (non-linear) potential. The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function to be propagated.\\
+wf *gwfp & Wave function to be used to predict the future potential.\\
+cgrid *potential & Grid containing the (complex) potential.\\
+REAL complex time & Time step for propagation (atomic units). Note this is complex.\\
+\end{longtable}
+\noindent
+This function returns no value. This should be used with the matching grid\_wf\_propagate\_correct() function call.
+
+\subsection{grid\_wf\_propagate\_correct() -- Propagate wave function in time (correct)}
+
+Propagate the wave function in time subject to a given potential (e.g., average of current and future potentials). The arguments are:
+\begin{longtable}{p{.3\textwidth} p{.6\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function to be propagated.\\
+cgrid *potential & Grid containing the (complex) potential.\\
+REAL complex time & Time step for propagation (atomic units). Note this is complex.\\
+\end{longtable}
+\noindent
+This function returns no value. This should be used with the matching grid\_wf\_propagate\_predict() function call.
 
 \subsection{grid\_wf\_propagate() -- Propagate wave function in time}
 
@@ -2735,9 +2945,7 @@ Argument & Description\\
 \cline{1-2}
 wf *gwf & Wave function to be propagated.\\
 cgrid *potential & Grid containing the (complex) potential.\\
-cgrid *sq\_grad\_pot & grid containing square of potential gradient. Only used for the 4th order propagator (can be set to NULL when not used).\\
-REAL complex time & Time step for propagation (atomic units). Note this may be complex.\\
-cgrid *workspace & Additional workspace needed for the operation.\\
+REAL complex time & Time step for propagation (atomic units). Note this is complex.\\
 \end{longtable}
 \noindent
 This function returns no value.
@@ -3315,7 +3523,7 @@ int main(int argc, char **argv) {
 
 /* Define this for 4th order accuracy in time */
 /* Otherwise for 2nd order accuracy */
-#define FOURTH_ORDER_PROPAGATOR
+#define FOURTH_ORDER_FFT
 
 REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
 REAL complex harmonic(void *arg, REAL x, REAL y, REAL z);
@@ -3338,10 +3546,7 @@ int main(int argc, char *argv[]) {
   REAL step, lx, time_step;
   REAL complex time;
   wf *gwf = NULL;
-  cgrid *potential, *workspace, *workspace2;
-#ifdef FOURTH_ORDER_PROPAGATOR
-  cgrid *sq_grad_pot;
-#endif
+  cgrid *potential;
   rgrid *rworkspace;
   char fname[256];
   pparams potential_params;
@@ -3349,7 +3554,7 @@ int main(int argc, char *argv[]) {
   
   /* Parameter check */
   if (argc != 14) {
-    fprintf(stderr, "Usage: wavepacket <thr> <npts> <tstep> <iters> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n", argv[0]);
+    fprintf(stderr, "Usage: wavepacket <thr> <npts> <tstep> <iters> <kx> <ky> <kz> <wx> <wy> <wz> <xc> <yc> <zc>\n");
     return -1;
   }
   
@@ -3390,13 +3595,12 @@ int main(int argc, char *argv[]) {
   
   /* allocate memory (mass = 1.0) */
   gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
-                      WF_2ND_ORDER_PROPAGATOR, "WF");
-  potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
-  workspace = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace");
-  workspace2 = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "workspace2");
-#ifdef FOURTH_ORDER_PROPAGATOR
-  sq_grad_pot = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "sq_grad_pot");
+#ifdef FOURTH_ORDER_FFT
+                      WF_4TH_ORDER_FFT, "WF");
+#else
+                      WF_2ND_ORDER_FFT, "WF");
 #endif
+  potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
   rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");
   
   /* Initialize wave function */
@@ -3415,18 +3619,11 @@ int main(int argc, char *argv[]) {
     sprintf(fname, "output-" FMT_I, l);
     rgrid_write_grid(fname, rworkspace);
     /* Propagate one time step */
-#ifdef FOURTH_ORDER_PROPAGATOR
-    grid_wf_square_of_potential_gradient(sq_grad_pot,potential, workspace, workspace2);
-    grid_wf_propagate(gwf, potential, sq_grad_pot, time, workspace);
-#else
-    grid_wf_propagate(gwf, potential, NULL, time, workspace);
-#endif
+    grid_wf_propagate(gwf, potential, time);
   }
 
   /* Release resources */
   grid_wf_free(gwf);
-  cgrid_free(workspace);
-  cgrid_free(workspace2);
   rgrid_free(rworkspace);
   cgrid_free(potential);
   

@@ -19,7 +19,7 @@
 #endif
 
 /*
- * Subroutine for rotating grid around z axis.
+ * Local subroutine for rotating grid around z axis.
  *
  */
 
@@ -164,7 +164,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 }
 
 /*
- * "Clone" a real grid with the parameters idential to the given grid (except new grid->value is allocated).
+ * "Clone" a real grid with the parameters identical to the given grid (except new grid->value is allocated).
  *
  * grid = Grid to be cloned (rgrid *; input).
  * id   = ID string describing the grid (char *; input);
@@ -3000,7 +3000,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
  * 
  */
 
-EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, int npts) {
+EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
 
   INT i, ip, j, jp, k, kp, nx = source->nx, ny = source->ny, nz = source->nz, pts;
   INT li, ui, lj, uj, lk, uk;

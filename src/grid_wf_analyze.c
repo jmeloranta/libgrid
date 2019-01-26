@@ -301,9 +301,9 @@ EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgri
 /*
  * Calculate angular momentum expectation value <L_x>.
  *
- * wf         = Wavefunction (gwf *).
- * workspace1 = Worspace required for the operation (rgrid *).
- * workspace2 = Worspace required for the operation (rgrid *).
+ * wf         = Wavefunction (wf *).
+ * workspace1 = Workspace required for the operation (rgrid *).
+ * workspace2 = Workspace required for the operation (rgrid *).
  *
  * Return <L_x>.
  *
@@ -345,8 +345,8 @@ EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  * Calculate angular momentum expectation value <L_y>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace1 = Worspace required for the operation (rgrid *).
- * workspace2 = Worspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (rgrid *).
+ * workspace2 = Workspace required for the operation (rgrid *).
  *
  * Return <L_y>.
  *
@@ -388,8 +388,8 @@ EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  * Calculate angular momentum expectation value <L_z>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace1 = Worspace required for the operation (rgrid *).
- * workspace2 = Worspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (rgrid *).
+ * workspace2 = Workspace required for the operation (rgrid *).
  *
  * Return <L_z>.
  *
@@ -434,8 +434,8 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  * lx         = Value of l_x (REAL *).
  * ly         = Value of l_y (REAL *).
  * lz         = Value of l_z (REAL *).
- * workspace1 = Worspace required for the operation (rgrid *).
- * workspace2 = Worspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (rgrid *).
+ * workspace2 = Workspace required for the operation (rgrid *).
  *
  * NOTE: The old df_driver_L() routine returned angular momentum * mass.
  *       This routine does not include the mass.
@@ -459,7 +459,7 @@ EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace1, r
  * omega_y = angular frequency in a.u., y-axis (REAL, input)
  * omega_z = angular frequency in a.u., z-axis (REAL, input)
  *
- * No return value.
+ * Returns the rotational energy.
  *
  */
 
