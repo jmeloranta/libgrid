@@ -56,7 +56,7 @@ wf *read_grid(char *file) {
   fread(&ny, sizeof(INT), 1, fp);
   fread(&nz, sizeof(INT), 1, fp);
   fread(&step, sizeof(REAL), 1, fp);
-  wf = grid_wf_alloc(nx, ny, nz, step, MASS, WF_NEUMANN_BOUNDARY, WF_2ND_ORDER_PROPAGATOR, "wf");
+  wf = grid_wf_alloc(nx, ny, nz, step, MASS, WF_NEUMANN_BOUNDARY, WF_2ND_ORDER_FFT, "wf");
   
   if(!been_here) {
     if(!(x = (REAL *) malloc(sizeof(REAL) * (size_t) nx))) {
