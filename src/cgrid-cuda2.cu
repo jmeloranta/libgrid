@@ -1651,6 +1651,8 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
   CUREAL kx, ky, kz;
   extern __shared__ CUREAL els2[];
 
+  if(i >= nx || j >= ny || k >= nz) return;
+
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
       els2[t] = 0.0;

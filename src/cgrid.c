@@ -2501,7 +2501,7 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
 EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy;
-  REAL kx, ky, kz, lz, step, norm, sum = 0, ssum;
+  REAL kx, ky, kz, lz, step, norm, sum = 0.0, ssum;
   REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL complex *lvalue = laplace->value;
   REAL aux;

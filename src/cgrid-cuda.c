@@ -803,7 +803,7 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplace->value, laplace->grid_len, laplace->id, 0) < 0) return -1;
 
-  if (laplace != grid)  cuda_gpu2gpu(cuda_find_block(laplace->value), cuda_find_block(grid->value), 0);
+  if (laplace != grid) cuda_gpu2gpu(cuda_find_block(laplace->value), cuda_find_block(grid->value), 0);
 
   cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), grid->fft_norm, grid->kx0, grid->ky0, grid->kz0, 
                                             grid->step, grid->nx, grid->ny, grid->nz);
