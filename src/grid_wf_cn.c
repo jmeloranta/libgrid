@@ -202,6 +202,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     }      
     d[nx-1] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
+// TODO: There are other than periodic and neumann.
     if(gwf->boundary == WF_PERIODIC_BOUNDARY)
       grid_solve_tridiagonal_system_cyclic2(nx, d, b, &psi[j * nz + k], c2 + c3 * y, nyz, pwrk);
     else

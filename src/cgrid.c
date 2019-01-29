@@ -280,6 +280,20 @@ EXPORT void cgrid_set_momentum(cgrid *grid, REAL kx0, REAL ky0, REAL kz0) {
 }
 
 /*
+ * Set the rotation about the Z-axis.
+ *
+ * omega = rotation frequency about the Z axis (REAL; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void cgrid_set_rotation(cgrid *grid, REAL omega) {
+
+  grid->omega = omega;
+}
+
+/*
  * Free grid.
  *
  * grid = pointer to grid to be freed (cgrid *; input).

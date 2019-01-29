@@ -52,7 +52,7 @@ EXPORT inline void grid_solve_tridiagonal_system(INT n, REAL complex *a, REAL co
  * b = diagonal elements (overwritten) (REAL complex *).
  * v = right hand side vector (overwritten) (REAL complex *).
  * x = solution on exit (REAL complex *).
- * c2 = Off diagonal parameter (REAL complex; input). Sub = c2 - 1 (or c2 at rh boundary); Sup = c2 + 1 (or c2 at lh boundary).
+ * c2 = Off diagonal parameter (REAL complex; input). Sub = 1 - c2 (or c2 at rh boundary); Sup = 1 + c2 (or c2 at lh boundary).
  * str = solution may go to a non-continuous array (INT; input).
  *
  * Status: Compared against Mathematica.

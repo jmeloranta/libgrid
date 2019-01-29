@@ -416,8 +416,54 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
   return grid;
 }
 
+/* 
+ * Read grid from disk in binary format. This is compatible with old libgrid binary grid format.
+ * Due to in place FFT being used, the new grids have holes in them...
+ *
+ * grid = grid to be read (rgrid *; output). If NULL, a grid with the correct dimensions will be allocated.
+ *        Note that the boundary condition will assigned to PERIODIC by default.
+ * in   = file handle for reading the file (FILE *; input).
+ *
+ * Returns pointer to the grid (NULL on error).
+ *
+ */
+
+EXPORT rgrid *rgrid_read_compat(rgrid *grid, FILE *in) {
+
+  INT nx, ny, nz, i, j, k;
+  REAL step, val;
+  
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
+#endif
+  fread(&nx, sizeof(INT), 1, in);
+  fread(&ny, sizeof(INT), 1, in);
+  fread(&nz, sizeof(INT), 1, in);
+  fread(&step, sizeof(REAL), 1, in);
+  
+  if (!grid) {
+    if(!(grid = rgrid_alloc(nx, ny, nz, step, RGRID_PERIODIC_BOUNDARY, NULL, "read_grid"))) {
+      fprintf(stderr, "libgrid: Failed to allocate grid in rgrid_read_compat().\n");
+      return NULL;
+    }
+  }
+
+  if (nx != grid->nx || ny != grid->ny || nz != grid->nz || step != grid->step) {
+    fprintf(stderr, "libgrid: Interpolation not supported for compatibility mode.\n");
+    exit(1);
+  }
+  
+  for (i = 0; i < nx; i++)
+    for (j = 0; j < ny; j++)
+      for (k = 0; k < nz; k++) {
+        fread(&val, sizeof(REAL), 1, in);
+        rgrid_value_to_index(grid, i, j, k, val);
+      }
+  return grid;
+}
+
 /*
- * Read in density from a binary file (.grd).
+ * Read in real grid from a binary file (.grd).
  *
  * grid = place to store the read density (output, rgrid *).
  * file = filename for the file (char *). Note: the .grd extension must NOT be given (input, char *).
@@ -440,7 +486,34 @@ EXPORT void rgrid_read_grid(rgrid *grid, char *file) {
   }
   rgrid_read(grid, fp);
   fclose(fp);
-  fprintf(stderr, "libgrid: Density read from %s.\n", file);
+  fprintf(stderr, "libgrid: Real grid read from %s.\n", file);
+}
+
+/*
+ * Read in real grid from a binary file (.grd). Compatibility with old libgrid binary grid files.
+ *
+ * grid = place to store the read density (output, rgrid *).
+ * file = filename for the file (char *). Note: the .grd extension must NOT be given (input, char *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_read_grid_compat(rgrid *grid, char *file) {
+
+  FILE *fp;
+
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 0);
+#endif
+
+  if(!(fp = fopen(file, "r"))) {
+    fprintf(stderr, "libgrid: Can't open real grid file %s.\n", file);
+    exit(1);
+  }
+  rgrid_read_compat(grid, fp);
+  fclose(fp);
+  fprintf(stderr, "libgrid: Real grid read from %s.\n", file);
 }
 
 /*

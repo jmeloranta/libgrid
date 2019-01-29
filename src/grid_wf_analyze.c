@@ -401,8 +401,8 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
   REAL x0, y0, z0;
 
-  grid_wf_probability_flux_x(wf, workspace1);
-  grid_wf_probability_flux_y(wf, workspace2);
+  grid_wf_probability_flux_x(wf, workspace1); /* px */
+  grid_wf_probability_flux_y(wf, workspace2); /* py */
   x0 = workspace1->x0; 
   workspace1->x0 = wf->grid->x0;
   y0 = workspace1->y0; 
