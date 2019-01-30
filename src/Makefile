@@ -23,8 +23,9 @@ SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c ngrid.c grid_wf.c grid_wf_fft.c gr
 SRC += ext-cuda/func1c.c ext-cuda/func2c.c ext-cuda/func3c.c ext-cuda/func4c.c ext-cuda/func5c.c ext-cuda/func6c.c ext-cuda/func7c.c
 
 ifeq ($(CUDA),yes)
-  SRC += cgrid-cuda.c cgrid_fft-cuda.c rgrid-cuda.c rgrid_fft-cuda.c grid_wf-cuda.c grid_wf_fft-cuda.c grid_wf_cn-cuda.c cuda.c ngrid-cuda.c
-  NVSRC = cgrid-cuda2.cu rgrid-cuda2.cu grid_wf-cuda2.cu grid_wf_fft-cuda2.cu grid_wf_cn-cuda2.cu ngrid-cuda2.cu
+  SRC += cgrid-cuda.c cgrid_fft-cuda.c rgrid-cuda.c rgrid_fft-cuda.c grid_wf-cuda.c grid_wf_fft-cuda.c grid_wf_cn-cuda.c cuda.c \
+         ngrid-cuda.c grid_wf_analyze-cuda.c
+  NVSRC = cgrid-cuda2.cu rgrid-cuda2.cu grid_wf-cuda2.cu grid_wf_fft-cuda2.cu grid_wf_cn-cuda2.cu ngrid-cuda2.cu grid_wf_analyze-cuda2.cu
   NVSRC += ext-cuda/func1cu.cu ext-cuda/func2cu.cu ext-cuda/func3cu.cu ext-cuda/func4cu.cu ext-cuda/func5cu.cu ext-cuda/func6cu.cu ext-cuda/func7cu.cu
 endif
 

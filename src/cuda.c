@@ -831,6 +831,7 @@ EXPORT void cuda_free_all_blocks(char sync) {
 
 EXPORT void cuda_enable(char val) {
 
+  static char been_here = 0;
   void cuda_gpu_info();
 
 #ifdef CUDA_DEBUG
@@ -840,7 +841,10 @@ EXPORT void cuda_enable(char val) {
   enable_cuda = val;
   if(val) {
     fprintf(stderr, "libgrid(cuda): CUDA enabled.\n");
-    cuda_gpu_info();
+    if(!been_here) {
+      cuda_gpu_info();
+      been_here = 1;
+    }
   }
 }
 
@@ -927,7 +931,7 @@ EXPORT void cuda_statistics(char verbose) {
       fprintf(stderr, "Block ID    : %s\n", ptr->id);
       fprintf(stderr, "Block mem   : %lx\n", (long unsigned int) ptr->host_mem);
       fprintf(stderr, "Block gpu   : %lx\n", (long unsigned int) ptr->gpu_mem);
-      fprintf(stderr, "Block size  : %ld MB\n", ptr->length / (1024 * 1024));
+      fprintf(stderr, "Block size  : %ld MB (%ld bytes)\n", ptr->length / (1024 * 1024), ptr->length);
       fprintf(stderr, "Created     : %s", ctime(&(ptr->created)));
       fprintf(stderr, "Last used   : %s", ctime(&(ptr->last_used)));
       fprintf(stderr, "Access cnt  : %ld\n", ptr->access_count);

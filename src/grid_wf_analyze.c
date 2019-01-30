@@ -6,48 +6,6 @@
 #include "grid.h"
 #include "private.h"
 
-static REAL grid_mult_mx(void *xx, REAL x, REAL y, REAL z) {
-
-  rgrid *grid = (rgrid *) xx;
-
-  return -rgrid_value(grid, x, y, z) * (x - grid->x0);
-}
-
-static REAL grid_mult_my(void *xx, REAL x, REAL y, REAL z) {
-
-  rgrid *grid = (rgrid *) xx;
-
-  return -rgrid_value(grid, x, y, z) * (y - grid->y0);
-}
-
-static REAL grid_mult_mz(void *xx, REAL x, REAL y, REAL z) {
-
-  rgrid *grid = (rgrid *) xx;
-
-  return -rgrid_value(grid, x, y, z) * (z - grid->z0);
-}
-
-static REAL grid_mult_x(void *xx, REAL x, REAL y, REAL z) {
-
-  rgrid *grid = (rgrid *) xx;
-
-  return rgrid_value(grid, x, y, z) * (x - grid->x0);
-}
-
-static REAL grid_mult_y(void *xx, REAL x, REAL y, REAL z) {
-
-  rgrid *grid = (rgrid *) xx;
-
-  return rgrid_value(grid, x, y, z) * (y - grid->y0);
-}
-
-static REAL grid_mult_z(void *xx, REAL x, REAL y, REAL z) {
-
-  rgrid *grid = (rgrid *) xx;
-
-  return rgrid_value(grid, x, y, z) * (z - grid->z0);
-}
-
 /*
  * Calculate the velocity field.
  *
@@ -302,129 +260,104 @@ EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgri
  * Calculate angular momentum expectation value <L_x>.
  *
  * wf         = Wavefunction (wf *).
- * workspace1 = Workspace required for the operation (rgrid *).
- * workspace2 = Workspace required for the operation (rgrid *).
+ * workspace  = Workspace required for the operation (rgrid *).
  *
- * Return <L_x>.
- *
- * TODO: CUDA
+ * Return <L_x> (L_x = y p_z - z p_y).
  *
  */
  
-EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace) {
 
-  REAL x0, y0, z0;
-
-  grid_wf_probability_flux_y(wf, workspace1);
-  grid_wf_probability_flux_z(wf, workspace2);
-  x0 = workspace1->x0; 
-  workspace1->x0 = wf->grid->x0;
-  y0 = workspace1->y0; 
-  workspace1->y0 = wf->grid->y0;
-  z0 = workspace1->z0; 
-  workspace1->z0 = wf->grid->z0;
-  rgrid_map(workspace1, grid_mult_mz, workspace1);      // -z * p_y
-  workspace1->x0 = x0;
-  workspace1->y0 = y0;
-  workspace1->z0 = z0;
-  x0 = workspace2->x0; 
-  workspace2->x0 = wf->grid->x0;
-  y0 = workspace2->y0; 
-  workspace2->y0 = wf->grid->y0;
-  z0 = workspace2->z0; 
-  workspace2->z0 = wf->grid->z0;
-  rgrid_map(workspace2, grid_mult_y, workspace2);       // y * p_z
-  workspace2->x0 = x0;
-  workspace2->y0 = y0;
-  workspace2->z0 = z0;
-  rgrid_sum(workspace1, workspace1, workspace2);
-  return rgrid_integral(workspace1);
+  cgrid *grid = wf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, ny2 = ny / 2, nz2 = nz / 2;
+  REAL step = grid->step, inv_delta = HBAR / (2.0 * wf->mass * step), y, z, y0 = grid->y0, z0 = grid->z0;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_lx(wf, workspace, inv_delta)) return rgrid_integral(workspace);
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,ny2,nz2,nxy,workspace,grid,inv_delta,y0,z0,step) private(i,j,ij,k,y,z) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    y = ((REAL) (j - ny2)) * step - y0;
+    for(k = 0; k < nz; k++) {
+      z = ((REAL) (k - nz2)) * step - z0;    
+      rgrid_value_to_index(workspace, i, j, k, 
+        (y * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j, k+1) - cgrid_value_at_index(grid, i, j, k-1))) /* y * p_z */
+        -z * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j+1, k) - cgrid_value_at_index(grid, i, j-1, k))) /*-z * p_y */
+        ) * inv_delta);
+    }
+  }
+  return rgrid_integral(workspace);
 }
 
 /*
  * Calculate angular momentum expectation value <L_y>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace1 = Workspace required for the operation (rgrid *).
- * workspace2 = Workspace required for the operation (rgrid *).
+ * workspace  = Workspace required for the operation (rgrid *).
  *
- * Return <L_y>.
- *
- * TODO: CUDA
+ * Return <L_y> (L_y = z * p_x - x * p_z).
  *
  */
  
-EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace) {
 
-  REAL x0, y0, z0;
-
-  grid_wf_probability_flux_z(wf, workspace1);
-  grid_wf_probability_flux_x(wf, workspace2);
-  x0 = workspace1->x0; 
-  workspace1->x0 = wf->grid->x0;
-  y0 = workspace1->y0; 
-  workspace1->y0 = wf->grid->y0;
-  z0 = workspace1->z0;
-   workspace1->z0 = wf->grid->z0;
-  rgrid_map(workspace1, grid_mult_mx, workspace1);      // -x * p_z
-  workspace1->x0 = x0;
-  workspace1->y0 = y0;
-  workspace1->z0 = z0;
-  x0 = workspace2->x0; 
-  workspace2->x0 = wf->grid->x0;
-  y0 = workspace2->y0; 
-  workspace2->y0 = wf->grid->y0;
-  z0 = workspace2->z0; 
-  workspace2->z0 = wf->grid->z0;
-  rgrid_map(workspace2, grid_mult_z, workspace2);       // z * p_x
-  workspace2->x0 = x0;
-  workspace2->y0 = y0;
-  workspace2->z0 = z0;
-  rgrid_sum(workspace1, workspace1, workspace2);
-  return rgrid_integral(workspace1);
+  cgrid *grid = wf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nx2 = nx / 2, nz2 = nz / 2;
+  REAL step = grid->step, inv_delta = HBAR / (2.0 * wf->mass * step), x, z, x0 = grid->x0, z0 = grid->z0;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_ly(wf, workspace, inv_delta)) return rgrid_integral(workspace);
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nx2,nz2,nxy,workspace,grid,inv_delta,x0,z0,step) private(i,j,ij,k,x,z) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    x = ((REAL) (i - nx2)) * step - x0;
+    for(k = 0; k < nz; k++) {
+      z = ((REAL) (k - nz2)) * step - z0;    
+      rgrid_value_to_index(workspace, i, j, k, 
+        (z * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i+1, j, k) - cgrid_value_at_index(grid, i-1, j, k))) /* z * p_x */
+        -x * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j, k+1) - cgrid_value_at_index(grid, i, j, k-1))) /*-x * p_z */
+        ) * inv_delta);
+    }
+  }
+  return rgrid_integral(workspace);
 }
 
 /*
  * Calculate angular momentum expectation value <L_z>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace1 = Workspace required for the operation (rgrid *).
- * workspace2 = Workspace required for the operation (rgrid *).
+ * workspace  = Workspace required for the operation (rgrid *).
  *
- * Return <L_z>.
- *
- * TODO: CUDA (map)
+ * Return <L_z> (L_z = x p_y - y p_x).
  *
  */
  
-EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace) {
 
-  REAL x0, y0, z0;
-
-  grid_wf_probability_flux_x(wf, workspace1); /* px */
-  grid_wf_probability_flux_y(wf, workspace2); /* py */
-  x0 = workspace1->x0; 
-  workspace1->x0 = wf->grid->x0;
-  y0 = workspace1->y0; 
-  workspace1->y0 = wf->grid->y0;
-  z0 = workspace1->z0; 
-  workspace1->z0 = wf->grid->z0;
-  rgrid_map(workspace1, grid_mult_my, workspace1);      // -y * p_x
-  workspace1->x0 = x0;
-  workspace1->y0 = y0;
-  workspace1->z0 = z0;
-  x0 = workspace2->x0; 
-  workspace2->x0 = wf->grid->x0;
-  y0 = workspace2->y0; 
-  workspace2->y0 = wf->grid->y0;
-  z0 = workspace2->z0; 
-  workspace2->z0 = wf->grid->z0;
-  rgrid_map(workspace2, grid_mult_x, workspace2);       // x * p_y
-  workspace2->x0 = x0;
-  workspace2->y0 = y0;
-  workspace2->z0 = z0;
-  rgrid_sum(workspace1, workspace1, workspace2);
-  return rgrid_integral(workspace1);
+  cgrid *grid = wf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nx2 = nx / 2, ny2 = ny / 2;
+  REAL step = grid->step, inv_delta = HBAR / (2.0 * wf->mass * step), x, y, x0 = grid->x0, y0 = grid->y0;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_lz(wf, workspace, inv_delta)) return rgrid_integral(workspace);
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nxy,workspace,grid,inv_delta,x0,y0,step) private(i,j,ij,k,x,y) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    x = ((REAL) (i - nx2)) * step - x0;
+    y = ((REAL) (j - ny2)) * step - y0;    
+    for(k = 0; k < nz; k++)
+      rgrid_value_to_index(workspace, i, j, k, 
+        (x * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j+1, k) - cgrid_value_at_index(grid, i, j-1, k))) /* x * p_y */
+        -y * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i+1, j, k) - cgrid_value_at_index(grid, i-1, j, k))) /*-y * p_x */
+        ) * inv_delta);
+  }
+  return rgrid_integral(workspace);
 }
 
 /*
@@ -434,8 +367,7 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  * lx         = Value of l_x (REAL *).
  * ly         = Value of l_y (REAL *).
  * lz         = Value of l_z (REAL *).
- * workspace1 = Workspace required for the operation (rgrid *).
- * workspace2 = Workspace required for the operation (rgrid *).
+ * workspace  = Workspace required for the operation (rgrid *).
  *
  * NOTE: The old df_driver_L() routine returned angular momentum * mass.
  *       This routine does not include the mass.
@@ -444,30 +376,31 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  *
  */
  
-EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace1, rgrid *workspace2) {
+EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace) {
 
-  *lx = grid_wf_lx(wf, workspace1, workspace2);
-  *ly = grid_wf_ly(wf, workspace1, workspace2);
-  *lz = grid_wf_lz(wf, workspace1, workspace2);
+  *lx = grid_wf_lx(wf, workspace);
+  *ly = grid_wf_ly(wf, workspace);
+  *lz = grid_wf_lz(wf, workspace);
 }
 
 /*
  * Calculate the energy from the rotation constraint, -<omega*L>.
  *
- * gwf     = wavefunction for the system (wf *; input).
- * omega_x = angular frequency in a.u., x-axis (REAL, input)
- * omega_y = angular frequency in a.u., y-axis (REAL, input)
- * omega_z = angular frequency in a.u., z-axis (REAL, input)
+ * gwf       = wavefunction for the system (wf *; input).
+ * omega_x   = angular frequency in a.u., x-axis (REAL, input)
+ * omega_y   = angular frequency in a.u., y-axis (REAL, input)
+ * omega_z   = angular frequency in a.u., z-axis (REAL, input)
+ * workspace = Workspace required for the operation (rgrid *).
  *
  * Returns the rotational energy.
  *
  */
 
-EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL omega_z, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL omega_z, rgrid *workspace) {
 
   REAL lx, ly, lz;
 
-  grid_wf_l(gwf, &lx, &ly, &lz, workspace1, workspace2);
+  grid_wf_l(gwf, &lx, &ly, &lz, workspace);
   return -(omega_x * lx * gwf->mass) - (omega_y * ly * gwf->mass) - (omega_z * lz * gwf->mass);
 }
 
