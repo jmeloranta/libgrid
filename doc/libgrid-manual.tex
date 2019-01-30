@@ -397,7 +397,7 @@ Argument & Description\\
 rgrid *grid & Grid where the data is to be read. If NULL, a grid with the correct dimensions will be allocated. Note that the boundary condition will assigned to periodic by default.\\
 FILE *in & File handle for reading the file I/O.\\
 \end{longtable}
-This function returns a pointer to the grid or NULL pointer on error.
+This function returns a pointer to the grid or NULL pointer on error. Note that there is also a function called rgrid\_read\_compat(), which takes the same arguments as above. This should only be used for grids prepared with old versions of libgrid (change in grid structure due to in-place FFT in new libgrid).
 
 \subsection{rgrid\_write\_grid() -- Write grid to disk with cutoffs along axes}
 
@@ -421,7 +421,7 @@ rgrid *grid & Grid to be stored in memory.\\
 char *file & File name for the file.\\
 \end{longtable}
 \noindent
-This function does not return any value. See also grid\_read().
+This function does not return any value. See also grid\_read(). Note that there is also a function called rgrid\_read\_grid\_compat(), which takes the same arguments as above. This should only be used for grids prepared with old versions of libgrid (change in grid structure due to in-place FFT in new libgrid).
 
 \subsection{rgrid\_copy() -- Copy grid}
 
@@ -1484,6 +1484,10 @@ $$vx_{0,min} = 2\pi\hbar / (NX * STEP * MASS)$$
 $$vy_{0,min} = 2\pi\hbar / (NY * STEP * MASS)$$
 $$vz_{0,min} = 2\pi\hbar / (NZ * STEP * MASS)$$
 where MASS is the particle mass. This function does not return any value.
+
+\subsection{cgrid\_set\_rotation() -- Set rotational constraint to grid}
+
+Set rotation constraint about the $z$-axis (with rotation frequency $\omega$). This function takes two arguments: the 1st argument is complex grid (cgrid *) and the second the rotation frequency $\omega$ (REAL; in atomic units). This is similar to setting a moving background but instead provides rotational motion. This function does not return any value. Note that only Crank-Nicolson propagator can handle this constraint.
 
 \subsection{cgrid\_free() -- Free real-valued grid}
 
