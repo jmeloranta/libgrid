@@ -5,10 +5,10 @@
 - try using local memory for derivatives in CUDA (avooid jumping in memory)
 - large memory cuda: something's not right with memory transfers - slow?
 - CUDA: Does CN with absorbing boundaries work correctly??
-  write CUDA version so that driver.c scale_wf does not have to fetch data from GPU
 - Poisson solver for other than periodic BC
 - multi GPU support (at least be able to select GPU). Can we use streams?
 - Fortran support: iso_c_binding, interface / end interface.
+- CUDA: most things have periodic BCs hardwired...
 
 also fgrep TODO *.[ch] to find out more specific issues.
 
