@@ -33,6 +33,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(IN
     ly = ab->data[2];
     hy = ab->data[3];
     lz = ab->data[4];
+    hz = ab->data[5];
   }
   if(time && CIMAG(tstep) != 0.0) {
     fprintf(stderr, "libgrid: Imaginary time for absorbing boundary - forcing real time.\n");
@@ -74,6 +75,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(IN
     ly = ab->data[2];
     hy = ab->data[3];
     lz = ab->data[4];
+    hz = ab->data[5];
  }
   if(time && CIMAG(tstep) != 0.0) {
     fprintf(stderr, "libgrid: Imaginary time for absorbing boundary - forcing real time.\n");
@@ -116,6 +118,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex (*time)(IN
     ly = ab->data[2];
     hy = ab->data[3];
     lz = ab->data[4];
+    hz = ab->data[5];
   }
   if(time && CIMAG(tstep) != 0.0) {
     fprintf(stderr, "libgrid: Imaginary time for absorbing boundary - forcing real time.\n");
