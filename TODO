@@ -9,6 +9,7 @@
 - multi GPU support (at least be able to select GPU). Can we use streams?
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
+- CUDA: Think about streams (and multiple GPUs). libdft could certainly use this.
 
 also fgrep TODO *.[ch] to find out more specific issues.
 
