@@ -13,49 +13,10 @@
 #include "cuda-math.h"
 #include "defs.h"
 #include "linalg-cuda.h"
+#include "grid_wf-cuda.h"
 
 extern void *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
-
-/*
- * grid_wf_absorb cuda equivalent.
- *
- * i         = Index i (x) (INT; input).
- * j         = Index j (y) (INT; input).
- * k         = Index k (z) (INT; input).
- * amp       = Ampltude for absorption (REAL; input).
- * lx        = Lower limit index for i (x) (INT; input).
- * hx        = Upper limit index for i (x) (INT; input).
- * ly        = Lower limit index for j (y) (INT; input).
- * hy        = Upper limit index for j (y) (INT; input).
- * lz        = Lower limit index for k (z) (INT; input).
- * hz        = Upper limit index for k (z) (INT; input).
- * time_step = Time step (REAL complex; input).
- * 
- * Returns the (complex) time step to be applied.
- *
- */
-
-__device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, CUCOMPLEX time_step) {
-
-  CUCOMPLEX t;
-
-  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return time_step;
-
-  t.x = 1.0; t.y = 0.0;
-
-  if(i < lx) t.y -= ((CUREAL) (lx - i)) / (3.0 * (CUREAL) lx);
-  else if(i > hx) t.y -= ((CUREAL) (i - hx)) / (3.0 * (CUREAL) lx);
-
-  if(j < ly) t.y -= ((CUREAL) (ly - j)) / (3.0 * (CUREAL) ly);
-  else if(j > hy) t.y -= ((CUREAL) (j - hy)) / (3.0 * (CUREAL) ly);
-
-  if(k < lz) t.y -= ((CUREAL) (lz - k)) / (3.0 * (CUREAL) lz);
-  else if(k > hz) t.y -= ((CUREAL) (k - hz)) / (3.0 * (CUREAL) lz);
-
-  t.y *= amp;
-  return t * time_step;
-}
 
 /*
  * Propagate wf using CN along X.
@@ -468,54 +429,3 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   cuda_error_check();
 }
 
-/*
- * Potential energy propagation in real space (possibly with absorbing boundaries).
- *
- */
-
-__global__ void grid_cuda_wf_propagate_potential_gpu(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX time_step, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
-
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUCOMPLEX c;
-
-  if(i >= nx || j >= ny || k >= nz) return;
-
-  idx = (i * ny + j) * nz + k;
-  if(amp == 0.0) 
-    c = CUMAKE(0.0, -1.0 / HBAR) * time_step;
-  else
-    c = CUMAKE(0.0, -1.0 / HBAR) * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, time_step);
-  b[idx] = b[idx] * CUCEXP(c * pot[idx]);
-}
-
-/*
- * Propagate potential energy in real space with absorbing boundaries.
- *
- * wf       = Source/destination grid for operation (REAL complex *; input/output).
- * pot      = Potential grid (CUCOMPLEX *; input).
- * time_step= Time step length (CUCOMPLEX; input).
- * amp      = Max amplitude for imag. part (CUREAL; input).
- * lx       = Lower bound for absorbing bc (INT; input).
- * hx       = Upper bound for absorbing bc (INT; input).
- * ly       = Lower bound for absorbing bc (INT; input).
- * hy       = Upper bound for absorbing bc (INT; input).
- * lz       = Lower bound for absorbing bc (INT; input).
- * hz       = Upper bound for absorbing bc (INT; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
- *
- * Only periodic boundaries!
- *
- */
-
-extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *pot, CUCOMPLEX time_step, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
-
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-
-  grid_cuda_wf_propagate_potential_gpu<<<blocks,threads>>>(grid, pot, time_step, amp, lx, hx, ly, hy, lz, hz, nx, ny, nz);
-  cuda_error_check();
-}

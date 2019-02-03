@@ -35,6 +35,7 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, 
     ly = ab->data[2];
     hy = ab->data[3];
     lz = ab->data[4];
+    hz = ab->data[5];
   }
   if(time && CIMAG(tstep) != 0.0) {
     fprintf(stderr, "libgrid: Imaginary time for absorbing boundary - forcing real time.\n");
