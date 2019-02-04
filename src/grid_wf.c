@@ -254,6 +254,8 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
  *
  * No return value.
  *
+ * NOTE: FFT can only do absorption for the potential part (CN does both).
+ *
  */
 
 EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL complex time) {  
@@ -268,7 +270,10 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       }
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       cgrid_copy(gwfp->grid, gwf->grid);
-      grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwfp, grid_wf_absorb, time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwfp, NULL, time, NULL, potential);
       /* continue with correct cycle */
       break;
     case WF_4TH_ORDER_FFT:
@@ -311,7 +316,10 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
   
   switch(gwf->propagator) {
     case WF_2ND_ORDER_FFT:
-      grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwf, NULL, time, NULL, potential);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       /* end correct cycle */
       break;
@@ -360,9 +368,15 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         exit(1);
       }
-      grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential); // TODO: oreder of pot and ke matters?
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
       grid_wf_propagate_kinetic_fft(gwf, time);
-      grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, half_time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwf, NULL, half_time, NULL, potential);
       break;
     case WF_4TH_ORDER_FFT:
       if(gwf->grid->omega != 0.0) {
@@ -371,14 +385,23 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       }
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
       if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
-      grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, one_sixth_time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
       grid_wf_propagate_kinetic_fft(gwf, half_time);    
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
       cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
-      grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, gwf->cworkspace);
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, two_thirds_time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwf, NULL, two_thirds_time, NULL, gwf->cworkspace);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
-      grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
+      if(gwf->ts_func)
+        grid_wf_propagate_potential(gwf, grid_wf_absorb, one_sixth_time, &(gwf->abs_data), potential);
+      else
+        grid_wf_propagate_potential(gwf, NULL, one_sixth_time, NULL, potential);
       break;
     case WF_4TH_ORDER_CN:
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
