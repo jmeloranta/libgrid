@@ -1,15 +1,15 @@
 - use malloc/free when moving blocks to/from GPU. This way the GPU node does not need as much memory (but we can use swap...)
 - Still sometimes eating all CPU (800% !, 100% would be OK) while everything should be running on GPU?! It seems to have openmp
-  busy wait threads as well as cuda initiated threads.
+  busy wait threads as well as cuda initiated threads (so, it takes a while for openmp to shutdown those?).
 - write kernels in .h files that can be included by both openmp and cuda code.
-- try using local memory for derivatives in CUDA (avooid jumping in memory)
-- large memory cuda: something's not right with memory transfers - slow?
-- CUDA performance of Crank-Nicolson is rather poor... too complex kernels, parameter tuning?
+- try using local memory for derivatives in CUDA (avoid jumping in memory)
+- CUDA performance of Crank-Nicolson is poor... too complex kernels, parameter tuning?
 - Poisson solver for other than periodic BC
-- multi GPU support (at least be able to select GPU). Can we use streams?
+- multi GPU support. Can we use streams?
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
-- CUDA: Think about streams (and multiple GPUs). libdft could certainly use this.
+- CUDA: Think about streams (and multiple GPUs). libdft could certainly use this. Also cufft can spread over multiple GPUs.
+- Test compressible/incompressible decomposition with plane waves and vortex line.
 
 also fgrep TODO *.[ch] to find out more specific issues.
 
