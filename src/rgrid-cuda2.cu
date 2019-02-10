@@ -4,9 +4,6 @@
  * blockDim = # of threads
  * gridDim = # of blocks
  *
- * Finite difference and integration routines do not seem to benefit from reducing to 1-D.
- * Scattered memory access any way and additional divisions make them slower.
- *
  */
 
 #include <cuda/cuda_runtime_api.h>
@@ -25,20 +22,16 @@ extern "C" void cuda_error_check();
  *
  */
 
-__global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPLEX *b, CUREAL norm, INT nyz, INT nz, INT maxidx) {
+__global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPLEX *b, CUREAL norm, INT nx, INT ny, INT nz) {
 
-  INT idx, idx2, i, j, k;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) {
-    idx2 = idx;
-    i = idx / nyz;   // TODO figure out odd-even without division (expensive) ?
-    idx = idx - i * nyz;
-    j = idx / nz;
-    k = idx - j * nz;
-    if((i + j + k) & 1) norm *= -1.0;
-    c[idx2] = norm * a[idx2] * b[idx2];
-  }
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  if((i + j + k) & 1) norm *= -1.0;
+  c[idx] = norm * a[idx] * b[idx];
 }
 
 /*
@@ -47,22 +40,25 @@ __global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPL
  * Multiplication in GPU memory: grid_gpu_mem[i] = grid_gpu_mem[i] * grid_gpu_mem[j] (with sign variation).
  * Note: this includes the sign variation needed for convolution as well as normalization!
  *
- * grida  = 1st grid to be convoluted (CUCOMPLEX *; input).
- * gridb  = 2nd grid to be convoluted (CUCOMPLEX *; input).
- * gridc  = output (CUCOMPLEX *; output).
- * norm   = FFT norm (REAL; input).
- * ny     = Grid dim y times (INT; input).
- * nz     = Grid dim z (INT; input). This is grid->nz2 / 2.
- * nblocks= Number of blocks (INT; input).
- * nelem  = Number of elements (INT; input).
+ * grida = 1st grid to be convoluted (CUCOMPLEX *; input).
+ * gridb = 2nd grid to be convoluted (CUCOMPLEX *; input).
+ * gridc = output (CUCOMPLEX *; output).
+ * norm  = FFT norm (REAL; input).
+ * nx    = Grid dim x (INT; input).
+ * ny    = Grid dim y (INT; input).
+ * nz    = Grid dim z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL norm, INT ny, INT nz, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL norm, INT nx, INT ny, INT nz) {
 
-  INT nyz = ny * nz;
+  INT nzz = nz / 2 + 1;
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nzz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fft_convolute_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(gridc, grida, gridb, norm, nyz, nz, nelem);
+  rgrid_cuda_fft_convolute_gpu<<<blocks,threads>>>(gridc, grida, gridb, norm, nx, ny, nzz);
   cuda_error_check();
 }
 
@@ -72,12 +68,16 @@ extern "C" void rgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CU
  *
  */
 
-__global__ void rgrid_cuda_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT maxidx) {
+__global__ void rgrid_cuda_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT ny, INT nz, INT nzz) {
   
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = POW(b[idx], x);
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = POW(b[idx], x);
 }
 
 /*
@@ -85,14 +85,20 @@ __global__ void rgrid_cuda_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT maxidx)
  *
  * grida    = Destination for operation (REAL *; output).
  * gridb    = Source for operation (REAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_power_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, exponent, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_power_gpu<<<blocks,threads>>>(grida, gridb, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -102,12 +108,16 @@ extern "C" void rgrid_cuda_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent,
  *
  */
 
-__global__ void rgrid_cuda_abs_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT maxidx) {
+__global__ void rgrid_cuda_abs_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = POW(FABS(b[idx]), x);
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = POW(FABS(b[idx]), x);
 }
 
 /*
@@ -115,14 +125,20 @@ __global__ void rgrid_cuda_abs_power_gpu(CUREAL *a, CUREAL *b, CUREAL x, INT max
  *
  * grida    = Destination for operation (REAL *; output).
  * gridb    = Source for operation (REAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_abs_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_abs_powerW(CUREAL *grida, CUREAL *gridb, CUREAL exponent, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_abs_power_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, exponent, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_abs_power_gpu<<<blocks,threads>>>(grida, gridb, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -132,12 +148,13 @@ extern "C" void rgrid_cuda_abs_powerW(CUREAL *grida, CUREAL *gridb, CUREAL expon
  *
  */
 
-__global__ void rgrid_cuda_multiply_gpu(CUREAL *a, CUREAL c, INT maxidx) {
+__global__ void rgrid_cuda_multiply_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] *= c;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  a[(i * ny + j) * nzz + k] *= c;
 }
 
 /*
@@ -145,14 +162,20 @@ __global__ void rgrid_cuda_multiply_gpu(CUREAL *a, CUREAL c, INT maxidx) {
  *
  * grid     = Grid to be operated on (CUREAL *; input/output).
  * c        = Multiplying constant (CUREAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_multiplyW(CUREAL *grid, CUREAL c, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_multiplyW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_multiply_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grid, c, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_multiply_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -162,12 +185,16 @@ extern "C" void rgrid_cuda_multiplyW(CUREAL *grid, CUREAL c, INT nblocks, INT ne
  *
  */
 
-__global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *a, CUREAL c, INT maxidx) {
+__global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *a, CUREAL c, INT nx, INT ny, INT nz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = a[idx] * c;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+  a[idx] = a[idx] * c;
 }
 
 /*
@@ -175,14 +202,21 @@ __global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *a, CUREAL c, INT maxidx) 
  *
  * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
  * c        = Multiplying constant (CUREAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_multiply_fftW(CUCOMPLEX *grid, CUREAL c, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_multiply_fftW(CUCOMPLEX *grid, CUREAL c, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_multiply_fft_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grid, c, nelem);
+  INT nzz = nz / 2 + 1;
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nzz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_multiply_fft_gpu<<<blocks,threads>>>(grid, c, nx, ny, nzz);
   cuda_error_check();
 }
 
@@ -192,12 +226,16 @@ extern "C" void rgrid_cuda_multiply_fftW(CUCOMPLEX *grid, CUREAL c, INT nblocks,
  *
  */
 
-__global__ void rgrid_cuda_sum_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT maxidx) {
+__global__ void rgrid_cuda_sum_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = b[idx] + c[idx];
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = b[idx] + c[idx];
 }
 
 /*
@@ -206,14 +244,20 @@ __global__ void rgrid_cuda_sum_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT maxidx) 
  * grida    = Destination grid (CUREAL *; output).
  * gridb    = Input grid 1 (CUREAL *; input).
  * gridc    = Input grid 2 (CUREAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_sumW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_sumW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_sum_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, gridc, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_sum_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -223,12 +267,16 @@ extern "C" void rgrid_cuda_sumW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT
  *
  */
 
-__global__ void rgrid_cuda_difference_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT maxidx) {
+__global__ void rgrid_cuda_difference_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = b[idx] - c[idx];
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = b[idx] - c[idx];
 }
 
 /*
@@ -237,14 +285,20 @@ __global__ void rgrid_cuda_difference_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT m
  * grida    = Destination grid (CUREAL *; output).
  * gridb    = Input grid 1 (CUREAL *; input).
  * gridc    = Input grid 2 (CUREAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_differenceW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_differenceW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_difference_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, gridc, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_difference_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -254,13 +308,16 @@ extern "C" void rgrid_cuda_differenceW(CUREAL *grida, CUREAL *gridb, CUREAL *gri
  *
  */
 
-__global__ void rgrid_cuda_product_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT maxidx) {
+__global__ void rgrid_cuda_product_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if(i >= nx || j >= ny || k >= nz) return;
 
-  if(idx < maxidx) a[idx] = b[idx] * c[idx];
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = b[idx] * c[idx];
 }
 
 /*
@@ -269,14 +326,20 @@ __global__ void rgrid_cuda_product_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT maxi
  * grida    = Destination grid (CUREAL *; output).
  * gridb    = Source grid 1 (CUREAL *; input).
  * gridc    = Source grid 2 (CUREAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_productW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_productW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_product_gpu<<<nblocks, CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, gridc, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_product_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -286,12 +349,16 @@ extern "C" void rgrid_cuda_productW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc,
  *
  */
 
-__global__ void rgrid_cuda_division_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT maxidx) {
+__global__ void rgrid_cuda_division_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = b[idx] / c[idx];
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = b[idx] / c[idx];
 }
 
 /*
@@ -300,14 +367,20 @@ __global__ void rgrid_cuda_division_gpu(CUREAL *a, CUREAL *b, CUREAL *c, INT max
  * grida    = Destination grid (CUREAL *; output).
  * gridb    = Source grid 1 (CUREAL *; input).
  * gridc    = Source grid 2 (CUREAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_divisionW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_divisionW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_division_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, gridc, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_division_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -317,12 +390,16 @@ extern "C" void rgrid_cuda_divisionW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc
  *
  */
 
-__global__ void rgrid_cuda_division_eps_gpu(CUREAL *a, CUREAL *b, CUREAL *c, CUREAL eps, INT maxidx) {
+__global__ void rgrid_cuda_division_eps_gpu(CUREAL *a, CUREAL *b, CUREAL *c, CUREAL eps, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = b[idx] / (c[idx] + eps);
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = b[idx] / (c[idx] + eps);
 }
 
 /*
@@ -332,14 +409,20 @@ __global__ void rgrid_cuda_division_eps_gpu(CUREAL *a, CUREAL *b, CUREAL *c, CUR
  * gridb    = Source grid 1 (CUREAL *; input).
  * gridc    = Source grid 2 (CUREAL *; input).
  * eps      = Epsilon (CUREAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_division_epsW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, CUREAL eps, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_division_epsW(CUREAL *grida, CUREAL *gridb, CUREAL *gridc, CUREAL eps, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_division_eps_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, gridc, eps, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_division_eps_gpu<<<blocks,threads>>>(grida, gridb, gridc, eps, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -349,12 +432,16 @@ extern "C" void rgrid_cuda_division_epsW(CUREAL *grida, CUREAL *gridb, CUREAL *g
  *
  */
 
-__global__ void rgrid_cuda_add_gpu(CUREAL *a, CUREAL c, INT maxidx) {
+__global__ void rgrid_cuda_add_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] += c;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] += c;
 }
 
 /*
@@ -362,14 +449,20 @@ __global__ void rgrid_cuda_add_gpu(CUREAL *a, CUREAL c, INT maxidx) {
  *
  * grid     = Grid to be operated on (CUREAL *; input/output).
  * c        = Constant (CUREAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_addW(CUREAL *grid, CUREAL c, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_addW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_add_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grid, c, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_add_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -379,12 +472,16 @@ extern "C" void rgrid_cuda_addW(CUREAL *grid, CUREAL c, INT nblocks, INT nelem) 
  *
  */
 
-__global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *a, CUREAL cm, CUREAL ca, INT maxidx) {
+__global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *a, CUREAL cm, CUREAL ca, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = a[idx] * cm + ca;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = a[idx] * cm + ca;
 }
 
 /*
@@ -393,14 +490,20 @@ __global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *a, CUREAL cm, CUREAL ca,
  * grid     = Grid to be operated on (CUREAL *; input/output).
  * cm       = Multiplier (CUREAL; input).
  * ca       = Additive constant (CUREAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_multiply_and_addW(CUREAL *grid, CUREAL cm, REAL ca, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_multiply_and_addW(CUREAL *grid, CUREAL cm, REAL ca, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_multiply_and_add_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grid, cm, ca, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_multiply_and_add_gpu<<<blocks,threads>>>(grid, cm, ca, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -410,12 +513,16 @@ extern "C" void rgrid_cuda_multiply_and_addW(CUREAL *grid, CUREAL cm, REAL ca, I
  *
  */
 
-__global__ void rgrid_cuda_add_and_multiply_gpu(CUREAL *a, CUREAL ca, CUREAL cm, INT maxidx) {
+__global__ void rgrid_cuda_add_and_multiply_gpu(CUREAL *a, CUREAL ca, CUREAL cm, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = (a[idx] + ca) * cm;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = (a[idx] + ca) * cm;
 }
 
 /*
@@ -424,14 +531,20 @@ __global__ void rgrid_cuda_add_and_multiply_gpu(CUREAL *a, CUREAL ca, CUREAL cm,
  * grid     = Grid to be operated on (CUREAL *; input/output).
  * cm       = Multiplier (CUREAL; input).
  * ca       = Additive constant (CUREAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_add_and_multiplyW(CUREAL *grid, CUREAL ca, CUREAL cm, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_add_and_multiplyW(CUREAL *grid, CUREAL ca, CUREAL cm, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_add_and_multiply_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grid, ca, cm, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_add_and_multiply_gpu<<<blocks,threads>>>(grid, ca, cm, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -441,12 +554,16 @@ extern "C" void rgrid_cuda_add_and_multiplyW(CUREAL *grid, CUREAL ca, CUREAL cm,
  *
  */
 
-__global__ void rgrid_cuda_add_scaled_gpu(CUREAL *a, CUREAL d, CUREAL *b, INT maxidx) {
+__global__ void rgrid_cuda_add_scaled_gpu(CUREAL *a, CUREAL d, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = a[idx] + b[idx] * d;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = a[idx] + b[idx] * d;
 }
 
 /*
@@ -455,14 +572,20 @@ __global__ void rgrid_cuda_add_scaled_gpu(CUREAL *a, CUREAL d, CUREAL *b, INT ma
  * grida    = Destination for operation (REAL *; output).
  * d        = Scaling factor (REAL; input).
  * gridb    = Source for operation (REAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_add_scaledW(CUREAL *grida, CUREAL d, CUREAL *gridb, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_add_scaledW(CUREAL *grida, CUREAL d, CUREAL *gridb, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_add_scaled_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, d, gridb, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(grida, d, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -472,12 +595,16 @@ extern "C" void rgrid_cuda_add_scaledW(CUREAL *grida, CUREAL d, CUREAL *gridb, I
  *
  */
 
-__global__ void rgrid_cuda_add_scaled_product_gpu(CUREAL *a, CUREAL d, CUREAL *b, CUREAL *c, INT maxidx) {
+__global__ void rgrid_cuda_add_scaled_product_gpu(CUREAL *a, CUREAL d, CUREAL *b, CUREAL *c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = a[idx] + d * b[idx] * c[idx];
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = a[idx] + d * b[idx] * c[idx];
 }
 
 /*
@@ -487,14 +614,20 @@ __global__ void rgrid_cuda_add_scaled_product_gpu(CUREAL *a, CUREAL d, CUREAL *b
  * d        = Scaling factor (REAL; input).
  * gridb    = Source for operation (REAL *; input).
  * gridc    = Source for operation (REAL *; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_add_scaled_productW(CUREAL *grida, CUREAL d, CUREAL *gridb, CUREAL *gridc, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_add_scaled_productW(CUREAL *grida, CUREAL d, CUREAL *gridb, CUREAL *gridc, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_add_scaled_product_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, d, gridb, gridc, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_add_scaled_product_gpu<<<blocks,threads>>>(grida, d, gridb, gridc, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -504,12 +637,16 @@ extern "C" void rgrid_cuda_add_scaled_productW(CUREAL *grida, CUREAL d, CUREAL *
  *
  */
 
-__global__ void rgrid_cuda_constant_gpu(CUREAL *a, CUREAL c, INT maxidx) {
+__global__ void rgrid_cuda_constant_gpu(CUREAL *a, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) a[idx] = c;
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  a[idx] = c;
 }
 
 /*
@@ -517,14 +654,20 @@ __global__ void rgrid_cuda_constant_gpu(CUREAL *a, CUREAL c, INT maxidx) {
  *
  * grid     = Destination for operation (REAL *; output).
  * c        = Constant (REAL; input).
- * nblocks  = Number of blocks to use (INT; input).
- * nelem    = Number of elements in the grids (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_constantW(CUREAL *grid, CUREAL c, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_constantW(CUREAL *grid, CUREAL c, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_constant_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grid, c, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_constant_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 
@@ -1371,36 +1514,38 @@ extern "C" void rgrid_cuda_abs_rotW(CUREAL *rot, CUREAL *fx, CUREAL *fy, CUREAL 
  *
  */
 
-__global__ void rgrid_cuda_ipower_gpu(CUREAL *a, CUREAL *b, INT n, INT maxidx) {
+__global__ void rgrid_cuda_ipower_gpu(CUREAL *a, CUREAL *b, INT n, INT nx, INT ny, INT nz, INT nzz) {
   
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx, ii, sig;
   CUREAL value = 1.0;
 
-  idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if(idx < maxidx) {
-    if(n == 0) {
-      a[idx] = 1.0;
-      return;
-    }
-    sig = (n < 0) ? -1:1;
-    n = ABS(n);
-    switch(n) {
-      case 1:      
-        a[idx] = b[idx];
-        break;
-      case 2:
-        a[idx] = b[idx] * b[idx];
-        break;
-      case 3:
-        a[idx] = b[idx] * b[idx] * b[idx];
-        break;
-      default:
-        for(ii = 0; ii < n; ii++)
-          value *= b[idx];
-        a[idx] = value;
-    }
-    if(sig == -1) a[idx] = 1.0 / a[idx];
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  if(n == 0) {
+    a[idx] = 1.0;
+    return;
   }
+  sig = (n < 0) ? -1:1;
+  n = ABS(n);
+  switch(n) {
+    case 1:      
+      a[idx] = b[idx];
+      break;
+    case 2:
+      a[idx] = b[idx] * b[idx];
+      break;
+    case 3:
+      a[idx] = b[idx] * b[idx] * b[idx];
+      break;
+    default:
+      for(ii = 0; ii < n; ii++)
+        value *= b[idx];
+      a[idx] = value;
+  }
+  if(sig == -1) a[idx] = 1.0 / a[idx];
 }
 
 /*
@@ -1408,14 +1553,20 @@ __global__ void rgrid_cuda_ipower_gpu(CUREAL *a, CUREAL *b, INT n, INT maxidx) {
  *
  * grida    = Destination for operation (REAL *; output).
  * gridb    = Source for operation (REAL *; input).
- * nblocks  = # of blocks (INT; input).
- * nelem    = Total # of elements (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_ipowerW(CUREAL *grida, CUREAL *gridb, INT exponent, INT nblocks, INT nelem) {
+extern "C" void rgrid_cuda_ipowerW(CUREAL *grida, CUREAL *gridb, INT exponent, INT nx, INT ny, INT nz) {
 
-  rgrid_cuda_ipower_gpu<<<nblocks,CUDA_THREADS_PER_BLOCK2>>>(grida, gridb, exponent, nelem);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_ipower_gpu<<<blocks,threads>>>(grida, gridb, exponent, nx, ny, nz, 2 * (nz / 2 + 1));
   cuda_error_check();
 }
 

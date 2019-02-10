@@ -54,7 +54,7 @@ static char cgrid_bc_conv(cgrid *grid) {
 EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*value_outside)(cgrid *grid, INT i, INT j, INT k), void *outside_params_ptr, char *id) {
 
   cgrid *grid;
-  INT i, nelem;
+  INT i;
   size_t len;
   
   if(!(grid = (cgrid *) malloc(sizeof(cgrid)))) {
@@ -65,12 +65,10 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   grid->nx = nx;
   grid->ny = ny;
   grid->nz = nz;
-  grid->nelem = nelem = nx * ny * nz;
-  grid->grid_len = len = ((size_t) nelem) * sizeof(REAL complex);
+  grid->grid_len = len = ((size_t) (nx * ny * nz)) * sizeof(REAL complex);
   grid->step = step;
   
 #ifdef USE_CUDA
-  grid->nblocks = (nelem + CUDA_THREADS_PER_BLOCK2 - 1) / CUDA_THREADS_PER_BLOCK2;
   if(cudaMallocHost((void **) &(grid->value), len) != cudaSuccess) { /* Use page-locked grids */
 #else
 #if defined(SINGLE_PREC)
