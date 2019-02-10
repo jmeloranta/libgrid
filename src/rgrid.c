@@ -76,7 +76,7 @@ static char rgrid_bc_conv(rgrid *grid) {
 EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outside)(rgrid *grid, INT i, INT j, INT k), void *outside_params_ptr, char *id) {
 
   rgrid *grid;
-  INT nz2, i;
+  INT nz2, i, nelem, nelem2;
   size_t len; 
  
   if(!(grid = (rgrid *) malloc(sizeof(rgrid)))) {
@@ -88,9 +88,13 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   grid->ny = ny;
   grid->nz = nz;
   grid->nz2 = nz2 = 2 * (nz / 2 + 1);
-  grid->grid_len = len = ((size_t) (nx * ny * nz2)) * sizeof(REAL);
+  grid->nelem = nelem = nx * ny * nz2;  // Total number of elements for real grid (including the blank ones)
+  grid->nelem2 = nelem2 = nelem / 2;    // Total number of elements for complex grid
+  grid->grid_len = len = ((size_t) nelem) * sizeof(REAL);
 
 #ifdef USE_CUDA
+  grid->nblocks = (nelem + CUDA_THREADS_PER_BLOCK2 - 1) / CUDA_THREADS_PER_BLOCK2;
+  grid->nblocks2 = (nelem2 + CUDA_THREADS_PER_BLOCK2 - 1) / CUDA_THREADS_PER_BLOCK2;
   if(cudaMallocHost((void **) &(grid->value), len) != cudaSuccess) { /* Use page-locked grids */
 #else
 #if defined(SINGLE_PREC)
@@ -148,15 +152,14 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   grid->id[31] = 0;
 
 #ifdef USE_CUDA
-  /* rgrid_cuda_init(sizeof(REAL) * (size_t) nx); */ // reduction along x (was len)
-  rgrid_cuda_init(sizeof(REAL) 
-     * ((((size_t) nx) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
-     * ((((size_t) ny) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
+  rgrid_cuda_init(sizeof(REAL)
+     * ((((size_t) nx) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
+     * ((((size_t) ny) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
      * ((((size_t) nz) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK));  // reduction along blocks
 #endif
 
   for(i = 0; i < nx * ny * nz2; i++)
-    grid->value[i] = 0.0;
+    grid->value[i] = 0.0; // Set also the "extra" elements to zero. Note that inverse FFT might put some random stuff in these...
 
   grid->flag = 0;
 

@@ -20,7 +20,7 @@ typedef struct cgrid_struct { /* complex grid data type */
   REAL complex *value;
   char id[32];
   size_t grid_len;
-  INT nx, ny, nz;
+  INT nx, ny, nz, nelem;
   REAL step;
   REAL x0, y0, z0;
   REAL kx0, ky0, kz0;
@@ -37,6 +37,7 @@ typedef struct cgrid_struct { /* complex grid data type */
 #endif
 #ifdef USE_CUDA
   cufftHandle cufft_handle;
+  INT nblocks;
 #endif
   REAL fft_norm;
   REAL fft_norm2;
@@ -47,7 +48,7 @@ typedef struct rgrid_struct { /* real grid data type */
   REAL *value;
   char id[32];
   size_t grid_len;
-  INT nx, ny, nz, nz2;
+  INT nx, ny, nz, nz2, nelem, nelem2;
   REAL step;
   REAL x0, y0, z0;
   REAL kx0, ky0, kz0;
@@ -64,6 +65,7 @@ typedef struct rgrid_struct { /* real grid data type */
 #ifdef USE_CUDA
   cufftHandle cufft_handle_r2c;
   cufftHandle cufft_handle_c2r;
+  INT nblocks, nblocks2;
 #endif
   REAL fft_norm;
   REAL fft_norm2;
