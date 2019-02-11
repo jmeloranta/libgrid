@@ -2430,7 +2430,7 @@ EXPORT void cgrid_fft_gradient(cgrid *grid, cgrid *gradient_x, cgrid *gradient_y
 
 EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
 
-  INT i, j, k, ij, ijnz, nx,ny,nz, nxy;
+  INT i, j, k, ij, ijnz, nx, ny, nz, nxy;
   REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL kx, ky, kz, lz, step, norm;
   REAL complex *lvalue = laplace->value;

@@ -2999,10 +2999,10 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
 
 EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
-  INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nzz = input1->nz / 2 + 1, idx, nxy = nx * ny;
+  INT nx = input1->nx, ny = input1->ny, nzz = input1->nz / 2 + 1, idx, nxy = nx * ny;
   REAL step = input1->step, r, kx, ky, kz;
   REAL complex *value1 = (REAL complex *) input1->value, *value2, *value3;
-  REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
+  REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = M_PI / (((REAL) nzz - 1) * step);
   INT *nvals, ij, i, j, k, ijnz;
 
   if(input2) value2 = (REAL complex *) input2->value;
@@ -3023,7 +3023,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   bzero(nvals, sizeof(INT) * (size_t) nbins);
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
-#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nxy,step,lx,ly,lz,value1,value2,value3,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nzz,nxy,step,lx,ly,lz,value1,value2,value3,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
@@ -3109,3 +3109,170 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
         rgrid_value_to_index(dest, i, j, k, ave);
       }
 }
+
+/*
+ * Differentiate real grid in the Fourier space along x.
+ *
+ * grid       = grid to be differentiated (in Fourier space) (rgrid *; input).
+ * gradient_x = output grid (rgrid *; output).
+ *
+ * No return value.
+ *
+ * Note: input and output grids may be the same.
+ *
+ */
+
+EXPORT void rgrid_fft_gradient_x(rgrid *grid, rgrid *gradient_x) {
+
+  INT i, k, ij, ijnz, nx, ny, nz, nxy;
+  REAL kx0 = grid->kx0;
+  REAL kx, step, norm, lx;
+  REAL complex *gxvalue = (REAL complex *) gradient_x->value;
+  
+  if (gradient_x != grid) rgrid_copy(gradient_x, grid);
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_gradient_x(gradient_x)) return;
+#endif
+
+  /* f'(x) = iF[ i kx F[f(x)] ] */  
+  nx = grid->nx;
+  ny = grid->ny;
+  nz = grid->nz2 / 2;
+  nxy = nx * ny;
+  step = grid->step;
+  norm = grid->fft_norm;
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    ijnz = ij * nz;
+    if(i < nx/2) 
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = -((REAL) (nx - i)) * lx - kx0;
+    for(k = 0; k < nz; k++)	  
+      gxvalue[ijnz + k] *= (kx * norm) * I;
+  } 
+}
+
+/*
+ * Differentiate real grid in the Fourier space along y.
+ *
+ * grid       = grid to be differentiated (in Fourier space) (rgrid *; input).
+ * gradient_y = output grid (rgrid *; output).
+ *
+ * No return value.
+ *
+ * Note: input and output grids may be the same.
+ *
+ */
+
+EXPORT void rgrid_fft_gradient_y(rgrid *grid, rgrid *gradient_y) {
+
+  INT j, k, ij, ijnz, nx, ny, nz, nxy;
+  REAL ky0 = grid->ky0;
+  REAL ky, step, norm, ly;
+  REAL complex *gyvalue = (REAL complex *) gradient_y->value;
+  
+  if (gradient_y != grid) rgrid_copy(gradient_y, grid);
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_gradient_y(gradient_y)) return;
+#endif
+
+  /* f'(x) = iF[ i kx F[f(x)] ] */  
+  nx = grid->nx;
+  ny = grid->ny;
+  nz = grid->nz2 / 2;
+  nxy = nx * ny;
+  step = grid->step;
+  norm = grid->fft_norm;
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    j = ij % ny;
+    ijnz = ij * nz;
+    if(j < ny/2) 
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = -((REAL) (ny - j)) * ly - ky0;
+    for(k = 0; k < nz; k++)	  
+      gyvalue[ijnz + k] *= (ky * norm) * I;
+  } 
+}
+
+/*
+ * Differentiate real grid in the Fourier space along z.
+ *
+ * grid       = grid to be differentiated (in Fourier space) (rgrid *; input).
+ * gradient_z = output grid (rgrid *; output).
+ *
+ * No return value.
+ *
+ * Note: input and output grids may be the same.
+ *
+ */
+
+EXPORT void rgrid_fft_gradient_z(rgrid *grid, rgrid *gradient_z) {
+
+  INT k, ij, ijnz, nx, ny, nz, nxy, nzz = grid->nz2 / 2;
+  REAL kz0 = grid->kz0;
+  REAL kz, step, norm, lz;
+  REAL complex *gzvalue = (REAL complex *) gradient_z->value;
+  
+  if (gradient_z != grid) rgrid_copy(gradient_z, grid);
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_gradient_z(gradient_z)) return;
+#endif
+
+  /* f'(x) = iF[ i kx F[f(x)] ] */  
+  nx = grid->nx;
+  ny = grid->ny;
+  nz = grid->nz2 / 2;
+  nxy = nx * ny;
+  step = grid->step;
+  norm = grid->fft_norm;
+  lz = M_PI / (((REAL) nzz - 1) * step);
+
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    for(k = 0; k < nz; k++) {
+      if(k < nz/2) 
+        kz = ((REAL) k) * lz - kz0;
+      else
+        kz = -((REAL) (nz - k)) * lz - kz0;
+      gzvalue[ijnz + k] *= (kz * norm) * I;
+    }
+  } 
+}
+
+/*
+ * Calculate gradient of a grid (in Fourier space).
+ *
+ * grid       = grid to be differentiated (rgrid *; input).
+ * gradient_x = x output grid (rgrid *; output).
+ * gradient_y = y output grid (rgrid *; output).
+ * gradient_z = z output grid (rgrid *; output).
+ *
+ * No return value.
+ *
+ * Note: input/output grids may be the same.
+ *
+ */
+
+EXPORT void rgrid_fft_gradient(rgrid *grid, rgrid *gradient_x, rgrid *gradient_y, rgrid *gradient_z) {
+
+  rgrid_fft_gradient_x(grid, gradient_x);
+  rgrid_fft_gradient_y(grid, gradient_y);
+  rgrid_fft_gradient_z(grid, gradient_z);
+}
+
+/*
+ * TODO: laplace (see cgrid.c).
+ *
+ */
