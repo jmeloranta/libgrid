@@ -1036,6 +1036,56 @@ rgrid *laplacez & Grid containing the 2nd derivative.\\
 \noindent
 This function does not return any value.
 
+\subsection{rgrid\_fft\_gradient\_x() -- Differentiate grid with respect to x (FFT)}
+
+Differentiate a grid with respect to $x$ (evaluated in Fourier space). The function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient & Grid containing the derivative (output).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient\_y() -- Differentiate grid with respect to y (FFT)}
+
+Differentiate a grid with respect to $y$ (evaluated in Fourier space). The function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient & Grid containing the derivative (output).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient\_z() -- Differentiate grid with respect to z (FFT)}
+
+Differentiate a grid with respect to $z$ (evaluated in Fourier space). The function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient & Grid containing the derivative (output).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient() -- gradient of a grid (FFT)}
+
+Calculate gradient of a grid (evaluated in Fourier space). The function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & grid to be differentiated.\\
+rgrid *gradient\_x & $x$ component derivative grid.\\
+rgrid *gradient\_y & $y$ component derivative grid.\\
+rgrid *gradient\_z & $z$ component derivative grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
 \subsection{rgrid\_fd\_gradient\_dot\_gradient() -- Dot product of gradient of grid with itself}
 
 This function calculates dot product of the gradient of the grid with itself: $\nabla$ grid $\cdot$ $\nabla$ grid (finite difference). It takes the following arguments:
