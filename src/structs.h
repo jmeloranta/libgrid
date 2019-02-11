@@ -88,6 +88,6 @@ typedef struct rotation_struct {  /* structure for rotating grids */
   cgrid *cgrid;
   REAL sinth;
   REAL costh;
-} rotation;
+} grid_rotation;
 
 #endif /* __GRID_STRUCTS__ */

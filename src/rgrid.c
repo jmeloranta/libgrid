@@ -26,8 +26,8 @@
 static REAL rgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
 
   /* Unpack the values in arg */ 
-  rgrid *grid = ((rotation *) arg)->rgrid;
-  REAL sth = ((rotation *) arg)->sinth, cth = ((rotation *) arg)->costh, xp, yp;
+  rgrid *grid = ((grid_rotation *) arg)->rgrid;
+  REAL sth = ((grid_rotation *) arg)->sinth, cth = ((grid_rotation *) arg)->costh, xp, yp;
 
   xp = -y * sth + x * cth; 
   yp =  y * cth + x * sth;
@@ -2423,14 +2423,14 @@ EXPORT void rgrid_extrapolate(rgrid *dest, rgrid *src) {
 
 EXPORT void rgrid_rotate_z(rgrid *out, rgrid *in, REAL th) {
 
-  rotation *r;
+  grid_rotation *r;
 
   if(in == out) {
     fprintf(stderr,"libgrid: in and out grids in rgrid_rotate_z must be different\n");
     abort();
   }
 
-  if(!(r = malloc(sizeof(rotation)))) {
+  if(!(r = malloc(sizeof(grid_rotation)))) {
     fprintf(stderr, "libgrid: cannot allocate rotation structure.\n");
     abort();
   }

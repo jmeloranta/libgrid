@@ -9,6 +9,7 @@
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
 - CUDA: Think about streams (and multiple GPUs). libdft could certainly use this. Also cufft can spread over multiple GPUs.
+  At the moment, kernel launching overhead / PCI-E bus speed seems to limit.
 - Test compressible/incompressible decomposition with plane waves and vortex line.
 
 also fgrep TODO *.[ch] to find out more specific issues.
