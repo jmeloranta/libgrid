@@ -1319,7 +1319,9 @@ EXPORT void cuda_gpu_info() {
     fprintf(stderr, "libgrid(cuda): Cannot get device count.\n");
     abort();
   }
+  fprintf(stderr, "Threads per block = %d.\n\n", CUDA_THREADS_PER_BLOCK);
   for(i = 0; i < ndev; i++) {
+    fprintf(stderr, "**********************************************************************\n");
     cudaGetDeviceProperties(&prop, i);
     fprintf(stderr, "Device Number: %d\n", i);
     fprintf(stderr, "  Device name: %s\n", prop.name);
@@ -1337,6 +1339,6 @@ EXPORT void cuda_gpu_info() {
     fprintf(stderr, "  Warp size: %d\n", prop.warpSize);
     fprintf(stderr, "  Maximum memory pitch: %lu kB\n", prop.memPitch / 1024);
     fprintf(stderr, "  Total amount of constant memory: %lu kB\n", prop.totalConstMem / 1024);
+    fprintf(stderr, "**********************************************************************\n");
   }
-  fprintf(stderr, "**********************************************************************\n");
 }

@@ -22,18 +22,26 @@ extern "C" void cuda_error_check();
  *
  */
 
-__global__ void grid_cuda_wf_propagate_potential_gpu(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX time_step, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+/* amp = 0 */
+__global__ void grid_cuda_wf_propagate_potential_gpu1(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUCOMPLEX c;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  if(amp == 0.0) 
-    c = CUMAKE(0.0, -1.0 / HBAR) * time_step;
-  else
-    c = CUMAKE(0.0, -1.0 / HBAR) * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, time_step);
+  b[idx] = b[idx] * CUCEXP(c * pot[idx]);
+}
+
+/* amp != 0 */
+__global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  c = c * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz);
   b[idx] = b[idx] * CUCEXP(c * pot[idx]);
 }
 
@@ -64,8 +72,14 @@ extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *po
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  CUCOMPLEX c;
 
-  grid_cuda_wf_propagate_potential_gpu<<<blocks,threads>>>(grid, pot, time_step, amp, lx, hx, ly, hy, lz, hz, nx, ny, nz);
+  c.x =  (1.0 / HBAR) * time_step.y;
+  c.y = -(1.0 / HBAR) * time_step.x;
+  if(amp != 0.0) 
+    grid_cuda_wf_propagate_potential_gpu2<<<blocks,threads>>>(grid, pot, c, amp, lx, hx, ly, hy, lz, hz, nx, ny, nz);
+  else
+    grid_cuda_wf_propagate_potential_gpu1<<<blocks,threads>>>(grid, pot, c, nx, ny, nz);
   cuda_error_check();
 }
 

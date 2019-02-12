@@ -1667,7 +1667,7 @@ extern "C" void rgrid_cuda_poissonW(CUCOMPLEX *grid, CUREAL norm, CUREAL step2, 
  *
  */
 
-__global__ void rgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *gradient, REAL kx0, REAL step, REAL norm, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *gradient, REAL kx0, REAL step, REAL norm, INT nx, INT ny, INT nz, INT nx2) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
@@ -1677,7 +1677,7 @@ __global__ void rgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *gradient, REAL kx0, REA
 
   idx = (i * ny + j) * nz + k;
   lx = 2.0 * M_PI / (((REAL) nx) * step);
-  if(i < nx/2) 
+  if(i < nx2) 
     kx = ((REAL) i) * lx - kx0;
   else
     kx = -((REAL) (nx - i)) * lx - kx0;
@@ -1704,7 +1704,7 @@ extern "C" void rgrid_cuda_fft_gradient_xW(CUCOMPLEX *gradient_x, REAL kx0, REAL
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fft_gradient_x_gpu<<<blocks,threads>>>(gradient_x, kx0, step, norm, nx, ny, nz);
+  rgrid_cuda_fft_gradient_x_gpu<<<blocks,threads>>>(gradient_x, kx0, step, norm, nx, ny, nz, nx / 2);
   cuda_error_check();
 }
 
@@ -1713,7 +1713,7 @@ extern "C" void rgrid_cuda_fft_gradient_xW(CUCOMPLEX *gradient_x, REAL kx0, REAL
  *
  */
 
-__global__ void rgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *gradient, REAL ky0, REAL step, REAL norm, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *gradient, REAL ky0, REAL step, REAL norm, INT nx, INT ny, INT nz, INT ny2) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
@@ -1723,7 +1723,7 @@ __global__ void rgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *gradient, REAL ky0, REA
 
   idx = (i * ny + j) * nz + k;
   ly = 2.0 * M_PI / (((REAL) ny) * step);
-  if(j < ny/2) 
+  if(j < ny2) 
     ky = ((REAL) j) * ly - ky0;
   else
     ky = -((REAL) (ny - j)) * ly - ky0;
@@ -1750,7 +1750,7 @@ extern "C" void rgrid_cuda_fft_gradient_yW(CUCOMPLEX *gradient_y, REAL ky0, REAL
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fft_gradient_y_gpu<<<blocks,threads>>>(gradient_y, ky0, step, norm, nx, ny, nz);
+  rgrid_cuda_fft_gradient_y_gpu<<<blocks,threads>>>(gradient_y, ky0, step, norm, nx, ny, nz, ny / 2);
   cuda_error_check();
 }
 
@@ -1759,7 +1759,7 @@ extern "C" void rgrid_cuda_fft_gradient_yW(CUCOMPLEX *gradient_y, REAL ky0, REAL
  *
  */
 
-__global__ void rgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *gradient, REAL kz0, REAL step, REAL norm, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *gradient, REAL kz0, REAL step, REAL norm, INT nx, INT ny, INT nz, INT nz2) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
@@ -1769,7 +1769,7 @@ __global__ void rgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *gradient, REAL kz0, REA
 
   idx = (i * ny + j) * nz + k;
   lz = M_PI / (((REAL) nz - 1) * step);
-  if(k < nz/2) 
+  if(k < nz2) 
     kz = ((REAL) k) * lz - kz0;
   else
     kz = -((REAL) (nz - k)) * lz - kz0;
@@ -1796,6 +1796,6 @@ extern "C" void rgrid_cuda_fft_gradient_zW(CUCOMPLEX *gradient_z, REAL kz0, REAL
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  rgrid_cuda_fft_gradient_z_gpu<<<blocks,threads>>>(gradient_z, kz0, step, norm, nx, ny, nz);
+  rgrid_cuda_fft_gradient_z_gpu<<<blocks,threads>>>(gradient_z, kz0, step, norm, nx, ny, nz, nz / 2);
   cuda_error_check();
 }

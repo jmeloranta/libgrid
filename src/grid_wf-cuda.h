@@ -16,27 +16,16 @@
  * hy        = Upper limit index for j (y) (INT; input).
  * lz        = Lower limit index for k (z) (INT; input).
  * hz        = Upper limit index for k (z) (INT; input).
- * time_step = Time step (REAL complex; input).
  * 
- * Returns the (complex) time step to be applied.
+ * Returns time_step scaling (CUCOMPLEX).
  *
  */
 
-static __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, CUCOMPLEX time_step) {
+static __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   CUCOMPLEX t;
 
-#if 0
-  amp = 2.0;
-  lx = 12;
-  hx = 244;
-  ly = 12;
-  hy = 244;
-  lz = 30;
-  hz = 482;
-#endif
-
-  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return time_step;
+  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return CUMAKE(1.0,0.0);
 
   t.x = 1.0; t.y = 0.0;
 
@@ -50,5 +39,5 @@ static __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp,
   else if(k > hz) t.y -= ((CUREAL) (k - hz)) / (3.0 * (CUREAL) lz);
 
   t.y *= amp;
-  return t * time_step;
+  return t;
 }

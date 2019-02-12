@@ -168,24 +168,19 @@ EXPORT void grid_wf_free(wf *gwf) {
  * k           = Current index along Z (INT; input).
  * data        = Pointer to struct grid_abs holding values for specifying the absorbing region (void *; INPUT).
  *               This will specify amp, lx, hx, ly, hy, lz, hz.
- * time_step   = Real time step (REAL complex; input). This should be real valued.
  * 
- * Returns the (complex) time.
+ * Returns the (complex) scaling for time.
  *
  */
 
-EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data, REAL complex time_step) {
+EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data) {
 
   REAL t;
   struct grid_abs *ab = (struct grid_abs *) data;
   INT lx = ab->data[0], hx = ab->data[1], ly = ab->data[2], hy = ab->data[3], lz = ab->data[4], hz = ab->data[5];
   REAL amp = ab->amp;
 
-  if(CIMAG(time_step) != 0.0) {
-    fprintf(stderr, "libgrid: Imaginary time for absorbing boundary - forcing real time.\n");
-    time_step = CREAL(time_step);
-  }
-  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return (REAL complex) time_step;
+  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return (REAL complex) 1.0;
 
   t = 0.0;
 
@@ -198,7 +193,7 @@ EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data, REAL complex
   if(k < lz) t -= ((REAL) (lz - k)) / (3.0 * (REAL) lz);
   else if(k > hz) t -= ((REAL) (k - hz)) / (3.0 * (REAL) lz);
 
-  return (1.0 + I * amp * t) * (REAL complex) time_step;
+  return (1.0 + I * amp * t);
 }
 
 /*
@@ -456,7 +451,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
  *
  */
 
-EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *potential) {
+EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *potential) {
 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
@@ -473,7 +468,7 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, 
     j = ij % ny;
     for(k = 0; k < nz; k++) {
       /* psi(t+dt) = exp(- i V dt / hbar) psi(t) */
-      if(time) c = -I * (*time)(i, j, k, privdata, tstep) / HBAR;
+      if(time) c = -I * tstep * (*time)(i, j, k, privdata) / HBAR;
       else c = -I * tstep / HBAR;
       psi[ijnz + k] = psi[ijnz + k] * CEXP(c * pot[ijnz + k]);
     }

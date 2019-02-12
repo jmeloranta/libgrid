@@ -15,7 +15,7 @@
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;
@@ -57,7 +57,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex (*time)(IN
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;
@@ -100,7 +100,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex (*time)(IN
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *, REAL complex), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = (struct grid_abs *) privdata;

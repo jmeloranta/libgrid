@@ -108,12 +108,13 @@ extern "C" void grid_cuda_real_to_complex_imW(CUCOMPLEX *grida, CUREAL *gridb, I
 __global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;
-  idx2 = (i * ny + j) * nzz + k;
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
 
   a[idx].x = CUCREAL(a[idx]) + b[idx2];
 }
@@ -150,12 +151,13 @@ extern "C" void grid_cuda_add_real_to_complex_reW(CUCOMPLEX *grida, CUREAL *grid
 __global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;
-  idx2 = (i * ny + j) * nzz + k;
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
 
   a[idx].y = CUCIMAG(a[idx]) + b[idx2];
 }
@@ -192,12 +194,13 @@ extern "C" void grid_cuda_add_real_to_complex_imW(CUCOMPLEX *grida, CUREAL *grid
 __global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;
-  idx2 = (i * ny + j) * nzz + k;
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
 
   a[idx] = a[idx] * b[idx2];
 }
@@ -234,12 +237,13 @@ extern "C" void grid_cuda_product_complex_with_realW(CUCOMPLEX *grida, CUREAL *g
 __global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;
-  idx2 = (i * ny + j) * nzz + k;
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
 
   a[idx2] = CUCIMAG(b[idx]);
 }
@@ -276,12 +280,13 @@ extern "C" void grid_cuda_complex_im_to_realW(CUREAL *grida, CUCOMPLEX *gridb, I
 __global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;
-  idx2 = (i * ny + j) * nzz + k;
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
 
   a[idx2] = CUCREAL(b[idx]);
 }

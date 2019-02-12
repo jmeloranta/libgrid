@@ -42,7 +42,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(i = 1; i < nx - 1; i++) {
-    if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+    if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz);
     else tim = tstep;
     cp = c / tim;
     ind = i * nyz + tid;
@@ -57,7 +57,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
 
   // Boundary conditions
   ind = j * nz + k; // i = 0 - left boundary
-  if(amp != 0.0) tim = grid_cuda_wf_absorb(0, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+  if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(0, j, k, amp, lx, hx, ly, hy, lz, hz);
   else tim = tstep;
   cp = c / tim;
   /* Right-hand side (-) */
@@ -79,7 +79,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
   d[0] = cp - 2.0;  // LHS: -2 diag elem from Laplacian (x C)
 
   ind = (nx - 1) * nyz + j * nz + k;  // i = nx - 1, right boundary
-  if(amp != 0.0) tim = grid_cuda_wf_absorb(nx-1, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+  if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(nx-1, j, k, amp, lx, hx, ly, hy, lz, hz);
   else tim = tstep;
   cp = c / tim;
   /* Right-hand side (-) */
@@ -180,7 +180,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(j = 1; j < ny - 1; j++) {
-    if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+    if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz);
     else tim = tstep;
     cp = c / tim;
     ind = i * nyz + j * nz + k;
@@ -196,7 +196,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
   // Boundary conditions
  
   ind = i * nyz + k; // j = 0 - left boundary
-  if(amp != 0.0) tim = grid_cuda_wf_absorb(i, 0, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+  if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, 0, k, amp, lx, hx, ly, hy, lz, hz);
   else tim = tstep;
   cp = c / tim;
   /* Right-hand side (-) */
@@ -218,7 +218,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
   d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
   ind = i * nyz + (ny-1) * nz + k;  // j = ny - 1 - right boundary
-  if(amp != 0.0) tim = grid_cuda_wf_absorb(i, ny-1, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+  if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, ny-1, k, amp, lx, hx, ly, hy, lz, hz);
   else tim = tstep;
   cp = c / tim;
   /* Right-hand side (-) */
@@ -318,7 +318,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(k = 1; k < nz - 1; k++) {
-    if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz, tstep);
+    if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz);
     else tim = tstep;
     cp = c / tim;
     ind = i * nyz + j * nz + k;
@@ -334,7 +334,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   // Boundary conditions
  
   ind = i * nyz + j * nz; // k = 0 - left boundary
-  if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, 0, amp, lx, hx, ly, hy, lz, hz, tstep);
+  if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, j, 0, amp, lx, hx, ly, hy, lz, hz);
   else tim = tstep;
   cp = c / tim;
   /* Right-hand side (-) */
@@ -356,7 +356,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
   ind = i * nyz + j * nz + (nz - 1);  // k = nz-1 - right boundary
-  if(amp != 0.0) tim = grid_cuda_wf_absorb(i, j, nz-1, amp, lx, hx, ly, hy, lz, hz, tstep);
+  if(amp != 0.0) tim = tstep * grid_cuda_wf_absorb(i, j, nz-1, amp, lx, hx, ly, hy, lz, hz);
   else tim = tstep;
   cp = c / tim;
   switch(bc) {
