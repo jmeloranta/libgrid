@@ -144,7 +144,8 @@ EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL cutoff) {
 }
 
 /*
- * Calculate the probability flux x component.
+ * Calculate the probability flux x component (m^-2 s^-1). This is related to liquid momentum:
+ * rho_mass * velocity = mass * flux.
  * 
  * gwf       = wavefunction for the operation (wf *).
  * flux_x    = x output grid containing the flux (rgrid *).
@@ -173,7 +174,8 @@ EXPORT void grid_wf_probability_flux_x(wf *gwf, rgrid *flux_x) {
 }
 
 /*
- * Calculate the probability flux y component.
+ * Calculate the probability flux y component (m^-2 s^-1). This is related to liquid momentum:
+ * rho_mass * velocity = mass * flux.
  * 
  * gwf       = wavefunction for the operation (wf *).
  * flux_y    = y output grid containing the flux (rgrid *).
@@ -202,7 +204,8 @@ EXPORT void grid_wf_probability_flux_y(wf *gwf, rgrid *flux_y) {
 }
 
 /*
- * Calculate the probability flux z component.
+ * Calculate the probability flux z component (m^-2 s^-1). This is related to liquid momentum:
+ * rho_mass * velocity = mass * flux.
  * 
  * gwf       = wavefunction for the operation (wf *).
  * flux_z    = z output grid containing the flux (rgrid *).
@@ -231,7 +234,8 @@ EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
 }
 
 /*
- * Calculate the probability flux.
+ * Calculate the probability flux (m^-2 s^-1). This is related to liquid momentum:
+ * rho_mass * velocity = mass * flux.
  *
  * gwf        = wavefunction for the operation (wf *).
  * flux_x     = x output grid containing the flux (rgrid *).
@@ -431,7 +435,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
   grid_wf_density(gwf, workspace4);
   rgrid_power(workspace4, workspace4, 0.5);
-  rgrid_division_eps(workspace1, workspace1, workspace4, 1E-5);
+  rgrid_division_eps(workspace1, workspace1, workspace4, 1E-5);  // TODO: Use common EPS
   rgrid_division_eps(workspace2, workspace2, workspace4, 1E-5);
   rgrid_division_eps(workspace3, workspace3, workspace4, 1E-5);
   rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
@@ -488,3 +492,44 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
     bins[i] = bins[i] * 0.5 * gwf->mass / (4.0 * M_PI);
 }
 
+/*
+ * Calculate total kinetic energy minus the quantum pressure: int 1/2 * mass * rho * |v|^2 d^3
+ *
+ * wf         = Wavefunction (wf *; input).
+ * workspace1 = Workspace (rgrid *; input).
+ * workspace2 = Workspace (rgrid *; input).
+ *
+ * Returns the kinetic energy (REAL).
+ *
+ */
+
+EXPORT REAL grid_wf_kinetic_energy_noqp(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+
+  rgrid_zero(workspace2);
+  grid_wf_probability_flux_x(gwf, workspace1);  // = rho * v_x
+  rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);  // 1/2 * mass * rho^2 * v_x^2
+  grid_wf_probability_flux_y(gwf, workspace1);
+  rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);
+  grid_wf_probability_flux_z(gwf, workspace1);
+  rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);
+  
+  grid_wf_density(gwf, workspace1);
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS);  // remove extra rho
+  return rgrid_integral(workspace2);
+}
+
+/*
+ * Calculate quantum pressure ( = total K.E. - 1/2 rho v^2).
+ *
+ * gwf        = Wavefunction (wf *; input).
+ * workspace1 = Workspace (rgrid *; input).
+ * workspace2 = Workspace (rgrid *; input).
+ * 
+ * Returns the kinetic energy (REAL).
+ *
+ */
+
+EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+
+  return grid_wf_kinetic_energy(gwf) - grid_wf_kinetic_energy_noqp(gwf, workspace1, workspace2);
+}

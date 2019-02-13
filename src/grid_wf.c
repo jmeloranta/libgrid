@@ -219,7 +219,22 @@ EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 }
 
 /*
- * Auxiliary routine for calculating potential energy.
+ * Calculate kinetic energy for the wavefunction. 
+ * Includes -E_{kin} * n if the frame of reference has momentum != 0.
+ *
+ * gwf       = wavefunction for the energy calculation (wf *).
+ *
+ * Returns the energy (REAL).
+ *
+ */
+
+EXPORT REAL grid_wf_kinetic_energy(wf *gwf) {
+
+  return grid_wf_energy(gwf, NULL);
+}
+
+/*
+ * Calcucate potential energy.
  * 
  * gwf       = wavefunction for potential energy calculation (wf *).
  * potential = potential energy (rgrid *).
