@@ -435,9 +435,9 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
   grid_wf_density(gwf, workspace4);
   rgrid_power(workspace4, workspace4, 0.5);
-  rgrid_division_eps(workspace1, workspace1, workspace4, 1E-5);  // TODO: Use common EPS
-  rgrid_division_eps(workspace2, workspace2, workspace4, 1E-5);
-  rgrid_division_eps(workspace3, workspace3, workspace4, 1E-5);
+  rgrid_division_eps(workspace1, workspace1, workspace4, GRID_EPS2);
+  rgrid_division_eps(workspace2, workspace2, workspace4, GRID_EPS2);
+  rgrid_division_eps(workspace3, workspace3, workspace4, GRID_EPS2);
   rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
 
   /* FFT each component */
@@ -514,7 +514,7 @@ EXPORT REAL grid_wf_kinetic_energy_noqp(wf *gwf, rgrid *workspace1, rgrid *works
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);
   
   grid_wf_density(gwf, workspace1);
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS);  // remove extra rho
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);  // remove extra rho
   return rgrid_integral(workspace2);
 }
 
