@@ -22,7 +22,7 @@ EXPORT REAL grid_wf_energy_cn(wf *gwf, rgrid *potential) {
 
   REAL en;
 
-  en = grid_wf_energy_cn_kinetic(gwf);
+  en = grid_wf_kinetic_energy_cn(gwf);
   if(potential) en += grid_wf_potential_energy(gwf, potential);
   return en;    
 }
@@ -37,7 +37,7 @@ EXPORT REAL grid_wf_energy_cn(wf *gwf, rgrid *potential) {
  *
  */
 
-EXPORT REAL grid_wf_energy_cn_kinetic(wf *gwf) {  
+EXPORT REAL grid_wf_kinetic_energy_cn(wf *gwf) {  
 
   cgrid *grid = gwf->grid;
 

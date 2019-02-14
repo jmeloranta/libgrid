@@ -2521,8 +2521,10 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   REAL complex *lvalue = laplace->value;
   REAL aux;
 
+  if(grid != laplace) cgrid_copy(laplace, grid);
+
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fft_laplace_expectation_value(grid, laplace, &sum)) return sum;
+  if(cuda_status() && !cgrid_cuda_fft_laplace_expectation_value(laplace, &sum)) return sum;
 #endif
 
   /* int f*(x) f''(x) dx */
@@ -2537,8 +2539,6 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   norm = grid->fft_norm;
   norm = step * step * step * grid->fft_norm;
   
-  if(grid != laplace) cgrid_copy(laplace, grid);
-
   if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY  ||
      grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
      grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
@@ -2548,13 +2548,13 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
       i = ij / ny;
       j = ij % ny;
       ijnz = ij * nz;
-   
+      
       kx = M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
       ky = M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
-    
+      
       ssum = 0.0;
       lz = ((REAL) nz) * step;
-    
+      
       for(k = 0; k < nz; k++) {
         kz = M_PI * ((REAL) k) / lz - kz0;
         /* Manual fixing of boundaries: the symmetry points (i=0 or i=nx-1 etc) have 1/2 the weigth in the integral */
@@ -2566,44 +2566,44 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
       }
       sum += ssum;
     }
-  } else {  
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz,lz, ssum) reduction(+:sum) default(none) schedule(runtime)
-   for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    j = ij % ny;
-    ijnz = ij * nz;
-    
-    /* 
-     * k = 2 pi n / L 
-     * if k < n/2, k = k
-     * else k = -k
-     */
-    if (i <= nx / 2)
-      kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
-    else 
-      kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
-    
-    if (j <= ny / 2)
-      ky = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
-    else 
-      ky = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - ky0;
-    
-    ssum = 0.0;
-    lz = ((REAL) nz) * step;
-    
-    for(k = 0; k < nz; k++) {
-      if (k <= nz / 2)
-        kz = 2.0 * M_PI * ((REAL) k) / lz - kz0;
-      else 
-        kz = 2.0 * M_PI * ((REAL) (k - nz)) / lz - kz0;
+  } else {
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz,lz,ssum) reduction(+:sum) default(none) schedule(runtime)
+    for(ij = 0; ij < nxy; ij++) {
+      i = ij / ny;
+      j = ij % ny;
+      ijnz = ij * nz;
       
-      ssum += (-kx * kx - ky * ky - kz * kz) * sqnorm(lvalue[ijnz + k]);
+      /* 
+       * k = 2 pi n / L 
+       * if k < n/2, k = k
+       * else k = -k
+       */
+      if (i <= nx / 2)
+	kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
+      else 
+	kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
+      
+      if (j <= ny / 2)
+	ky = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
+      else 
+	ky = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - ky0;
+      
+      ssum = 0.0;
+      lz = ((REAL) nz) * step;
+      
+      for(k = 0; k < nz; k++) {
+	if (k <= nz / 2)
+	  kz = 2.0 * M_PI * ((REAL) k) / lz - kz0;
+	else 
+	  kz = 2.0 * M_PI * ((REAL) (k - nz)) / lz - kz0;
+	
+	ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
+      }
+      
+      sum += ssum;
     }
-    
-    sum += ssum;
-   }
   }
-
+  
   return sum * norm;
 }
 

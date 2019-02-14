@@ -209,13 +209,8 @@ EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data) {
 
 EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 
-  REAL mass = gwf->mass, kx = gwf->grid->kx0, ky = gwf->grid->ky0, kz = gwf->grid->kz0;
-  REAL ekin = -HBAR * HBAR * (kx * kx + ky * ky + kz * kz) / (2.0 * mass);
-
-  if(ekin != 0.0) ekin *= CREAL(cgrid_integral_of_square(gwf->grid));
-
-  if (gwf->propagator == WF_2ND_ORDER_CN || gwf->propagator == WF_4TH_ORDER_CN) return grid_wf_energy_cn(gwf, potential) + ekin;
-  else return grid_wf_energy_fft(gwf, potential) + ekin; /* else FFT */
+  if (gwf->propagator == WF_2ND_ORDER_CN || gwf->propagator == WF_4TH_ORDER_CN) return grid_wf_energy_cn(gwf, potential);
+  else return grid_wf_energy_fft(gwf, potential); /* else FFT */
 }
 
 /*

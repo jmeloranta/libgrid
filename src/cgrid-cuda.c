@@ -791,26 +791,24 @@ EXPORT char cgrid_cuda_fft_laplace(cgrid *grid, cgrid *laplace) {
 /*
  * Calculate expectation value of laplace operator in the Fourier space (int grid^* grid'').
  *
- * grid    = source grid (cgrid *; input).
  * laplace = laplace of grid (cgrid *; output).
  * value   = expectation value (REAL *; output).
  *
  */
 
-EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace, REAL *value) {
+EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value) {
 
-  REAL step = grid->step;
+  REAL step = laplace->step, norm = laplace->fft_norm;
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, laplace->value, laplace->grid_len, laplace->id, 0) < 0) return -1;
+  if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->id, 1) < 0) return -1;
 
-  if (laplace != grid) cuda_gpu2gpu(cuda_find_block(laplace->value), cuda_find_block(grid->value), 0);
-
-  cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), grid->fft_norm, grid->kx0, grid->ky0, grid->kz0, 
-                                            grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, 
+                                            laplace->step, laplace->nx, laplace->ny, laplace->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
-  if(grid->nx != 1) *value *= step;
-  if(grid->ny != 1) *value *= step;
-  *value *= step;
+  if(laplace->nx != 1) *value *= step;
+  if(laplace->ny != 1) *value *= step;
+  *value *= step * norm;
+
   return 0;
 }
 

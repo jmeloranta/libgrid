@@ -555,10 +555,8 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 
 EXPORT REAL grid_wf_kinetic_energy_flow(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
 
-  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, val;
-  REAL ekin = -HBAR * HBAR * (kx0 * kx0 + ky0 * ky0 + kz0 * kz0) / (2.0 * gwf->mass);  // moving background
-
 #if 0
+  // brute force
   rgrid_zero(workspace2);
   grid_wf_probability_flux_x(gwf, workspace1);  // = rho * v_x
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);  // 1/2 * mass * rho^2 * v_x^2
@@ -570,18 +568,11 @@ EXPORT REAL grid_wf_kinetic_energy_flow(wf *gwf, rgrid *workspace1, rgrid *works
   grid_wf_density(gwf, workspace1);
   rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);  // divide out extra rho
   val = rgrid_integral(workspace2);
-#else
-  // QP can be evaluated without dividing by rho, so calculate total and remove QP
-  val = grid_wf_energy_cn_kinetic(gwf) - grid_wf_kinetic_energy_qp(gwf, workspace1, workspace2);
-#endif
-#if 0
-  if(ekin != 0.0) {
-    ekin *= CREAL(cgrid_integral_of_square(gwf->grid));
-    val += ekin;
-  }
   return val;
+#else
+  // total - quantum pressure K.E.
+  return grid_wf_kinetic_energy_cn(gwf) - grid_wf_kinetic_energy_qp(gwf, workspace1, workspace2);
 #endif
-  return grid_wf_energy_cn_kinetic(gwf) - grid_wf_kinetic_energy_qp(gwf, workspace1, workspace2);
 }
 
 /*
