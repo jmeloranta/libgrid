@@ -542,7 +542,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 }
 
 /*
- * Calculate total kinetic energy minus the quantum pressure: int 1/2 * mass * rho * |v|^2 d^3
+ * Calculate total classical kinetic energy minus the quantum pressure: int 1/2 * mass * rho * |v|^2 d^3
  * This is the kinetic energy due to classical flow / motion.
  *
  * wf         = Wavefunction (wf *; input).
@@ -553,7 +553,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
  *
  */
 
-EXPORT REAL grid_wf_kinetic_energy_flow(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
 
 #if 0
   // brute force
@@ -608,6 +608,27 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
 
 EXPORT REAL grid_wf_ideal_gas_temperature(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
 
-  return grid_wf_kinetic_energy_flow(gwf, workspace1, workspace2) / (1.5 * grid_wf_norm(gwf) * GRID_AUKB);
+  return grid_wf_kinetic_energy_classical(gwf, workspace1, workspace2) / (1.5 * grid_wf_norm(gwf) * GRID_AUKB);
 }
 
+/*
+ * Calculate liquid circulation.
+ *
+ * wf         = Wave function (wf *; input).
+ * nn         = Exponent (REAL; input). Usually nn = 1.0. See below.
+ * workspace1 = Workspace (rgrid *; input).
+ * workspace2 = Workspace (rgrid *; input).
+ * workspace3 = Workspace (rgrid *; input).
+ * workspace4 = Workspace (rgrid *; input).
+ *
+ * returns int |circulation|^nn
+ *
+ */
+
+EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
+
+  grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
+  rgrid_abs_rot(workspace4, workspace1, workspace2, workspace3);
+  if(nn != 1.0) rgrid_power(workspace4, workspace4, nn);
+  return rgrid_integral(workspace4);
+}
