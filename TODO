@@ -11,6 +11,7 @@
 - CUDA: Think about streams (and multiple GPUs). libdft could certainly use this. Also cufft can spread over multiple GPUs.
   At the moment, kernel launching overhead / PCI-E bus speed seems to limit.
 - Test compressible/incompressible decomposition with plane waves and vortex line.
+- Why do kinetic energy valuation using FFT and FD give slightly different result (about 10%)?
 
 also fgrep TODO *.[ch] to find out more specific issues.
 

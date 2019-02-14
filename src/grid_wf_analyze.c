@@ -4,6 +4,7 @@
  */
 
 #include "grid.h"
+#include "au.h"
 #include "private.h"
 
 /*
@@ -261,10 +262,58 @@ EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgri
 }
 
 /*
+ * Calculate linear momentum expectation value <p_x>.
+ *
+ * wf        = Wafecuntion (wf *; input).
+ * workspace = Workspace (rgrid *; input).
+ *
+ * Return <p_x>.
+ *
+ */
+
+EXPORT REAL grid_wf_px(wf *gwf, rgrid *workspace) {
+
+  grid_wf_probability_flux_x(gwf, workspace);
+  return rgrid_integral(workspace);
+}
+
+/*
+ * Calculate linear momentum expectation value <p_y>.
+ *
+ * wf        = Wafecuntion (wf *; input).
+ * workspace = Workspace (rgrid *; input).
+ *
+ * Return <p_y>.
+ *
+ */
+
+EXPORT REAL grid_wf_py(wf *gwf, rgrid *workspace) {
+
+  grid_wf_probability_flux_y(gwf, workspace);
+  return rgrid_integral(workspace);
+}
+
+/*
+ * Calculate linear momentum expectation value <p_z>.
+ *
+ * wf        = Wafecuntion (wf *; input).
+ * workspace = Workspace (rgrid *; input).
+ *
+ * Return <p_z>.
+ *
+ */
+
+EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
+
+  grid_wf_probability_flux_z(gwf, workspace);
+  return rgrid_integral(workspace);
+}
+
+/*
  * Calculate angular momentum expectation value <L_x>.
  *
- * wf         = Wavefunction (wf *).
- * workspace  = Workspace required for the operation (rgrid *).
+ * wf         = Wavefunction (wf *; input).
+ * workspace  = Workspace required for the operation (rgrid *; input).
  *
  * Return <L_x> (L_x = y p_z - z p_y).
  *
@@ -494,6 +543,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 
 /*
  * Calculate total kinetic energy minus the quantum pressure: int 1/2 * mass * rho * |v|^2 d^3
+ * This is the kinetic energy due to classical flow / motion.
  *
  * wf         = Wavefunction (wf *; input).
  * workspace1 = Workspace (rgrid *; input).
@@ -503,8 +553,12 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
  *
  */
 
-EXPORT REAL grid_wf_kinetic_energy_noqp(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_kinetic_energy_flow(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
 
+  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, val;
+  REAL ekin = -HBAR * HBAR * (kx0 * kx0 + ky0 * ky0 + kz0 * kz0) / (2.0 * gwf->mass);  // moving background
+
+#if 0
   rgrid_zero(workspace2);
   grid_wf_probability_flux_x(gwf, workspace1);  // = rho * v_x
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);  // 1/2 * mass * rho^2 * v_x^2
@@ -514,12 +568,24 @@ EXPORT REAL grid_wf_kinetic_energy_noqp(wf *gwf, rgrid *workspace1, rgrid *works
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);
   
   grid_wf_density(gwf, workspace1);
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);  // remove extra rho
-  return rgrid_integral(workspace2);
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);  // divide out extra rho
+  val = rgrid_integral(workspace2);
+#else
+  // QP can be evaluated without dividing by rho, so calculate total and remove QP
+  val = grid_wf_energy_cn_kinetic(gwf) - grid_wf_kinetic_energy_qp(gwf, workspace1, workspace2);
+#endif
+#if 0
+  if(ekin != 0.0) {
+    ekin *= CREAL(cgrid_integral_of_square(gwf->grid));
+    val += ekin;
+  }
+  return val;
+#endif
+  return grid_wf_energy_cn_kinetic(gwf) - grid_wf_kinetic_energy_qp(gwf, workspace1, workspace2);
 }
 
 /*
- * Calculate quantum pressure ( = total K.E. - 1/2 rho v^2).
+ * Calculate quantum pressure ( = -(hbar * hbar / (2m)) sqrt(rho) laplace sqrt(rho)).
  *
  * gwf        = Wavefunction (wf *; input).
  * workspace1 = Workspace (rgrid *; input).
@@ -531,5 +597,26 @@ EXPORT REAL grid_wf_kinetic_energy_noqp(wf *gwf, rgrid *workspace1, rgrid *works
 
 EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
 
-  return grid_wf_kinetic_energy(gwf) - grid_wf_kinetic_energy_noqp(gwf, workspace1, workspace2);
+  grid_wf_density(gwf, workspace1);
+  rgrid_power(workspace1, workspace1, 0.5);
+  rgrid_fd_laplace(workspace1, workspace2);
+  rgrid_product(workspace1, workspace1, workspace2);
+  return -(HBAR * HBAR / (2.0 * gwf->mass)) * rgrid_integral(workspace1);
 }
+
+/*
+ * Evaluate classical ideal gas "temperature" of the system from kinetic energy minus quantum pressure.
+ *
+ * gwf        = Wavefunction (wf *; input).
+ * workspace1 = Workspace (rgird *; input).
+ * workspace2 = Workspace (rgird *; input).
+ *
+ * Returns temperature (in Kelvin).
+ *
+ */
+
+EXPORT REAL grid_wf_ideal_gas_temperature(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+
+  return grid_wf_kinetic_energy_flow(gwf, workspace1, workspace2) / (1.5 * grid_wf_norm(gwf) * GRID_AUKB);
+}
+
