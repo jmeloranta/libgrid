@@ -716,6 +716,28 @@ EXPORT char rgrid_cuda_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll
 }
 
 /*
+ * Zero a range of complex grid.
+ *
+ * grid = grid to be cleared (rgrid *; input/output).
+ * lx       = Lower limit for x index (INT; input).
+ * hx       = Upper limit for x index (INT; input).
+ * ly       = Lower limit for y index (INT; input).
+ * hy       = Upper limit for y index (INT; input).
+ * lz       = Lower limit for z index (INT; input).
+ * hz       = Upper limit for z index (INT; input).
+ *
+ */
+
+EXPORT char rgrid_cuda_zero_index(rgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+
+  if(hx > grid->nx || lx < 0 || hy > grid->ny || ly < 0 || hz > grid->nz || lz < 0) return 0; // not part of the grid
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
+
+  rgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
+  return 0;
+}
+
+/*
  * Solve Poisson equation.
  *
  * grid = destination grid (rgrid *; input/output).

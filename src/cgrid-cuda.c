@@ -864,7 +864,6 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
   return 0;
 }
 
-
 /*
  * Solve Poisson equation.
  *

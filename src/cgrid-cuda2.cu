@@ -1848,7 +1848,6 @@ extern "C" void cgrid_cuda_zero_indexW(CUCOMPLEX *grid, INT lx, INT hx, INT ly, 
   cuda_error_check();
 }
 
-
 /*
  * Poisson equation.
  *

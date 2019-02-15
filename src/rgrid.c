@@ -2524,6 +2524,49 @@ EXPORT void rgrid_random(rgrid *grid, REAL scale) {
 }
 
 /*
+ * Add random noise to grid to part of grid.
+ *
+ * grid  = Grid where the noise will be added (cgrid *; input/output).
+ * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
+ * lx    = Lower limit index for x (INT; input).
+ * hx    = Upper limit index for x (INT; input).
+ * ly    = Lower limit index for y (INT; input).
+ * hy    = Upper limit index for y (INT; input).
+ * lz    = Lower limit index for z (INT; input).
+ * hz    = Upper limit index for z (INT; input).
+ *
+ */
+
+EXPORT void rgrid_random_index(rgrid *grid, REAL scale, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+
+  static char been_here = 0;
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  INT i, j, k;
+
+  if(!been_here) {
+    srand48(time(0));
+    been_here = 1;
+  }
+
+#ifdef USE_CUDA
+  cuda_remove_block(grid->value, 1);
+#endif
+
+  if(hx > nx) hx = nx;
+  if(hy > ny) hy = ny;
+  if(hz > nz) hz = nz;
+  if(lx < 0) lx = 0;
+  if(ly < 0) ly = 0;
+  if(lz < 0) lz = 0;
+
+  // drand48 is not thread safe.
+  for (i = lx; i < hx; i++)
+    for (j = ly; j <  hy; j++)
+      for (k = lz; k < hz; k++)
+        grid->value[(i * ny + j) * nz + k] += scale * 2.0 * (((REAL) drand48()) - 0.5);
+}
+
+/*
  * Solve Poisson equation: Laplace f = u subject to periodic boundaries
  * Uses finite difference for Laplacian (7 point) and FFT.
  *
@@ -2708,6 +2751,44 @@ EXPORT void rgrid_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz) {
       lvalue[ijnz + k] = SQRT(lvalue[ijnz + k]);
     }
   }
+}
+
+/*
+ * Zero a given index range of a complex grid over [lx, hx[ X [ly, hy[ X [lz, hz[ .
+ *
+ * grid     = Grid to be operated on (cgrid *; input/output).
+ * lx       = Lower limit for x index (INT; input).
+ * hx       = Upper limit for x index (INT; input).
+ * ly       = Lower limit for y index (INT; input).
+ * hy       = Upper limit for y index (INT; input).
+ * lz       = Lower limit for z index (INT; input).
+ * hz       = Upper limit for z index (INT; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_zero_index(rgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nynz = ny * nz;
+  REAL *value = grid->value;
+
+  if(hx > nx) hx = nx;
+  if(hy > ny) hy = ny;
+  if(hz > nz) hz = nz;
+  if(lx < 0) lx = 0;
+  if(ly < 0) ly = 0;
+  if(lz < 0) lz = 0;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_zero_index(grid, lx, hx, ly, hy, lz, hz)) return;
+#endif
+
+#pragma omp parallel for firstprivate(lx,hx,nx,ly,hy,ny,lz,hz,nz,value,nynz) private(i,j,k) default(none) schedule(runtime)
+  for(i = lx; i < hx; i++)
+    for(j = ly; j < hy; j++)
+      for(k = lz; k < hz; k++)
+        value[i * nynz + j * nz + k] = 0.0;
 }
 
 /*

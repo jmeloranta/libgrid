@@ -1615,6 +1615,48 @@ extern "C" void rgrid_cuda_threshold_clearW(CUREAL *dest, CUREAL *src, CUREAL ul
 }
 
 /*
+ * Zero part of real grid.
+ *
+ * A = 0 in the specified range.
+ *
+ */
+
+__global__ void rgrid_cuda_zero_index_gpu(CUREAL *a, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+  if(i >= lx && i < hx && j >= ly && j < hy && k >= lz && k < hz)
+    a[idx] = 0.0;
+}
+
+/*
+ * Zero specified range of complex grid.
+ *
+ * grid     = Grid to be operated on (CUREAL *; input/output).
+ * lx, hx, ly, hy, lz, hz = limiting indices (INT; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void rgrid_cuda_zero_indexW(CUREAL *grid, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_zero_index_gpu<<<blocks,threads>>>(grid, lx, hx, ly, hy, lz, hz, nx, ny, nz);
+  cuda_error_check();
+}
+
+/*
  * Poisson equation.
  *
  */
