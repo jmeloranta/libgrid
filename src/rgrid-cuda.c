@@ -807,3 +807,45 @@ EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
 
   return 0;
 }
+
+/*
+ * Calculate second derivative of a grid (in Fourier space).
+ *
+ * grid    = source grid (rgrid *; input).
+ * laplace = destination grid (rgrid *; output).
+ *
+ */
+
+EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
+
+  if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->id, 1) < 0) 
+    return -1;
+
+  rgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), laplace->fft_norm, laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, 
+                          laplace->nx, laplace->ny, laplace->nz2 / 2);
+  return 0;
+}
+
+/*
+ * Calculate expectation value of laplace operator in the Fourier space (int grid^* grid'').
+ *
+ * laplace = laplace of grid (cgrid *; output).
+ * value   = expectation value (REAL *; output).
+ *
+ */
+
+EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value) {
+
+  REAL step = laplace->step, norm = laplace->fft_norm;
+
+  if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->id, 1) < 0) return -1;
+
+  rgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, 
+                                            laplace->step, laplace->nx, laplace->ny, laplace->nz);
+  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
+  if(laplace->nx != 1) *value *= step;
+  if(laplace->ny != 1) *value *= step;
+  *value *= step * norm;
+
+  return 0;
+}

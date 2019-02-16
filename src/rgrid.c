@@ -3205,7 +3205,7 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
 
 EXPORT void rgrid_fft_gradient_x(rgrid *grid, rgrid *gradient_x) {
 
-  INT i, k, ij, ijnz, nx, ny, nz, nxy;
+  INT i, k, ij, ijnz, nx, ny, nzz, nxy, nx2;
   REAL kx0 = grid->kx0;
   REAL kx, step, norm, lx;
   REAL complex *gxvalue = (REAL complex *) gradient_x->value;
@@ -3219,21 +3219,22 @@ EXPORT void rgrid_fft_gradient_x(rgrid *grid, rgrid *gradient_x) {
   /* f'(x) = iF[ i kx F[f(x)] ] */  
   nx = grid->nx;
   ny = grid->ny;
-  nz = grid->nz2 / 2;
+  nzz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
   norm = grid->fft_norm;
   lx = 2.0 * M_PI / (((REAL) nx) * step);
+  nx2 = nx / 2;
 
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx2,norm,nx,ny,nzz,nxy,step,gxvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
-    ijnz = ij * nz;
-    if(i < nx/2) 
+    ijnz = ij * nzz;
+    if(i < nx2) 
       kx = ((REAL) i) * lx - kx0;
     else
       kx = -((REAL) (nx - i)) * lx - kx0;
-    for(k = 0; k < nz; k++)	  
+    for(k = 0; k < nzz; k++)	  
       gxvalue[ijnz + k] *= (kx * norm) * I;
   } 
 }
@@ -3252,7 +3253,7 @@ EXPORT void rgrid_fft_gradient_x(rgrid *grid, rgrid *gradient_x) {
 
 EXPORT void rgrid_fft_gradient_y(rgrid *grid, rgrid *gradient_y) {
 
-  INT j, k, ij, ijnz, nx, ny, nz, nxy;
+  INT j, k, ij, ijnz, nx, ny, nzz, nxy, ny2;
   REAL ky0 = grid->ky0;
   REAL ky, step, norm, ly;
   REAL complex *gyvalue = (REAL complex *) gradient_y->value;
@@ -3266,21 +3267,22 @@ EXPORT void rgrid_fft_gradient_y(rgrid *grid, rgrid *gradient_y) {
   /* f'(x) = iF[ i kx F[f(x)] ] */  
   nx = grid->nx;
   ny = grid->ny;
-  nz = grid->nz2 / 2;
+  nzz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
   norm = grid->fft_norm;
   ly = 2.0 * M_PI / (((REAL) ny) * step);
+  ny2 = ny / 2;
 
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(ny2,norm,nx,ny,nzz,nxy,step,gyvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     j = ij % ny;
-    ijnz = ij * nz;
-    if(j < ny/2) 
+    ijnz = ij * nzz;
+    if(j < ny2) 
       ky = ((REAL) j) * ly - ky0;
     else
       ky = -((REAL) (ny - j)) * ly - ky0;
-    for(k = 0; k < nz; k++)	  
+    for(k = 0; k < nzz; k++)	  
       gyvalue[ijnz + k] *= (ky * norm) * I;
   } 
 }
@@ -3299,7 +3301,7 @@ EXPORT void rgrid_fft_gradient_y(rgrid *grid, rgrid *gradient_y) {
 
 EXPORT void rgrid_fft_gradient_z(rgrid *grid, rgrid *gradient_z) {
 
-  INT k, ij, ijnz, nx, ny, nz, nxy, nzz = grid->nz2 / 2;
+  INT k, ij, ijnz, nx, ny, nxy, nzz, nzz2;
   REAL kz0 = grid->kz0;
   REAL kz, step, norm, lz;
   REAL complex *gzvalue = (REAL complex *) gradient_z->value;
@@ -3313,20 +3315,21 @@ EXPORT void rgrid_fft_gradient_z(rgrid *grid, rgrid *gradient_z) {
   /* f'(x) = iF[ i kx F[f(x)] ] */  
   nx = grid->nx;
   ny = grid->ny;
-  nz = grid->nz2 / 2;
+  nzz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
   norm = grid->fft_norm;
   lz = M_PI / (((REAL) nzz - 1) * step);
+  nzz2 = nzz / 2;
 
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nzz2,norm,nx,ny,nzz,nxy,step,gzvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nz;
-    for(k = 0; k < nz; k++) {
-      if(k < nz/2) 
+    ijnz = ij * nzz;
+    for(k = 0; k < nzz; k++) {
+      if(k < nzz2) 
         kz = ((REAL) k) * lz - kz0;
       else
-        kz = -((REAL) (nz - k)) * lz - kz0;
+        kz = -((REAL) (nzz - k)) * lz - kz0;
       gzvalue[ijnz + k] *= (kz * norm) * I;
     }
   } 
@@ -3353,7 +3356,195 @@ EXPORT void rgrid_fft_gradient(rgrid *grid, rgrid *gradient_x, rgrid *gradient_y
   rgrid_fft_gradient_z(grid, gradient_z);
 }
 
-/*
- * TODO: laplace (see cgrid.c).
+/* 
+ * Calculate second derivative of a grid (in Fourier space).
+ *
+ * grid    = grid to be differentiated (rgrid *; input).
+ * laplace = output grid (rgrid *; output).
+ *
+ * No return value.
+ *
+ * Note: input/output grids may be the same.
  *
  */
+
+EXPORT void rgrid_fft_laplace(rgrid *grid, rgrid *laplace)  {
+
+  INT i, j, k, ij, ijnz, nx, ny, nxy, nzz;
+  INT nx2, ny2, nzz2;
+  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
+  REAL kx, ky, kz, lx, ly, lz, step, norm;
+  REAL complex *lvalue = (REAL complex *) laplace->value;
+  
+  if (grid != laplace) rgrid_copy(laplace, grid);
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_laplace(laplace)) return;
+#endif
+
+  /* f''(x) = iF[ -k^2 F[f(x)] ] */
+  nx = grid->nx;
+  ny = grid->ny;
+  nzz = grid->nz2 / 2;
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nzz2 = nzz / 2;
+  nxy = nx * ny;
+  step = grid->step;
+  norm = grid->fft_norm;  
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = M_PI / (((REAL) nzz - 1) * step);
+  
+#pragma omp parallel for firstprivate(nx2,ny2,nzz2,norm,nx,ny,nzz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nzz;
+    
+    if(i < nx2) 
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = -((REAL) (nx - i)) * lx - kx0;
+    if(j < ny2) 
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = -((REAL) (ny - j)) * ly - ky0;
+      
+    for(k = 0; k < nzz; k++) {
+      if(k < nzz2) 
+        kz = ((REAL) k) * lz - kz0;
+      else
+        kz = -((REAL) (nzz - k)) * lz - kz0;        
+      lvalue[ijnz + k] *= -(kx * kx + ky * ky + kz * kz) * norm;
+    }
+  }
+}
+
+/*
+ * Calculate expectation value of laplace operator in the Fourier space (int grid^* grid'').
+ *
+ * grid    = source grid for the operation (in Fourier space) (rgrid *; input).
+ * laplace = laplacian of the grid (input) (rgrid *; output).
+ *
+ * Returns the expectation value (REAL).
+ *
+ */
+
+EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
+
+  INT i, j, k, ij, ijnz, nx, ny, nxy, nzz;
+  INT nx2, ny2, nzz2;
+  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
+  REAL kx, ky, kz, lx, ly, lz, step, norm, sum, ssum;
+  REAL complex *lvalue = (REAL complex *) laplace->value;
+  
+  if (grid != laplace) rgrid_copy(laplace, grid);
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_laplace_expectation_value(laplace, &sum)) return sum;
+#endif
+
+  /* f''(x) = iF[ -k^2 F[f(x)] ] */
+  nx = grid->nx;
+  ny = grid->ny;
+  nzz = grid->nz2 / 2;
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nzz2 = nzz / 2;
+  nxy = nx * ny;
+  step = grid->step;
+  norm = grid->fft_norm;  
+  norm *= step * step * step;
+
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = M_PI / (((REAL) nzz - 1) * step);
+  
+#pragma omp parallel for firstprivate(nx2,ny2,nzz2,norm,nx,ny,nzz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(ssum,i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime) reduction(+:sum)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nzz;
+    
+    if(i < nx2) 
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = -((REAL) (nx - i)) * lx - kx0;
+    if(j < ny2) 
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = -((REAL) (ny - j)) * ly - ky0;
+      
+    ssum = 0.0;
+    for(k = 0; k < nzz; k++) {
+      if(k < nzz2) 
+        kz = ((REAL) k) * lz - kz0;
+      else
+        kz = -((REAL) (nzz - k)) * lz - kz0;        
+      ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
+    }
+    sum += ssum;
+  }
+  return sum * norm;
+}
+
+/*
+ * Apply user defined filter in Fourier space.
+ *
+ * grid   = Grid in Fourier space to be filtered (rgrid *; input/output).
+ * func   = Filter function (REAL complex (*func)(void *farg, REAL kx, REAL ky, REAL kz); input).
+ * farg   = Arguments to be passed to the function (void *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REAL, REAL), void *farg) {
+
+  INT i, j, k, ij, ijnz, nx, ny, nzz, nxy, nx2, ny2, nzz2;
+  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
+  REAL kx, ky, kz, lx, ly, lz, step;
+  REAL complex *value = (REAL complex *) grid->value;
+  
+#ifdef USE_CUDA
+  cuda_remove_block(grid->value, 1);
+#endif
+
+  nx = grid->nx;
+  ny = grid->ny;
+  nzz = grid->nz2 / 2;
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nzz2 = nzz / 2;
+  nxy = nx * ny;
+  step = grid->step;
+  
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = M_PI / (((REAL) nzz - 1) * step);
+
+#pragma omp parallel for firstprivate(nx2,ny2,nzz2,func,farg,nx,ny,nzz,nxy,step,value,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nzz;
+      
+    if(i < nx2) 
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = -((REAL) (nx - i)) * lx - kx0;
+    if(j < ny2) 
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = -((REAL) (ny - j)) * ly - ky0;
+      
+    for(k = 0; k < nzz; k++) {
+      if(k < nzz2) 
+        kz = ((REAL) k) * lz - kz0;
+      else
+        kz = -((REAL) (nzz - k)) * lz - kz0;        
+      value[ijnz + k] *= (*func)(farg, kx, ky, kz);
+    }
+  }
+}

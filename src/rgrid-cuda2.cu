@@ -1841,3 +1841,155 @@ extern "C" void rgrid_cuda_fft_gradient_zW(CUCOMPLEX *gradient_z, REAL kz0, REAL
   rgrid_cuda_fft_gradient_z_gpu<<<blocks,threads>>>(gradient_z, kz0, step, norm, nx, ny, nz, nz / 2);
   cuda_error_check();
 }
+
+
+/*
+ * FFT laplace.
+ *
+ * B = B'' in Fourier space.
+ *
+ */
+
+__global__ void rgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2) {  /* Exectutes at GPU */
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT idx;
+  CUREAL kx, ky, kz;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  
+  if(i < nx2) 
+    kx = ((REAL) i) * lx - kx0;
+  else
+    kx = -((REAL) (nx - i)) * lx - kx0;
+  if(j < ny2) 
+    ky = ((REAL) j) * ly - ky0;
+  else
+    ky = -((REAL) (ny - j)) * ly - ky0;
+  if(k < nz2) 
+    kz = ((REAL) k) * lz - kz0;
+  else
+    kz = -((REAL) (nz - k)) * lz - kz0;        
+
+  b[idx] = b[idx] * (-(kx * kx + ky * ky + kz * kz) * norm);
+}
+
+/*
+ * FFT laplace
+ *
+ * laplace  = Source/destination grid for operation (REAL complex *; input/output).
+ * norm     = FFT norm (grid->fft_norm) (REAL; input).
+ * kx0      = Momentum shift of origin along X (REAL; input).
+ * ky0      = Momentum shift of origin along Y (REAL; input).
+ * kz0      = Momentum shift of origin along Z (REAL; input).
+ * step     = Spatial step length (REAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ * Only periodic boundaries!
+ *
+ */
+
+extern "C" void rgrid_cuda_fft_laplaceW(CUCOMPLEX *laplace, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz) {
+
+  INT nx2 = nx / 2, ny2 = ny / 2, nz2 = ny / 2;
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  rgrid_cuda_fft_laplace_gpu<<<blocks,threads>>>(laplace, norm, kx0, ky0, kz0, 2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nz - 1) * step), step, nx, ny, nz, nx2, ny2, nz2);
+  cuda_error_check();
+}
+
+/*
+ * FFT laplace expectation value.
+ *
+ * B = <B''> in Fourier space.
+ *
+ * Only periodic version implemented.
+ *
+ * Normalization done in rgrid-cuda.c
+ *
+ */
+
+__global__ void rgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOMPLEX *blocks, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
+  INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
+  CUREAL kx, ky, kz;
+  extern __shared__ CUREAL els2[];
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+    for(t = 0; t < d; t++)
+      els2[t] = 0.0;
+  }
+  __syncthreads();
+
+  idx = (i * ny + j) * nz + k;
+
+  if(i < nx2) 
+    kx = ((REAL) i) * lx - kx0;
+  else
+    kx = -((REAL) (nx - i)) * lx - kx0;
+  if(j < ny2) 
+    ky = ((REAL) j) * ly - ky0;
+  else
+    ky = -((REAL) (ny - j)) * ly - ky0;
+  if(k < nz2) 
+    kz = ((REAL) k) * lz - kz0;
+  else
+    kz = -((REAL) (nz - k)) * lz - kz0;        
+
+  idx2 = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
+  els2[idx2] -= (kx * kx + ky * ky + kz * kz) * (CUCREAL(b[idx]) * CUCREAL(b[idx]) + CUCIMAG(b[idx]) * CUCIMAG(b[idx]));
+  __syncthreads();
+
+  if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
+    for(t = 0; t < d; t++) {
+      idx2 = (blockIdx.z * gridDim.y + blockIdx.y) * gridDim.x + blockIdx.x;
+      blocks[idx2].x += els2[t];  // reduce threads
+    }
+  }
+}
+
+/*
+ * FFT laplace expectation value
+ *
+ * laplace  = Source/destination grid for operation (REAL complex *; input/output).
+ * kx0      = Momentum shift of origin along X (REAL; input).
+ * ky0      = Momentum shift of origin along Y (REAL; input).
+ * kz0      = Momentum shift of origin along Z (REAL; input).
+ * step     = Spatial step length (REAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ * sum      = Expectation value (REAL; output).
+ *
+ * Only periodic boundaries!
+ *
+ * Normalization done in cgrid-cuda.c
+ *
+ */
+
+extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(CUCOMPLEX *laplace, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz) {
+
+  INT nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b3 = blocks.x * blocks.y * blocks.z;
+
+  rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr, b3);
+  cuda_error_check();
+  rgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks,threads,s*sizeof(CUREAL)>>>(laplace, (CUCOMPLEX *) grid_gpu_mem_addr, kx0, ky0, kz0, 2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nz - 1) * step), step, nx, ny, nz, nx2, ny2, nz2);
+  cuda_error_check();
+  rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr, b3);
+  cuda_error_check();
+}
