@@ -3252,6 +3252,8 @@ EXPORT void cgrid_ipower(cgrid *dst, cgrid *src, INT exponent) {
  *
  * No return value.
  *
+ * NOTE: This does not multiply by fft_norm, so use cgrid_inverse_fft_norm()...
+ *
  */
 
 EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REAL, REAL), void *farg) {
@@ -3318,7 +3320,6 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
       else 
         ky = ((REAL) (j - ny)) * ly - ky0;
       
-      lz = ((REAL) nz) * step;
       for(k = 0; k < nz; k++) {
         if (k <= nz2)
           kz = ((REAL) k) * lz - kz0;

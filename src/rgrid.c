@@ -3498,6 +3498,8 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
  *
  * No return value.
  *
+ * NOTE: This does not multiply by fft_norm, so use rgrid_inverse_fft_norm()...
+ *
  */
 
 EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REAL, REAL), void *farg) {
