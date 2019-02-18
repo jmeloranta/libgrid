@@ -599,7 +599,7 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
  * Evaluate classical ideal gas "temperature" of the system from kinetic energy minus quantum pressure.
  *
  * gwf        = Wavefunction (wf *; input).
- * other      = Other energy to be added for computing temperature (rgird *; input). May be NULL if not used.
+ * offset     = Offset to be added for computing temperature (REAL; input).
  * workspace1 = Workspace (rgird *; input).
  * workspace2 = Workspace (rgird *; input).
  *
@@ -607,13 +607,10 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
  *
  */
 
-EXPORT REAL grid_wf_ideal_gas_temperature(wf *gwf, rgrid *other, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_ideal_gas_temperature(wf *gwf, REAL offset, rgrid *workspace1, rgrid *workspace2) {
 
-  if(other)
-    return (grid_wf_kinetic_energy_classical(gwf, workspace1, workspace2) + rgrid_integral(other)) 
+  return (grid_wf_kinetic_energy_classical(gwf, workspace1, workspace2) + offset) 
            / (1.5 * grid_wf_norm(gwf) * GRID_AUKB);
-  else
-    return grid_wf_kinetic_energy_classical(gwf, workspace1, workspace2) / (1.5 * grid_wf_norm(gwf) * GRID_AUKB);
 }
 
 /*
