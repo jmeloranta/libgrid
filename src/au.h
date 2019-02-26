@@ -8,7 +8,7 @@
 #define GRID_AUTOANG  0.52917725             /* Bohr to Angstrom  */
 #define GRID_AUTOM    (GRID_AUTOANG * 1E-10) /* Bohr to meter */
 #define GRID_AUTOK    3.15773213e5           /* Hartree to Kelvin */
-#define GIRD_AUTOJ    4.359748E-18           /* Hartree to Joule */
+#define GRID_AUTOJ    4.359748E-18           /* Hartree to Joule */
 #define GRID_AUTOCM1  (3.15773213e5/1.439)   /* Hartree to wavenumbers */
 #define GRID_HZTOCM1  3.335641E-11           /* Hz to wavenumbers */
 #define GRID_AUTOAMU  (1.0/1822.88853006)    /* Me (mass of electron) to atomic mass unit */
