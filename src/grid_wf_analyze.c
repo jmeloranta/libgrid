@@ -610,6 +610,7 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
 EXPORT REAL grid_wf_ideal_gas_temperature(wf *gwf, REAL offset, rgrid *workspace1, rgrid *workspace2) {
 
   return (grid_wf_kinetic_energy_classical(gwf, workspace1, workspace2) + offset) 
+//  return (grid_wf_kinetic_energy(gwf) + offset)
            / (1.5 * grid_wf_norm(gwf) * GRID_AUKB);
 }
 

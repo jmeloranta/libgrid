@@ -8,6 +8,7 @@
 #define GRID_AUTOANG  0.52917725             /* Bohr to Angstrom  */
 #define GRID_AUTOM    (GRID_AUTOANG * 1E-10) /* Bohr to meter */
 #define GRID_AUTOK    3.15773213e5           /* Hartree to Kelvin */
+#define GIRD_AUTOJ    4.359748E-18           /* Hartree to Joule */
 #define GRID_AUTOCM1  (3.15773213e5/1.439)   /* Hartree to wavenumbers */
 #define GRID_HZTOCM1  3.335641E-11           /* Hz to wavenumbers */
 #define GRID_AUTOAMU  (1.0/1822.88853006)    /* Me (mass of electron) to atomic mass unit */
@@ -21,5 +22,6 @@
 #define GRID_AUTOVPM  5.14220652E11          /* Atomic electric field strength to V/m */
 #define GRID_AUTOPAS  (GRID_AUTOPA * GRID_AUTOS) /* Atomic viscosity unit to Pa s */
 #define GRID_AUKB     3.1668773658e-06       /* Boltzmann constant in a.u. (k_B) */
+#define GRID_AVOGADRO 6.022137E23            /* Avogardro's number: convert from # of particles to moles */
 #endif
 
