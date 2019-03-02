@@ -82,6 +82,9 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
     case WF_VORTEX_Z_BOUNDARY:
       value_outside = cgrid_value_outside_vortex_z;
       break;
+    default:
+      fprintf(stderr, "libgrid: Unknown boundary condition in grid_wf_alloc().\n");
+      exit(1);
   }
   
   if(!(gwf->grid = cgrid_alloc(nx, ny, nz, step, value_outside, 0, id))) {
