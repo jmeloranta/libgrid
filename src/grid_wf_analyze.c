@@ -478,7 +478,7 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 
 EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
 
-  INT i;
+  INT i, npts = gwf->grid->nx * gwf->grid->ny * gwf->grid->nz;
   REAL step = gwf->grid->step, step3 = step * step * step;
 
   /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
@@ -498,8 +498,9 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   rgrid_fft(workspace3); rgrid_multiply(workspace3, step3);
   rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
   
+// TODO: Why do we need to divide by the number of points? Doing so matches previous work...
   for (i = 0; i < nbins; i++)
-    bins[i] = bins[i] * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) * 0.5 * gwf->mass / (4.0 * M_PI);
+    bins[i] = bins[i] * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) * 0.5 * gwf->mass / (4.0 * M_PI * (REAL) npts);
 }
 
 /*
@@ -522,7 +523,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
 
 EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
 
-  INT i;
+  INT i, npts = gwf->grid->nx * gwf->grid->ny * gwf->grid->nz;
   REAL step = gwf->grid->step, step3 = step * step * step;
 
   /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
@@ -543,8 +544,9 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 
   rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
   
+// TODO: Why do we need to divide by the number of points? Doing so matches previous work...
   for (i = 0; i < nbins; i++)
-    bins[i] = bins[i] * 0.5 * gwf->mass * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) / (4.0 * M_PI);
+    bins[i] = bins[i] * 0.5 * gwf->mass * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) / (4.0 * M_PI * (REAL) npts);
 }
 
 /*
