@@ -500,7 +500,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   
   for (i = 0; i < nbins; i++) {
     k = binstep * (REAL) i;
-    bins[i] = bins[i] * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) * k * k * 0.5 * gwf->mass / (4.0 * M_PI);
+    bins[i] = bins[i] * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) * 0.5 * gwf->mass / (4.0 * M_PI);
   }
 }
 
@@ -547,7 +547,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
   
   for (i = 0; i < nbins; i++) {
     k = binstep * (REAL) i;
-    bins[i] = bins[i] * 0.5 * gwf->mass * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) * k * k / (4.0 * M_PI);
+    bins[i] = bins[i] * 0.5 * gwf->mass * (2.0 * M_PI) * (2.0 * M_PI) * (2.0 * M_PI) / (4.0 * M_PI);
   }
 }
 
