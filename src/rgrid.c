@@ -2162,6 +2162,11 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
  *
  * Note: the input/output grids may be the same.
  *
+ * Convert from FFT to Fourier integral:
+ *
+ * Forward: Multiply FFT result by step^3.
+ * Inverse: Multiply FFT result by (1 / (step * N))^3.
+ *
  */
 
 EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {

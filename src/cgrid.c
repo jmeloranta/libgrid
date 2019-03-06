@@ -2146,12 +2146,17 @@ EXPORT void cgrid_inverse_fft_norm(cgrid *grid) {
  *
  * Note: the input/output grids may be the same.
  *
+ * Convert from FFT to Fourier integral:
+ *
+ * Forward: Multiply FFT result by step^3.
+ * Inverse: Multiply FFT result by (1 / (step * N))^3.
+ *
  */
 
 EXPORT void cgrid_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy;
-  REAL step, norm;
+  REAL norm = grida->fft_norm2;
   REAL complex *cvalue, *bvalue, *avalue;
 
 #ifdef USE_CUDA
@@ -2163,14 +2168,11 @@ EXPORT void cgrid_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
   ny = gridc->ny;
   nz = gridc->nz;
   nxy = nx * ny;
-  step = gridc->step;
   
   cvalue = gridc->value;
   bvalue = gridb->value;
   avalue = grida->value; 
  
-  norm = step * step * step * grida->fft_norm;         /* David: fft_norm */
-  
 #pragma omp parallel for firstprivate(nx,ny,nz,nxy,cvalue,bvalue,avalue,norm) private(i,j,ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;

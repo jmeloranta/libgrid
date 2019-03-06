@@ -1,7 +1,10 @@
 
 include ../make.conf
 
-all: fft spherical poisson wavepacket gradient
+all: fft spherical poisson wavepacket gradient decomp
+
+decomp: decomp.o
+	$(CC) $(CFLAGS) -o decomp decomp.o $(LDFLAGS)
 
 fft: fft.o
 	$(CC) $(CFLAGS) -o fft fft.o $(LDFLAGS)
@@ -20,6 +23,6 @@ gradient: gradient.o
 
 clean:
 	-rm fft fft.o spherical spherical.o poisson poisson.o *~ *.x *.y *.z *.grd *.dat
-	-rm wavepacket.o wavepacket gradient.o gradient
+	-rm wavepacket.o wavepacket gradient.o gradient comp.dat incomp.dat
 
 
