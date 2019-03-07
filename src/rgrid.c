@@ -3130,7 +3130,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
         bins[idx] = bins[idx] + 2.0 * sqnorm(value1[ijnz + k]);  // 2 x Hermitean symmetry - loop is over only half of the data 
         if(value2) bins[idx] = bins[idx] + 2.0 * sqnorm(value2[ijnz + k]);
         if(value3) bins[idx] = bins[idx] + 2.0 * sqnorm(value3[ijnz + k]);
-        nvals[idx]++;
+        nvals[idx] += 2;
       }
     }
   }
