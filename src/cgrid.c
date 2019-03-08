@@ -362,7 +362,7 @@ EXPORT cgrid *cgrid_read(cgrid *grid, FILE *in) {
   REAL step;
   
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 0);  // grid will be overwritten below
+  if(grid) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
 #endif
   fread(&nx, sizeof(INT), 1, in);
   fread(&ny, sizeof(INT), 1, in);

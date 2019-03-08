@@ -382,7 +382,7 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
   REAL step;
   
 #ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
+  if(grid) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
 #endif
   fread(&nx, sizeof(INT), 1, in);
   fread(&ny, sizeof(INT), 1, in);
