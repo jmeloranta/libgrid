@@ -352,11 +352,11 @@ EXPORT void cgrid_write(cgrid *grid, FILE *out) {
  * grid = grid to be read (cgrid *; input).
  * in   = file handle for reading the file (FILE * as defined in stdio.h; input).
  *
- * No return value.
+ * Returns pointer to the grid (NULL on error).
  *
  */
 
-EXPORT void cgrid_read(cgrid *grid, FILE *in) {
+EXPORT cgrid *cgrid_read(cgrid *grid, FILE *in) {
 
   INT nx, ny, nz;
   REAL step;
@@ -369,6 +369,13 @@ EXPORT void cgrid_read(cgrid *grid, FILE *in) {
   fread(&nz, sizeof(INT), 1, in);
   fread(&step, sizeof(REAL), 1, in);
   
+  if (!grid) {
+    if(!(grid = cgrid_alloc(nx, ny, nz, step, CGRID_PERIODIC_BOUNDARY, NULL, "read_grid"))) {
+      fprintf(stderr, "libgrid: Failed to allocate grid in cgrid_read().\n");
+      return NULL;
+    }
+  }
+
   if (nx != grid->nx || ny != grid->ny || nz != grid->nz || step != grid->step) {
     cgrid *tmp;
 
@@ -381,10 +388,11 @@ EXPORT void cgrid_read(cgrid *grid, FILE *in) {
     fread(tmp->value, sizeof(REAL complex), (size_t) (nx * ny * nz), in);
     cgrid_extrapolate(grid, tmp);
     cgrid_free(tmp);
-    return;
+    return grid;
   }
   
   fread(grid->value, sizeof(REAL complex), (size_t) (grid->nx * grid->ny * grid->nz), in);
+  return grid;
 }
 
 /*
