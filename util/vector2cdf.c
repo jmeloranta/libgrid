@@ -88,7 +88,7 @@ rgrid *read_grid(char *file) {
   fclose(fp);
 
   if(tmp_grid == NULL)
-    tmp_grid = rgrid_alloc(nx, ny, nz, step, RGRID_PERIODIC_BOUNDARY, NULL, "tmp");
+    tmp_grid = rgrid_clone(grid, "tmp");
 
   reverse_xz(grid, tmp_grid);
   bcopy(tmp_grid->value, grid->value, sizeof(double) * (size_t) (nx * ny * nz));

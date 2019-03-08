@@ -48,16 +48,15 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  nx = ny = nz = 1;
-  fread(&nx, sizeof(INT), 1, fp);
-  fread(&ny, sizeof(INT), 1, fp);
-  fread(&nz, sizeof(INT), 1, fp);
-  fread(&step, sizeof(REAL), 1, fp);
+  orig = rgrid_read(NULL, fp);
+  nx = orig->nx;
+  ny = orig->ny;
+  nz = orig->nz;
+  step = orig->step;
 
   fprintf(stderr, "nx = " FMT_I ", ny = " FMT_I ", nz = " FMT_I ", step = " FMT_R "\n", nx, ny, nz, step);
   
-  orig = rgrid_alloc(nx, ny, nz, step, RGRID_NEUMANN_BOUNDARY, NULL, "orig");
-  final = rgrid_alloc(nx, ny, nz, step, RGRID_NEUMANN_BOUNDARY, NULL, "final");
+  final = rgrid_clone(orig, "final");
 
   if(!(x = (REAL *) malloc(sizeof(REAL) * (size_t) nx))) {
     fprintf(stderr, "Out of memory.\n");
