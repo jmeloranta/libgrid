@@ -183,20 +183,20 @@ EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data) {
   INT lx = ab->data[0], hx = ab->data[1], ly = ab->data[2], hy = ab->data[3], lz = ab->data[4], hz = ab->data[5];
   REAL amp = ab->amp;
 
-  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return (REAL complex) 1.0;
+//  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return (REAL complex) 1.0;
 
   t = 0.0;
 
-  if(i < lx) t -= ((REAL) (lx - i)) / (3.0 * (REAL) lx);
-  else if(i > hx) t -= ((REAL) (i - hx)) / (3.0 * (REAL) lx);
+  if(i < lx) t -= ((REAL) (lx - i)) / (REAL) lx;
+  else if(i > hx) t -= ((REAL) (i - hx)) / (REAL) lx;
 
-  if(j < ly) t -= ((REAL) (ly - j)) / (3.0 * (REAL) ly);
-  else if(j > hy) t -= ((REAL) (j - hy)) / (3.0 * (REAL) ly);
+  if(j < ly) t -= ((REAL) (ly - j)) / (REAL) ly;
+  else if(j > hy) t -= ((REAL) (j - hy)) / (REAL) ly;
 
-  if(k < lz) t -= ((REAL) (lz - k)) / (3.0 * (REAL) lz);
-  else if(k > hz) t -= ((REAL) (k - hz)) / (3.0 * (REAL) lz);
+  if(k < lz) t -= ((REAL) (lz - k)) / (REAL) lz;
+  else if(k > hz) t -= ((REAL) (k - hz)) / (REAL) lz;
 
-  return (1.0 + I * amp * t);
+  return (1.0 + I * amp * t / 3.0);
 }
 
 /*

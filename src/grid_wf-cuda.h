@@ -25,19 +25,19 @@ static __device__ CUCOMPLEX grid_cuda_wf_absorb(INT i, INT j, INT k, CUREAL amp,
 
   CUCOMPLEX t;
 
-  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return CUMAKE(1.0,0.0);
+//  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return CUMAKE(1.0,0.0);
 
   t.x = 1.0; t.y = 0.0;
 
-  if(i < lx) t.y -= ((CUREAL) (lx - i)) / (3.0 * (CUREAL) lx);
-  else if(i > hx) t.y -= ((CUREAL) (i - hx)) / (3.0 * (CUREAL) lx);
+  if(i < lx) t.y -= ((CUREAL) (lx - i)) / (CUREAL) lx;
+  else if(i > hx) t.y -= ((CUREAL) (i - hx)) / (CUREAL) lx;
 
-  if(j < ly) t.y -= ((CUREAL) (ly - j)) / (3.0 * (CUREAL) ly);
-  else if(j > hy) t.y -= ((CUREAL) (j - hy)) / (3.0 * (CUREAL) ly);
+  if(j < ly) t.y -= ((CUREAL) (ly - j)) / (CUREAL) ly;
+  else if(j > hy) t.y -= ((CUREAL) (j - hy)) / (CUREAL) ly;
 
-  if(k < lz) t.y -= ((CUREAL) (lz - k)) / (3.0 * (CUREAL) lz);
-  else if(k > hz) t.y -= ((CUREAL) (k - hz)) / (3.0 * (CUREAL) lz);
+  if(k < lz) t.y -= ((CUREAL) (lz - k)) / (CUREAL) lz;
+  else if(k > hz) t.y -= ((CUREAL) (k - hz)) / (CUREAL) lz;
 
-  t.y *= amp;
+  t.y *= amp / 3.0;
   return t;
 }
