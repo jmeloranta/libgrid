@@ -12,7 +12,7 @@ typedef struct grid_timer_struct { /* wall clock timing structure */
 } grid_timer;
 
 struct grid_abs {
-  REAL amp;
+  REAL rho0;
   INT data[6];
 };
 
@@ -79,7 +79,7 @@ typedef struct wf_struct { /* wavefunction */
   cgrid *cworkspace;
   cgrid *cworkspace2;
   cgrid *cworkspace3;
-  REAL complex (*ts_func)(INT, INT, INT, void *);
+  REAL (*ts_func)(INT, INT, INT, void *);
   struct grid_abs abs_data;
 } wf;
 

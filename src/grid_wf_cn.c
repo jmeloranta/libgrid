@@ -55,7 +55,7 @@ EXPORT REAL grid_wf_kinetic_energy_cn(wf *gwf) {
  * Main routine for propagating using Crank-Nicolson.
  *
  * gwf       = wavefunction to be propagated (wf *).
- * time      = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
+ * time      = time step function (REAL (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
  * privdata  = additional private data form time step function (void *).
  *
@@ -70,7 +70,7 @@ EXPORT REAL grid_wf_kinetic_energy_cn(wf *gwf) {
  *
  */
 
-EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata) {
+EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata) {
 
   cgrid *grid = gwf->grid;
 
@@ -88,7 +88,7 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex (*time)(INT, INT,
  *
  * gwf        = wavefunction to be propagated (wf *; input/output).
  * 
- * time       = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex); input). If NULL, tstep will be used.
+ * time       = time step function (REAL (*time)(INT, INT, INT, void *, REAL complex); input). If NULL, tstep will be used.
  * tstep      = base time step length (REAL complex; input).
  * privdata   = additional private data form time step function (void *; input).
  * workspace  = additional storage space needed (cgrid *; overwritten).
@@ -99,7 +99,7 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex (*time)(INT, INT,
  *
  */
 
-EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, c3, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, kx0 = gwf->grid->kx0, y, y0 = gwf->grid->y0;
@@ -144,7 +144,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(i = 1; i < nx - 1; i++) {
-      if(time) tim = tstep * (*time)(i, j, k, privdata);
+      if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, j, k, privdata);
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -159,7 +159,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
 
     // Boundary conditions 
     ind = j * nz + k; // i = 0 - left boundary
-    if(time) tim = tstep * (*time)(0, j, k, privdata);
+    if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(0, j, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -181,7 +181,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     d[0] = cp - 2.0;  // LHS: -2 diag elem from Laplacian, cp = c / dt
 
     ind = (nx - 1) * nyz + j * nz + k;  // i = nx - 1, right boundary
-    if(time) tim = tstep * (*time)(nx-1, j, k, privdata);
+    if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(nx-1, j, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -215,7 +215,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
  *
  * gwf       = wavefunction to be propagated (wf *).
  * 
- * time      = time step function (REAL complex (*time)(INT, INT, INT, void *)). If NULL, tstep will be used.
+ * time      = time step function (REAL (*time)(INT, INT, INT, void *)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
  * privdata  = additional private data form time step function (void *).
  * workspace = additional storage space needed (cgrid *).
@@ -226,7 +226,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex (*time)(INT, INT, INT, 
  *
  */
 
-EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, c3, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, ky0 = gwf->grid->ky0, x, x0 = gwf->grid->x0;
@@ -271,7 +271,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(j = 1; j < ny - 1; j++) {
-      if(time) tim = tstep * (*time)(i, j, k, privdata);
+      if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, j, k, privdata);
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -287,7 +287,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     // Boundary conditions
  
     ind = i * nyz + k; // j = 0 - left boundary
-    if(time) tim = tstep * (*time)(i, 0, k, privdata);
+    if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, 0, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -309,7 +309,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
     ind = i * nyz + (ny-1) * nz + k;  // j = ny - 1 - right boundary
-    if(time) tim = tstep * (*time)(i, ny-1, k, privdata);
+    if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, ny-1, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -342,7 +342,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
  *
  * gwf       = wavefunction to be propagated (wf *).
  * 
- * time      = time step function (REAL complex (*time)(INT, INT, INT, void *)). If NULL, tstep will be used.
+ * time      = time step function (REAL (*time)(INT, INT, INT, void *)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
  * privdata  = additional private data form time step function (void *).
  * workspace = additional storage space needed (cgrid *).
@@ -353,7 +353,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex (*time)(INT, INT, INT, 
  *
  */
 
-EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, kz0 = gwf->grid->kz0;
@@ -396,7 +396,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(k = 1; k < nz - 1; k++) {
-      if(time) tim = tstep * (*time)(i, j, k, privdata);
+      if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, j, k, privdata);
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -412,7 +412,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     // Boundary conditions
  
     ind = i * nyz + j * nz; // k = 0 - left boundary
-    if(time) tim = tstep * (*time)(i, j, 0, privdata);
+    if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, j, 0, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -434,7 +434,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex (*time)(INT, INT, INT, 
     d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
     ind = i * nyz + j * nz + (nz - 1);  // k = nz-1 - right boundary
-    if(time) tim = tstep * (*time)(i, j, nz-1, privdata);
+    if(time) tim = CREAL(tstep) + I * CIMAG(tstep) * (*time)(i, j, nz-1, privdata);
     else tim = tstep;
     cp = c / tim;
     switch(gwf->boundary) {

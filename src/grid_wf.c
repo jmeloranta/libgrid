@@ -154,49 +154,36 @@ EXPORT void grid_wf_free(wf *gwf) {
 }
 
 /* 
- * Calculate (complex) time for implementing absorbing boundaries.
- *
- * Excitations entering the absorbing region will be damped out
- * such that no back reflections occur from the boundary of the finite grid.
- * This is achieved by introducing imaginary time component to propagation
- * in this reagion, which is turned to full gradually (using a linear function).
- * This is to be used with time propagation routines that allow spatially dependent 
- * time (-> excludes kinetic energy by FFT). The absorging region is placed outside 
- * [lx,hx] x [ly,hy] x [lz,hz]. At the corners of the box, the propagation time
- * is (1.0 - I) * tstep (whereas outside the absorbing region the imaginary
- * component is zero). Each x,y,z direction contributes 1/3 to the imaginary component.
+ * Absorbing boundary amplitude (between zero and one).
  *
  * i           = Current index along X (INT; input).
  * j           = Current index along Y (INT; input).
  * k           = Current index along Z (INT; input).
  * data        = Pointer to struct grid_abs holding values for specifying the absorbing region (void *; INPUT).
- *               This will specify amp, lx, hx, ly, hy, lz, hz.
+ *               This will specify lx, hx, ly, hy, lz, hz.
  * 
- * Returns the (complex) scaling for time.
+ * Returns the scaling factor for imaginary time.
  *
  */
 
-EXPORT REAL complex grid_wf_absorb(INT i, INT j, INT k, void *data) {
+EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
 
   REAL t;
   struct grid_abs *ab = (struct grid_abs *) data;
   INT lx = ab->data[0], hx = ab->data[1], ly = ab->data[2], hy = ab->data[3], lz = ab->data[4], hz = ab->data[5];
-  REAL amp = ab->amp;
-
-//  if(i >= lx && i <= hx && j >= ly && j <= hy && k >= lz && k <= hz) return (REAL complex) 1.0;
 
   t = 0.0;
 
-  if(i < lx) t -= ((REAL) (lx - i)) / (REAL) lx;
-  else if(i > hx) t -= ((REAL) (i - hx)) / (REAL) lx;
+  if(i < lx) t += ((REAL) (lx - i)) / (REAL) lx;
+  else if(i > hx) t += ((REAL) (i - hx)) / (REAL) lx;
 
-  if(j < ly) t -= ((REAL) (ly - j)) / (REAL) ly;
-  else if(j > hy) t -= ((REAL) (j - hy)) / (REAL) ly;
+  if(j < ly) t += ((REAL) (ly - j)) / (REAL) ly;
+  else if(j > hy) t += ((REAL) (j - hy)) / (REAL) ly;
 
-  if(k < lz) t -= ((REAL) (lz - k)) / (REAL) lz;
-  else if(k > hz) t -= ((REAL) (k - hz)) / (REAL) lz;
+  if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
+  else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz;
 
-  return (1.0 + I * amp * t / 3.0);
+  return t / 3.0;
 }
 
 /*
@@ -455,7 +442,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
  * Auxiliary routine to propagate potential energy (only used with FFT propagation of kinetic energy; CN includes potential).
  *
  * gwf       = wavefunction to be propagated (wf *).
- * time      = time step function (REAL complex (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
+ * time      = time step function (REAL (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
  * tstep     = time step (REAL complex).
  * privdata  = private data for time step function (void *).
  * potential = grid containing the potential (cgrid *). If NULL, no propagation needed.
@@ -464,7 +451,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
  *
  */
 
-EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *potential) {
+EXPORT void grid_wf_propagate_potential(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *potential) {
 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
@@ -481,7 +468,7 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex (*time)(INT, INT, 
     j = ij % ny;
     for(k = 0; k < nz; k++) {
       /* psi(t+dt) = exp(- i V dt / hbar) psi(t) */
-      if(time) c = -I * tstep * (*time)(i, j, k, privdata) / HBAR;
+      if(time) c = (1.0 / HBAR) * (CIMAG(tstep) * grid_wf_absorb(i, j, k, privdata) - I * CREAL(tstep));
       else c = -I * tstep / HBAR;
       psi[ijnz + k] = psi[ijnz + k] * CEXP(c * pot[ijnz + k]);
     }

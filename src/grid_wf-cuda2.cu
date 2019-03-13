@@ -22,7 +22,7 @@ extern "C" void cuda_error_check();
  *
  */
 
-/* amp = 0 */
+/* regular */
 __global__ void grid_cuda_wf_propagate_potential_gpu1(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
@@ -33,15 +33,15 @@ __global__ void grid_cuda_wf_propagate_potential_gpu1(CUCOMPLEX *b, CUCOMPLEX *p
   b[idx] = b[idx] * CUCEXP(c * pot[idx]);
 }
 
-/* amp != 0 */
-__global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+/* abs */
+__global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  c = c * grid_cuda_wf_absorb(i, j, k, amp, lx, hx, ly, hy, lz, hz);
+  c.x = c.x * grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz);
   b[idx] = b[idx] * CUCEXP(c * pot[idx]);
 }
 
@@ -51,7 +51,6 @@ __global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *b, CUCOMPLEX *p
  * wf       = Source/destination grid for operation (REAL complex *; input/output).
  * pot      = Potential grid (CUCOMPLEX *; input).
  * time_step= Time step length (CUCOMPLEX; input).
- * amp      = Max amplitude for imag. part (CUREAL; input).
  * lx       = Lower bound for absorbing bc (INT; input).
  * hx       = Upper bound for absorbing bc (INT; input).
  * ly       = Lower bound for absorbing bc (INT; input).
@@ -66,7 +65,7 @@ __global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *b, CUCOMPLEX *p
  *
  */
 
-extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *pot, CUCOMPLEX time_step, CUREAL amp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *pot, CUCOMPLEX time_step, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -76,8 +75,8 @@ extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *po
 
   c.x =  (1.0 / HBAR) * time_step.y;
   c.y = -(1.0 / HBAR) * time_step.x;
-  if(amp != 0.0) 
-    grid_cuda_wf_propagate_potential_gpu2<<<blocks,threads>>>(grid, pot, c, amp, lx, hx, ly, hy, lz, hz, nx, ny, nz);
+  if(lz) 
+    grid_cuda_wf_propagate_potential_gpu2<<<blocks,threads>>>(grid, pot, c, lx, hx, ly, hy, lz, hz, nx, ny, nz);
   else
     grid_cuda_wf_propagate_potential_gpu1<<<blocks,threads>>>(grid, pot, c, nx, ny, nz);
   cuda_error_check();
