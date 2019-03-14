@@ -12,7 +12,6 @@ typedef struct grid_timer_struct { /* wall clock timing structure */
 } grid_timer;
 
 struct grid_abs {
-  REAL rho0;
   INT data[6];
 };
 

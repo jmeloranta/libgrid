@@ -104,8 +104,8 @@ __global__ void grid_cuda_wf_density_gpu(CUCOMPLEX *b, CUREAL *dens, INT nx, INT
 /*
  * Density
  *
- * wf       = Source/destination grid for operation (REAL complex *; input).
- * dens     = Density grid (CUCOMPLEX *; output).
+ * wf       = Source/destination grid for operation (CUCOMPLEX *; input).
+ * dens     = Density grid (CUREAL *; output).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -124,3 +124,52 @@ extern "C" void grid_cuda_wf_densityW(CUCOMPLEX *grid, CUREAL *dens, INT nx, INT
 }
 
 /********************************************************************************************************************/
+
+/*
+ * Add complex absorbing potential.
+ *
+ */
+
+__global__ void grid_cuda_wf_absorb_potential_gpu(CUCOMPLEX *gwf, CUCOMPLEX *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  REAL g, sq;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+  if((g = grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz)) == 0.0) return;
+
+  idx = (i * ny + j) * nz + k;
+
+  sq = gwf[idx].x * gwf[idx].x + gwf[idx].y * gwf[idx].y - rho0;
+  pot[idx].y += -g * amp * sq;
+}
+
+/*
+ * Complex absorbing potential.
+ *
+ * gwf      = wavefunction grid (CUCOMPLEX *; input).
+ * pot      = potential (CUCOMPLEX *; output).
+ * amp      = amplitude of the potential (CUREAL; input).
+ * rho0     = rho0 background (CUREAL; input).
+ * lx       = lower index for abs boundary (INT; input).
+ * hx       = upper index for abs boundary (INT; input).
+ * ly       = lower index for abs boundary (INT; input).
+ * hy       = upper index for abs boundary (INT; input).
+ * lz       = lower index for abs boundary (INT; input).
+ * hz       = upper index for abs boundary (INT; input).
+ * nx       = # of points along x (INT).
+ * ny       = # of points along y (INT).
+ * nz       = # of points along z (INT).
+ *
+ */
+
+extern "C" void grid_cuda_wf_absorb_potentialW(CUCOMPLEX *gwf, CUCOMPLEX *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  grid_cuda_wf_absorb_potential_gpu<<<blocks,threads>>>(gwf, pot, amp, rho0, lx, hx, ly, hy, lz, hz, nx, ny, nz);
+  cuda_error_check();
+}

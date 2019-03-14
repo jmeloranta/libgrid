@@ -56,3 +56,19 @@ EXPORT char grid_cuda_wf_density(wf *gwf, rgrid *density) {
   return 0;
 }
 
+/*
+ * Complex absorbing potential.
+ *
+ */
+
+EXPORT char grid_cuda_wf_absorb_potential(wf *gwf, cgrid *pot_grid, REAL amp, REAL rho0) {
+
+  cgrid *gwf_grid = gwf->grid;
+
+  if(cuda_two_block_policy(gwf_grid->value, gwf_grid->grid_len, gwf_grid->id, 1, pot_grid->value, pot_grid->grid_len, pot_grid->id, 1) < 0) return -1;
+  grid_cuda_wf_absorb_potentialW(cuda_block_address(gwf_grid->value), cuda_block_address(pot_grid->value), amp, rho0, 
+    gwf->abs_data.data[0], gwf->abs_data.data[1], gwf->abs_data.data[2], gwf->abs_data.data[3], gwf->abs_data.data[4], gwf->abs_data.data[5],
+    pot_grid->nx, pot_grid->ny, pot_grid->nz);
+  return 0;
+}
+

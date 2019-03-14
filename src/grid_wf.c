@@ -608,3 +608,37 @@ EXPORT inline void grid_wf_print(wf *gwf, FILE *out) {
 
   cgrid_print(gwf->grid, out); 
 }
+
+/*
+ * Add complex absorbing potential: -I * amp * (|psi|^2 - rho0).
+ *
+ * gwf   = current wavefunction (wf *; input).
+ * pot   = potential to which the absorption is added (cgrid *; input/output).
+ * amp   = amplitude (REAL; input).
+ * rho0  = baseline density (REAL; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_absorb_potential(wf *gwf, cgrid *pot, REAL amp, REAL rho0) {
+
+  REAL complex *val = pot->value;
+  INT i, j, k, ij, ijnz, nxy = pot->nx * pot->ny, ny = pot->ny, nz = pot->nz;
+  REAL g;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_absorb_potential(gwf, pot, amp, rho0)) return;
+#endif
+#pragma omp parallel for firstprivate(nxy, nz, ny, gwf, amp, val, rho0) private(i, j, k, ijnz, g) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      g = grid_wf_absorb(i, j, k, &(gwf->abs_data));
+      if(g > 0.0) val[ijnz + k] += -I * g * amp * (sqnorm(gwf->grid->value[ijnz + k]) - rho0);
+    }
+  }  
+}
+
