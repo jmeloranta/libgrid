@@ -17,14 +17,14 @@
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *pot) {
+EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pot) {
 
   cgrid *grid = gwf->grid;
-  struct grid_abs *ab = (struct grid_abs *) privdata;
+  struct grid_abs *ab = &(gwf->abs_data);
   INT lx, hx, ly, hy, lz, hz;
   CUCOMPLEX ts;
 
-  if(!ab) lx = hx = ly = hy = lz = hz = 0;
+  if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) lx = hx = ly = hy = lz = hz = 0;
   else {
     lx = ab->data[0];
     hx = ab->data[1];

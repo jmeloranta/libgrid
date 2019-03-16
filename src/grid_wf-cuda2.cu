@@ -141,7 +141,7 @@ __global__ void grid_cuda_wf_absorb_potential_gpu(CUCOMPLEX *gwf, CUCOMPLEX *pot
   idx = (i * ny + j) * nz + k;
 
   sq = gwf[idx].x * gwf[idx].x + gwf[idx].y * gwf[idx].y - rho0;
-  pot[idx].y += -g * amp * sq;
+  pot[idx].y -= g * amp * sq;
 }
 
 /*

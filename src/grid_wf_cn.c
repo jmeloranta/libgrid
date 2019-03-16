@@ -55,9 +55,7 @@ EXPORT REAL grid_wf_kinetic_energy_cn(wf *gwf) {
  * Main routine for propagating using Crank-Nicolson.
  *
  * gwf       = wavefunction to be propagated (wf *).
- * time      = time step function (REAL (*time)(INT, INT, INT, void *, REAL complex)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
- * privdata  = additional private data form time step function (void *).
  *
  * exp( -i (Tx + Ty + Tz) dt / hbar ) 
  *   = exp( -i (Tx+V) dt / hbar ) exp( -i (Ty+V) dt / hbar ) exp( -i (Tz+V) dt / hbar ) + O(dt^2)
@@ -70,7 +68,7 @@ EXPORT REAL grid_wf_kinetic_energy_cn(wf *gwf) {
  *
  */
 
-EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata) {
+EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex tstep) {
 
   cgrid *grid = gwf->grid;
 
@@ -78,9 +76,9 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL (*time)(INT, INT, INT, vo
   if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
 
-  if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, time, tstep, privdata, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
-  if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, time, tstep, privdata, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
-  if(gwf->grid->nz != 1) grid_wf_propagate_cn_z(gwf, time, tstep, privdata, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
+  if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, tstep, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
+  if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, tstep, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
+  if(gwf->grid->nz != 1) grid_wf_propagate_cn_z(gwf, tstep, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
 }
 
 /*
@@ -88,9 +86,7 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL (*time)(INT, INT, INT, vo
  *
  * gwf        = wavefunction to be propagated (wf *; input/output).
  * 
- * time       = time step function (REAL (*time)(INT, INT, INT, void *, REAL complex); input). If NULL, tstep will be used.
  * tstep      = base time step length (REAL complex; input).
- * privdata   = additional private data form time step function (void *; input).
  * workspace  = additional storage space needed (cgrid *; overwritten).
  * workspace2 = additional storage space needed (cgrid *; overwritten).
  * workspace3 = additional storage space needed (cgrid *; overwritten).
@@ -99,7 +95,7 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL (*time)(INT, INT, INT, vo
  *
  */
 
-EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, c3, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, kx0 = gwf->grid->kx0, y, y0 = gwf->grid->y0;
@@ -109,13 +105,15 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL (*time)(INT, INT, INT, void *),
   INT k, jk;
   INT nz = gwf->grid->nz, nyz = ny * nz;
   REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
+  REAL (*time)(INT, INT, INT, void *) = gwf->ts_func;
+  struct grid_abs *privdata = &(gwf->abs_data);
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_x(gwf, time, tstep, privdata, workspace, workspace2, workspace3)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_x(gwf, tstep, workspace, workspace2, workspace3)) return;
 #endif
 
   /*
@@ -215,9 +213,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL (*time)(INT, INT, INT, void *),
  *
  * gwf       = wavefunction to be propagated (wf *).
  * 
- * time      = time step function (REAL (*time)(INT, INT, INT, void *)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
- * privdata  = additional private data form time step function (void *).
  * workspace = additional storage space needed (cgrid *).
  * workspace2= additional storage space needed (cgrid *).
  * workspace3= additional storage space needed (cgrid *).
@@ -226,7 +222,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL (*time)(INT, INT, INT, void *),
  *
  */
 
-EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, c3, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, ky0 = gwf->grid->ky0, x, x0 = gwf->grid->x0;
@@ -236,13 +232,15 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL (*time)(INT, INT, INT, void *),
   INT k, ik;
   INT nz = gwf->grid->nz, nyz = ny * nz, nxz = nx * nz;
   REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
+  REAL (*time)(INT, INT, INT, void *) = gwf->ts_func;
+  struct grid_abs *privdata = &(gwf->abs_data);
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, time, tstep, privdata, workspace, workspace2, workspace3)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, tstep, workspace, workspace2, workspace3)) return;
 #endif
 
   /*
@@ -342,9 +340,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL (*time)(INT, INT, INT, void *),
  *
  * gwf       = wavefunction to be propagated (wf *).
  * 
- * time      = time step function (REAL (*time)(INT, INT, INT, void *)). If NULL, tstep will be used.
  * tstep     = base time step length (REAL complex).
- * privdata  = additional private data form time step function (void *).
  * workspace = additional storage space needed (cgrid *).
  * workspace2= additional storage space needed (cgrid *).
  * workspace3= additional storage space needed (cgrid *).
@@ -353,7 +349,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL (*time)(INT, INT, INT, void *),
  *
  */
 
-EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL (*time)(INT, INT, INT, void *), REAL complex tstep, void *privdata, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
+EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   REAL complex c, c2, *psi = gwf->grid->value;
   REAL step = gwf->grid->step, kz0 = gwf->grid->kz0;
@@ -363,13 +359,15 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL (*time)(INT, INT, INT, void *),
   INT k, ij;
   INT nz = gwf->grid->nz, nyz = ny * nz, nxy = nx * ny;
   REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
+  REAL (*time)(INT, INT, INT, void *) = gwf->ts_func;
+  struct grid_abs *privdata = &(gwf->abs_data);
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
     exit(1);
   }
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, time, tstep, privdata, workspace, workspace2, workspace3)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, tstep, workspace, workspace2, workspace3)) return;
 #endif
 
   /*
