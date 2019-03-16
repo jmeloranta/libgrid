@@ -586,7 +586,7 @@ EXPORT void grid_wf_absorb_potential(wf *gwf, cgrid *pot, REAL amp, REAL rho0) {
   REAL g;
   struct grid_abs *privdata = &(gwf->abs_data);
 
-  if(!privdata->data[5] == 0) {
+  if(privdata->data[5] == 0) {
     fprintf(stderr, "libgrid: grid_wf_absorb_potential() called without defining the absorbing region!\n");
     exit(1);
   }
