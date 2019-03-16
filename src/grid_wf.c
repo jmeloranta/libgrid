@@ -586,9 +586,12 @@ EXPORT void grid_wf_absorb_potential(wf *gwf, cgrid *pot, REAL amp, REAL rho0) {
   REAL g;
   struct grid_abs *privdata = &(gwf->abs_data);
 
-  if(!privdata->data[5] == 0) return; // No absorbing region
+  if(!privdata->data[5] == 0) {
+    fprintf(stderr, "libgrid: grid_wf_absorb_potential() called without defining the absorbing region!\n");
+    exit(1);
+  }
   if(gwf->ts_func) {
-    fprintf(stderr, "libgrid: Attempting to use grid_wf_absorb_potential() with imaginary time boundaries.\n");
+    fprintf(stderr, "libgrid: Attempting to use grid_wf_absorb_potential() with imaginary time boundaries active.\n");
     fprintf(stderr, "libgrid: Set gwf->ts_func to NULL to disable the imaginary time boundaries.\n");
     exit(1);
   }
