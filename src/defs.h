@@ -29,5 +29,7 @@
 
 #define WF_2ND_ORDER_FFT	1
 #define WF_4TH_ORDER_FFT	2
-#define WF_2ND_ORDER_CN		3
-#define WF_4TH_ORDER_CN		4
+#define WF_2ND_ORDER_CFFT	3
+#define WF_4TH_ORDER_CFFT	4
+#define WF_2ND_ORDER_CN		5
+#define WF_4TH_ORDER_CN		6

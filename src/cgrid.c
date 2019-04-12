@@ -475,6 +475,94 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
 }
 
 /*
+ * Write complex (momentum space) grid to disk including cuts along x, y, and z axes.
+ *
+ * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
+ * grid     = Grid to be written to disk (cgrid *; input).
+ * 
+ * No return value.
+ *
+ * See also cgrid_write().
+ *
+ */
+
+EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
+
+  FILE *fp;
+  char file[2048];
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL x, y, z, step = grid->step;
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 1);
+#endif
+
+  /* Write binary grid */
+  sprintf(file, "%s.grd", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  cgrid_write(grid, fp);
+  fclose(fp);
+
+  /* Write cut along x-axis */
+  sprintf(file, "%s.x", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  j = 0;
+  k = 0;
+  for(i = 0; i < nx; i++) { 
+    if (i <= nx / 2)
+      x = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - grid->kx0;
+    else 
+      x = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - grid->kx0;
+    tmp = cgrid_value_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", x, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+
+  /* Write cut along y-axis */
+  sprintf(file, "%s.y", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = 0;
+  k = 0;
+  for(j = 0; j < ny; j++) {
+    if (j <= ny / 2)
+      y = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - grid->ky0;
+    else 
+      y = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - grid->ky0;
+    tmp = cgrid_value_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", y, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+
+  /* Write cut along z-axis */
+  sprintf(file, "%s.z", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    exit(1);
+  }
+  i = 0;
+  j = 0;
+  for(k = 0; k < nz; k++) {
+    if (k <= nz / 2)
+      z = 2.0 * M_PI * ((REAL) k) / (((REAL) nz) * step) - grid->kz0;
+    else 
+      z = 2.0 * M_PI * ((REAL) (k - nz)) / (((REAL) nz) * step) - grid->kz0;
+    tmp = cgrid_value_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", z, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+}
+
+/*
  * Read in a grid from a binary file (.grd).
  *
  * grid = grid where the data is placed (cgrid *, output).
@@ -3160,7 +3248,7 @@ EXPORT void cgrid_abs_rot(rgrid *rot, cgrid *fx, cgrid *fy, cgrid *fz) {
 }
 
 /*
- * Zero a given index range of a complex grid over [lx, hx[ X [ly, hy[ X [lz, hz[ .
+ * Zero a given index range of a complex grid when x in [lx, hx[ x [ly, hy[ x [lz, hz[ .
  *
  * grid     = Grid to be operated on (cgrid *; input/output).
  * lx       = Lower limit for x index (INT; input).
@@ -3195,26 +3283,6 @@ EXPORT void cgrid_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz
     for(j = ly; j < hy; j++)
       for(k = lz; k < hz; k++)
         value[i * nynz + j * nz + k] = 0.0;
-}
-
-/*
- * de-alias grid in Fourier space by the 2/3 rule: zero high wavenumber components between:
- * [n/2 - n/3, n/2 + n/3] in each direction.
- *
- * grid     = Grid in Fourier space (cgrid *; input/output).
- *
- * Note: The combination component in the reciprocal space is at n/2 (f = \pm 1/(2 delta)).
- *
- * No return value.
- *
- */
-
-EXPORT void cgrid_dealias23(cgrid *grid) {
-
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
-
-  cgrid_zero_index(grid, nx / 2 - nx / 3, nx / 2 + nx / 3 + 1, ny / 2 - ny / 3, ny / 2 + ny / 3 + 1, 
-                         nz / 2 - nz / 3, nz / 2 + nz / 3 + 1);
 }
 
 /*

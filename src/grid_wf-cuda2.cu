@@ -73,8 +73,8 @@ extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *po
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   CUCOMPLEX c;
 
-  c.x =  (1.0 / HBAR) * time_step.y;
-  c.y = -(1.0 / HBAR) * time_step.x;
+  c.x =  time_step.y / HBAR;
+  c.y = -time_step.x / HBAR;
   if(lz) 
     grid_cuda_wf_propagate_potential_gpu2<<<blocks,threads>>>(grid, pot, c, lx, hx, ly, hy, lz, hz, nx, ny, nz);
   else

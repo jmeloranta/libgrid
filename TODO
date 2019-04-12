@@ -5,7 +5,9 @@
 - try using local memory for derivatives in CUDA (avoid jumping in memory)
 - CUDA performance of Crank-Nicolson is poor... too complex kernels, parameter tuning?
 - Poisson solver for other than periodic BC
-- multi GPU support. Can we use streams?
+- multi GPU support: split grids based on the fastest running index. This
+  allows using all the memory and minimize GPU crosstalk (except for non-local
+  operations like finite difference, FFT <- taken care of by nvidia).
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
 - CUDA: Think about streams (and multiple GPUs). libdft could certainly use this. Also cufft can spread over multiple GPUs.
@@ -15,3 +17,5 @@
 
 also fgrep TODO *.[ch] to find out more specific issues.
 
+- Move absorbing potential to be called by the propagation routines... front ends for absorbing boundaries.
+- Can we have Heaviside for the complex abs boundary rather than linear?

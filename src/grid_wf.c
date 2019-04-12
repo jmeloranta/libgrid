@@ -24,6 +24,8 @@
  * propagator = which time propagator to use for this wavefunction (char):
  *              WF_2ND_ORDER_FFT      = 2nd order in time (FFT).
  *              WF_4TH_ORDER_FFT      = 4th order in time (FFT).
+ *              WF_2ND_ORDER_CFFT     = 2nd order in time (FFT with Cayley's approx).
+ *              WF_4TH_ORDER_CFFT     = 4th order in time (FFT with Cayley's approx).
  *              WF_2ND_ORDER_CN       = 2nd order in time with Crank-Nicolson propagator.
  *              WF_4TH_ORDER_CN       = 4th order in time with Crank-Nicolson propagator.
  * id         = String identifier for the grid (for debugging; char *; input).
@@ -268,7 +270,18 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       grid_wf_propagate_potential(gwfp, time, potential);
       /* continue with correct cycle */
       break;
+    case WF_2ND_ORDER_CFFT:
+      if(gwfp->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
+        exit(1);
+      }
+      grid_wf_propagate_kinetic_cfft(gwf, half_time);
+      cgrid_copy(gwfp->grid, gwf->grid);
+      grid_wf_propagate_potential(gwfp, time, potential);
+      /* continue with correct cycle */
+      break;
     case WF_4TH_ORDER_FFT:
+    case WF_4TH_ORDER_CFFT:
     case WF_4TH_ORDER_CN:
       fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
       exit(1);
@@ -305,7 +318,13 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       /* end correct cycle */
       break;
+    case WF_2ND_ORDER_CFFT:
+      grid_wf_propagate_potential(gwf, time, potential);
+      grid_wf_propagate_kinetic_cfft(gwf, half_time);
+      /* end correct cycle */
+      break;
     case WF_4TH_ORDER_FFT:
+    case WF_4TH_ORDER_CFFT:
     case WF_4TH_ORDER_CN:
       fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
       exit(1);
@@ -364,6 +383,31 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential);
       break;
+    case WF_2ND_ORDER_CFFT:
+      if(gwf->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
+        exit(1);
+      }
+      grid_wf_propagate_potential(gwf, half_time, potential);
+      grid_wf_propagate_kinetic_cfft(gwf, time);
+      grid_wf_propagate_potential(gwf, half_time, potential);
+      break;
+    case WF_4TH_ORDER_CFFT:
+      if(gwf->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
+        exit(1);
+      }
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
+      grid_wf_propagate_potential(gwf, one_sixth_time, potential);
+      grid_wf_propagate_kinetic_cfft(gwf, half_time);    
+      cgrid_copy(gwf->cworkspace, potential);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
+      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+      grid_wf_propagate_potential(gwf, two_thirds_time, potential);
+      grid_wf_propagate_kinetic_cfft(gwf, half_time);
+      grid_wf_propagate_potential(gwf, one_sixth_time, potential);
+      break;
     case WF_4TH_ORDER_CN:
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
       if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
@@ -371,7 +415,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
-      cgrid_add_scaled(gwf->cworkspace, (1/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+      cgrid_add_scaled(gwf->cworkspace, (1.0/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
       grid_wf_propagate_potential(gwf, two_thirds_time, gwf->cworkspace);
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential);

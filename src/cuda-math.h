@@ -53,7 +53,11 @@ __device__ inline CUCOMPLEX operator/(REAL a, CUCOMPLEX b) { return CUMAKE(a * b
 
 __device__ inline CUREAL CUCABS(CUCOMPLEX val) {
 
-  return SQRT(val.x * val.x + val.y * val.y);
+  CUREAL a = val.x, b = val.y, aa = FABS(a), bb = FABS(b);
+
+  if(aa >= bb) return aa * SQRT(1.0 + b * b / (a * a));
+  else return bb * SQRT(1.0 + a * a / (b * b));
+//  return SQRT(val.x * val.x + val.y * val.y); (fast but not stable)
 }
 
 __device__ inline CUREAL CUCARG(CUCOMPLEX val) {
