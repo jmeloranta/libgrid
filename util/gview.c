@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
   GracePrintf("yaxis tick major " FMT_R, ymax / 10.0);
   GracePrintf("yaxis tick minor " FMT_R, ymax / 20.0);
 
-  printf("# of files = %d\n", argc);
+  printf("# of files = %d\n", argc-1);
   for (i = 1; i < argc; i++) {
 
     if(!(fp = fopen(argv[i], "r"))) {

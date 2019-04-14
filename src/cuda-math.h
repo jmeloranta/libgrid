@@ -133,3 +133,8 @@ __device__ inline CUCOMPLEX CUCSUBI(CUCOMPLEX cval, CUREAL ival) {
   cval.y -= ival;
   return cval;
 }
+
+__device__ inline CUREAL CUCSQNORM(CUCOMPLEX val) {
+
+  return val.x * val.x + val.y * val.y;
+}

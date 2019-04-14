@@ -3,8 +3,13 @@
  *
  */
 
+#include "au.h"
+
 #define GRID_EPS 1.0E-16  // Small epsilon
 #define GRID_EPS2 1E-5    // Large epsilon (for dividing by density)
+
+#define GRID_ABS_BC_CN (10.0 / GRID_AUTOFS)  // Absorbing boundary base value for CN
+#define GRID_ABS_BC_FFT (3.0E4 / GRID_AUTOK) // Absorbing boundary base value for FFT
 
 #define CGRID_DIRICHLET_BOUNDARY cgrid_value_outside_constantdirichlet
 #define CGRID_NEUMANN_BOUNDARY cgrid_value_outside_neumann

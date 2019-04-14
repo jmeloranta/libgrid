@@ -23,22 +23,31 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
   struct grid_abs *ab = &(gwf->abs_data);
   INT lx, hx, ly, hy, lz, hz;
   CUCOMPLEX ts;
+  char add_abs = 0;
+  CUREAL amp, rho0;
 
-  if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) lx = hx = ly = hy = lz = hz = 0;
-  else {
+  if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
+    lx = hx = ly = hy = lz = hz = 0;
+    amp = rho0 = 0.0;
+  } else {
     lx = ab->data[0];
     hx = ab->data[1];
     ly = ab->data[2];
     hy = ab->data[3];
     lz = ab->data[4];
     hz = ab->data[5];
+    amp = ab->amp;
+    rho0 = ab->rho0;
   }
+
+  if(gwf->propagator < WF_2ND_ORDER_CN && gwf->ts_func != NULL) add_abs = 1;   /* abs potential for FFT */
+
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, pot->value, pot->grid_len, pot->id, 1) < 0) return -1;
-
-  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
+   
+  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, add_abs, amp, rho0, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
   return 0;
 }
 

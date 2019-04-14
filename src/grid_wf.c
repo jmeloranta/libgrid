@@ -108,6 +108,58 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
 }
 
 /*
+ * Set up absorbing boundaries.
+ *
+ * gwf  = wavefunction (wf *; input/output).
+ * gwfp = predict wavefunction (wf *; input/output). Set to NULL if predict-correct not used.
+ * amp  = amplitude for boundary damping (REAL; input). Use 0.0 to remove the boundary. Relative to the baseline value defined
+ *        in src/defs.h.
+ * rho0 = desired value for |\psi|^2 at the boundary (complex potential only) (REAL; input).
+ * lx   = lower bound index (x) for the boundary (INT; input).
+ * hx   = upper bound index (x) for the boundary (INT; input).
+ * ly   = lower bound index (y) for the boundary (INT; input).
+ * hy   = upper bound index (y) for the boundary (INT; input).
+ * lz   = lower bound index (z) for the boundary (INT; input).
+ * hz   = upper bound index (z) for the boundary (INT; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+
+  if(amp == 0.0) {
+    gwf->ts_func = NULL;
+    if(gwfp) gwfp->ts_func = NULL;
+    return;
+  }
+
+  if(gwf->propagator < WF_2ND_ORDER_CN) gwf->abs_data.amp = amp * GRID_ABS_BC_FFT;
+  else gwf->abs_data.amp = amp * GRID_ABS_BC_CN;
+  gwf->abs_data.rho0 = rho0;
+  gwf->abs_data.data[0] = lx;
+  gwf->abs_data.data[1] = hx;
+  gwf->abs_data.data[2] = ly;
+  gwf->abs_data.data[3] = hy;
+  gwf->abs_data.data[4] = lz;
+  gwf->abs_data.data[5] = hz;
+  if(gwfp) {
+    if(gwfp->propagator < WF_2ND_ORDER_CN) gwfp->abs_data.amp = amp * GRID_ABS_BC_FFT;
+    else gwfp->abs_data.amp = amp * GRID_ABS_BC_CN;
+    gwfp->abs_data.rho0 = rho0;
+    gwfp->abs_data.data[0] = lx;
+    gwfp->abs_data.data[1] = hx;
+    gwfp->abs_data.data[2] = ly;
+    gwfp->abs_data.data[3] = hy;
+    gwfp->abs_data.data[4] = lz;
+    gwfp->abs_data.data[5] = hz;
+  }
+
+  gwf->ts_func = &grid_wf_absorb;
+  if(gwfp) gwfp->ts_func = &grid_wf_absorb;
+}
+
+/*
  * "Clone" a wave function: Allocate a wave function with idential parameters.
  *
  * gwf = Wavefunction to be cloned (wf *; input).
@@ -162,7 +214,7 @@ EXPORT void grid_wf_free(wf *gwf) {
  * j           = Current index along Y (INT; input).
  * k           = Current index along Z (INT; input).
  * data        = Pointer to struct grid_abs holding values for specifying the absorbing region (void *; INPUT).
- *               This will specify lx, hx, ly, hy, lz, hz.
+ *               This will specify amp, lx, hx, ly, hy, lz, hz.
  * 
  * Returns the scaling factor for imaginary time.
  *
@@ -185,7 +237,7 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
   if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
   else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz;
 
-  return t / 3.0;
+  return ab->amp * t / 3.0;
 }
 
 /*
@@ -448,7 +500,9 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
   REAL (*time)(INT, INT, INT, void *) = gwf->ts_func;
   struct grid_abs *privdata = &(gwf->abs_data);
-  
+  char add_abs = 0;  
+  REAL rho0 = privdata->rho0;
+
   if(!potential) return;
 #ifdef USE_CUDA
   if(gwf->ts_func && gwf->ts_func != grid_wf_absorb) {
@@ -457,17 +511,23 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
   }
   if(cuda_status() && !grid_cuda_wf_propagate_potential(gwf, tstep, potential)) return;
 #endif
+  if(gwf->propagator < WF_2ND_ORDER_CN) {
+    if(time) add_abs = 1;   /* abs potential for FFT */
+    time = NULL;            /* Imag time scheme disabled for FFT */
+  }
 
-#pragma omp parallel for firstprivate(ny,nz,nxy,psi,pot,time,tstep,privdata) private(i, j, k, ij, ijnz, c) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(add_abs,rho0,ny,nz,nxy,psi,pot,time,tstep,privdata) private(i, j, k, ij, ijnz, c) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++) {
       /* psi(t+dt) = exp(- i V dt / hbar) psi(t) */
-      if(time) c = (1.0 / HBAR) * (CIMAG(tstep) * grid_wf_absorb(i, j, k, privdata) - I * CREAL(tstep));
+      if(time) c = -((*time)(i, j, k, privdata) + I * CREAL(tstep)) / HBAR;
       else c = -I * tstep / HBAR;
-      psi[ijnz + k] = psi[ijnz + k] * CEXP(c * pot[ijnz + k]);
+      if(add_abs) psi[ijnz + k] = psi[ijnz + k] * 
+         CEXP(c * (pot[ijnz + k] - I * grid_wf_absorb(i, j, k, privdata) * (sqnorm(psi[ijnz + k]) - rho0)));
+      else psi[ijnz + k] = psi[ijnz + k] * CEXP(c * pot[ijnz + k]);
     }
   }
 }
@@ -605,52 +665,3 @@ EXPORT inline void grid_wf_print(wf *gwf, FILE *out) {
 
   cgrid_print(gwf->grid, out); 
 }
-
-/*
- * Add complex absorbing potential: -I * amp * (|psi|^2 - rho0).
- *
- * gwf   = current wavefunction (wf *; input).
- * pot   = potential to which the absorption is added (cgrid *; input/output).
- * amp   = amplitude (REAL; input).
- * rho0  = baseline density (REAL; input).
- *
- * No return value.
- *
- * NOTE: gwf->ts_func must be set to NULL when using this function. Otherwise the
- *       imaginary time absorbing boundary will also be included!
- *       Because gwf->ts_func is also used as an indicator imaginary time boundaries,
- *       this function has grid_wf_absorb() hardwired.
- *
- */
-
-EXPORT void grid_wf_absorb_potential(wf *gwf, cgrid *pot, REAL amp, REAL rho0) {
-
-  REAL complex *val = pot->value;
-  INT i, j, k, ij, ijnz, nxy = pot->nx * pot->ny, ny = pot->ny, nz = pot->nz;
-  REAL g;
-  struct grid_abs *privdata = &(gwf->abs_data);
-
-  if(privdata->data[5] == 0) {
-    fprintf(stderr, "libgrid: grid_wf_absorb_potential() called without defining the absorbing region!\n");
-    exit(1);
-  }
-  if(gwf->ts_func) {
-    fprintf(stderr, "libgrid: Attempting to use grid_wf_absorb_potential() with imaginary time boundaries active.\n");
-    fprintf(stderr, "libgrid: Set gwf->ts_func to NULL to disable the imaginary time boundaries.\n");
-    exit(1);
-  }
-#ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_absorb_potential(gwf, pot, amp, rho0)) return;
-#endif
-#pragma omp parallel for firstprivate(nxy, nz, ny, gwf, amp, val, rho0, privdata) private(i, j, k, ijnz, g) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++) {
-      g = grid_wf_absorb(i, j, k, privdata);
-      if(g > 0.0) val[ijnz + k] += -I * g * amp * (sqnorm(gwf->grid->value[ijnz + k]) - rho0);
-    }
-  }  
-}
-
