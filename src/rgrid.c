@@ -3416,7 +3416,7 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
   INT i, j, k, ij, ijnz, nx, ny, nxy, nzz;
   INT nx2, ny2, nzz2;
   REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
-  REAL kx, ky, kz, lx, ly, lz, step, norm, sum, ssum;
+  REAL kx, ky, kz, lx, ly, lz, step, norm, sum = 0.0, ssum;
   REAL complex *lvalue = (REAL complex *) laplace->value;
   
   if (grid != laplace) rgrid_copy(laplace, grid);

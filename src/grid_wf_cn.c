@@ -235,7 +235,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
   REAL complex *d, *b, *pwrk, tim, cp, *wrk, *wrk2, *wrk3;
   REAL (*time)(INT, INT, INT, void *) = gwf->ts_func;
   struct grid_abs *privdata = &(gwf->abs_data);
-  CUREAL amp = privdata->amp;
+  REAL amp = privdata->amp;
 
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
