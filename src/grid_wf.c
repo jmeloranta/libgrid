@@ -495,7 +495,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
  * gwf       = wavefunction to be propagated (wf *).
  * tstep     = time step (REAL complex).
  * potential = grid containing the potential (cgrid *). If NULL, no propagation needed.
- * cons      = constant term to add to potential (REAL complex; input).
+ * cons      = constant term to add to potential (REAL; input).
  *
  * No return value.
  *

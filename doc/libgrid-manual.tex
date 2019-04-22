@@ -254,7 +254,7 @@ Indexing of the grid values follow the same convention as for rgrid data type.
 
 Wave functions are special objects that contain a complex grid (wave function values) and all other necessary parameters such that it can be propagated in time by using a non-linear Schr\"odinger equation. This data type is mostly used in libdft library.
 
-\begin{longtable}{p{.2\textwidth} p{.75\textwidth}}
+\begin{longtable}{p{.3\textwidth} p{.65\textwidth}}
 Member & Description\\
 \cline{1-2}
 cgrid *grid & Complex grid containing the wave function values.\\
@@ -262,6 +262,11 @@ REAL mass & Particle mass that is represented by this wave function.\\
 REAL norm & Requested normalization of the wave function.\\
 char boundary & Boundary condition to be used for time propagation. WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition, WF\_VORTEX\_X\_BOUNDARY = Vortex line along $x$-axis, WF\_VORTEX\_Y\_BOUNDARY = Vortex line along $y$-axis, or WF\_VORTEX\_Z\_BOUNDARY = Vortex line along $z$-axis,.\\
 char propagator & Time propagator. WF\_2ND\_ORDER\_FFT = FFT propagator with 2nd order accuracy in time, WF\_4TH\_ORDER\_FFT = FFT propagator with 4th order accuracy in time, WF\_2ND\_ORDER\_CN = Crank-Nicolson propagator with 2nd order accuracy in time, or WF\_4TH\_ORDER\_CN = Crank-Nicolson propagator with 4th order accuracy in time.\\
+cgrid *workspace & Workspace required for the chosen propagator (may be NULL if not used).\\
+cgrid *workspace2 & Workspace required for the chosen propagator (may be NULL if not used).\\
+cgrid *workspace3 & Workspace required for the chosen propagator (may be NULL if not used).\\
+REAL (*ts\_func)(INT, INT, INT, void *) & User specified time step function. Allows, for example, for spatially dependent time step length.\\
+struct grid\_abs abs\_data & Structure containing absorbing boundary specification (amp = Absorption amplitude, rho0 = desired value for $|\psi|^2$, data$[6]$ = array of lower, upper bound indices for the boundary in $x, y, z$ directions. The first element is the lower bound for $x$ and the last upper bound for $z$.\\
 \end{longtable}
 
 \chapter{Library functions}
@@ -1309,10 +1314,6 @@ rgrid *fz  & $z$ component of the vector field.\\
 \noindent
 This function does not return any value. 
 
-\subsection{rgrid\_dealias23() -- Dealias in Fourier space (2/3 rule)}
-
-This function performs de-alias of a grid in Fourier space by the 2/3 rule: zero high wavenumber components between: [n/2 - n/3, n/2 + n/3] in each direction (except the last dimension is [nz - nz/3, nz]). The only argument is the grid (rgrid *; in reciprocal space) that will be operated on. The function does not return any value.
-
 \subsection{rgrid\_ipower() -- Rise grid to integer power}
 
 Raise given grid to a specified integer power (fast -- not using POW()). The following arguments are required:
@@ -1438,6 +1439,94 @@ INT npts & Number of points to be used in taking the running average. This smoot
 \end{longtable}
 \noindent
 This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient\_x() -- Differentiate real grid in the Fourier space along $x$}
+
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient\_x & Output grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient\_y() -- Differentiate real grid in the Fourier space along $y$}
+
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient\_y & Output grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient\_z() -- Differentiate real grid in the Fourier space along $z$}
+
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient\_z & Output grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_gradient() -- Calculate gradient of real grid in the Fourier space}
+
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient\_x & Output grid ($x$).\\
+rgrid *gradient\_y & Output grid ($y$).\\
+rgrid *gradient\_z & Output grid ($z$).\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_laplace() -- Calculate Laplacian of real grid in the Fourier space}
+
+Calculate Laplacian of a real grid in the reciprocal space. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *laplace & Output grid.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_laplace\_expectation\_value() -- Calculate expectation value of laplacian over real grid in the Fourier space}
+
+Calculate expectation value of Laplacian (real grid) in the reciprocal space. This function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be differentiated.\\
+rgrid *laplace & Output grid (calculated in addition to the expectation value).\\
+\end{longtable}
+\noindent
+This function returns the expectation value (REAL).
+
+\subsection{rgrid\_fft\_filter() -- Apply a user defined filter function in the Fourier space}
+
+Apply user defined filter in the Fourier space. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid in Fourier space to be filtered.\\
+REAL complex (*func)(void *farg, REAL kx, REAL ky, REAL kz) & Filter function.\\
+void *farg & Arguments to be passed to the filter function.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
+NOTE: This does not scale by fft\_norm, so use rgrid\_inverse\_fft\_norm() to include it.
 
 \section{Complex grid routines}
 
@@ -1597,6 +1686,18 @@ char *file & File name for the grid file to be read.\\
 \end{longtable}
 \noindent
 This function does not return any value. See also cgrid\_read().
+
+\subsection{cgrid\_write\_grid\_reciprocal() -- Write reciprocal space grid to disk}
+
+Write complex (reciprocal space) grid to disk including cuts along $x$, $y$, and $z$ axes. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+char *basename & Base filename where suffixes (.x, .y, .z, and .grd) are added.\\
+cgrid *grid & Grid (in reciprocal space) to be written to disk.\\
+\end{longtable}
+\noindent
+No return value. See also cgrid\_write().
 
 \subsection{cgrid\_copy() -- Copy grid}
 
@@ -2535,10 +2636,6 @@ INT lz & Lower limit for 3rd index ($z$).\\                                     
 \noindent
 This function has no return value.
 
-\subsection{cgrid\_dealias23() -- Dealias in Fourier space (2/3 rule)}
-
-This function performs de-alias of a grid in Fourier space by the 2/3 rule: zero high wavenumber components between: [n/2 - n/3, n/2 + n/3] in each direction (except the last dimension is [nz - nz/3, nz]). The only argument is the grid (cgrid *; in reciprocal space) that will be operated on. The function does not return any value.
-
 \subsection{cgrid\_ipower() -- Rise grid to integer power}
 
 Raise given grid to a specified integer power (fast -- not using POW()). The following arguments are required:
@@ -2551,6 +2648,20 @@ INT exponent & Exponent to be used. This value can be negative.\\
 \end{longtable}
 \noindent
 This function does not return any value. 
+
+\subsection{cgrid\_fft\_filter() -- Apply a user defined filter function in the Fourier space}
+
+Apply user defined filter in the Fourier space. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid in Fourier space to be filtered.\\
+REAL complex (*func)(void *farg, REAL kx, REAL ky, REAL kz) & Filter function.\\
+void *farg & Arguments to be passed to the filter function.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
+NOTE: This does not scale by fft\_norm, so use cgrid\_inverse\_fft\_norm() to include it.
 
 \section{Mixed real - complex grid routines}
 
@@ -2679,11 +2790,31 @@ INT nz & Number of spatial grid points along $z$ (3rd index).\\
 REAL step & Spatial step size for wave function grid.\\
 REAL mass & Mass of the particle corresponding to this wave function (in atomic units).\\
 char boundary & Boundary condition for wave function: WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition.\\
-char propagator & Which time propagator to use for this wave function: WF\_2ND\_ORDER\_FFT = FFT with 2nd order in time, WF\_4TH\_ORDER\_FFT = FFT with 4th order in time, WF\_2ND\_ORDER\_CN = Crank-Nicolson with 2nd order in time, WF\_4TH\_ORDER\_CN = Crank-Nicolson with 4th order in time.\\
+char propagator & Which time propagator to use for this wave function: WF\_2ND\_ORDER\_FFT = FFT with 2nd order in time, WF\_4TH\_ORDER\_FFT = FFT with 4th order in time, WF\_2ND\_ORDER\_CFFT = Cayley-FFT with 2nd order in time, WF\_4TH\_ORDER\_CFFT = Cayley-FFT with 4th order in time, WF\_2ND\_ORDER\_CN = Crank-Nicolson with 2nd order in time, WF\_4TH\_ORDER\_CN = Crank-Nicolson with 4th order in time.\\
 char *id & String identifier describing the grid (for debugging; char *; input).
 \end{longtable}
 \noindent
 This function returns a pointer to the allocated wave function structure (wf *). If memory allocation fails, NULL is returned.
+
+\subsection{grid\_wf\_boundary() -- Define absorbing boundary}
+
+Set up absorbing boundaries. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+wf *gwf & Wave function.\\
+wf *gwfp & Predict wave function. Set to NULL if predict-correct is not used.\\
+REAL amp & Amplitude for boundary damping. Use 0.0 to remove the boundary. Relative to the baseline value defined in src/defs.h. So, use 1.0 to get the default.\\
+REAL rho0 & Desired value for $|\psi|^2$ at the boundary (complex potential only).\\
+INT lx & Lower bound index ($x$) for the boundary.\\
+INT hx & Upper bound index ($x$) for the boundary.\\
+INT ly & Lower bound index ($y$) for the boundary.\\
+INT hy & Upper bound index ($y$) for the boundary.\\
+INT lz & Lower bound index ($z$) for the boundary.\\
+INT hz & Upper bound index ($z$) for the boundary.\\
+\end{longtable}
+\noindent
+This function does not return any value.
 
 \subsection{grid\_wf\_clone() -- Allocate a new wave function using existing wave function as template}
 
@@ -2725,8 +2856,9 @@ REAL complex time\_step & Real time step to be used.\\
 This function returns complex time step to be used at (i, j, k) (REAL complex). The grid\_abs structure is:
 \begin{verbatim}
 struct grid_abs {
-  REAL amp;           /* Absorption amplitude (larger means higher absorption) */
-  INT data[6];        /* Six indices corresponding to lx, hx, ly, hy, lz, hz */
+  REAL amp;        /* Absorption amplitude (larger means higher absorption) */
+  REAL rho0;       /* Desired value for |psi|^2 at the boundary (complex pot. only) */
+  INT data[6];     /* Six indices corresponding to lx, hx, ly, hy, lz, hz */
 };
 \end{verbatim}
 
@@ -3015,6 +3147,7 @@ REAL complex (*time)() & Time step function. If NULL, constant value will be use
 REAL complex *tstep & Time step (atomic units).\\
 void *privdata & Private data for the time step function.\\                                                                            
 cgrid *potential & Grid containing the potential.\\
+REAL cons & Constant term to add to potential.\\
 \end{longtable}
 \noindent
 Function grid\_wf\_propagate\_potential() does not return any value. The time step function REAL complex (*time)(), which allows spatial variation in time stepping, takes the following arguments:
