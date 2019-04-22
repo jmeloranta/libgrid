@@ -397,7 +397,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(k = 1; k < nz - 1; k++) {
-      if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, k, privdata);
+      if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, k, privdata);  // TODO: Why + ? Should be -I * delta t ?
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -458,6 +458,6 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
     if(gwf->boundary == WF_PERIODIC_BOUNDARY)
       grid_solve_tridiagonal_system_cyclic2(nz, d, b, &psi[i * nyz + j * nz], c2, 1, pwrk);
     else
-      grid_solve_tridiagonal_system2(nz, d, b, &psi[i * nyz + j * nz], c2, 1);
+      grid_solve_tridiagonal_system2(nz, d, b, &psi[i * nyz + j * nz], c2, 1); // c2 has very little effect
   }
 }

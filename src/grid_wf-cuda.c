@@ -17,7 +17,7 @@
  *
  */
 
-EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pot) {
+EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pot, REAL cons) {
 
   cgrid *grid = gwf->grid;
   struct grid_abs *ab = &(gwf->abs_data);
@@ -47,7 +47,7 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, pot->value, pot->grid_len, pot->id, 1) < 0) return -1;
    
-  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, add_abs, amp, rho0, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
+  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, add_abs, amp, rho0, cons, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
   return 0;
 }
 
