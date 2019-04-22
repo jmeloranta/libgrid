@@ -501,7 +501,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
  *
  */
 
-EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *potential, REAL complex cons) {
+EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *potential, REAL cons) {
 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
