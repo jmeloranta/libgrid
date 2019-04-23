@@ -145,11 +145,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
    * (1 + .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t) <=> A x = b
    * (C + dx^2 laplace + C2 grad + C3 y grad) psi(t+dt) 
    *         = (C - dx^2 laplace - C2 grad - C3 y grad) psi(t)
-   * where C = 4 i m dx^2 / (hbar dt), C2 = -2 i dx kx, C3 = m \omega i dx / hbar
+   * where C = 4 i m dx^2 / (hbar dt), C2 = -i dx kx, C3 = m \omega i dx / hbar
    *
    */
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
-  c2 = CUMAKE(0.0, -2.0 * step * kx0); // coeff for moving background
+  c2 = CUMAKE(0.0, -step * kx0); // coeff for moving background
   c3 = CUMAKE(0.0, mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
   grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, gwf, bc, wrk, wrk2, wrk3, c, c2, c3, step, y0, tstep, amp, lx, hx, ly, hy, lz, hz);
@@ -284,12 +284,12 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
    * (1 + .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t) <=> A x = b
    * (C + dy^2 laplace + C2 grad + C3 x grad) psi(t+dt) 
    *         = (C - dx^2 laplace - C2 grad - C3 x grad) psi(t)
-   * where C = 4 i m dy^2 / (hbar dt), C2 = -2 i dy ky, C3 = -m \omega i dy / hbar
+   * where C = 4 i m dy^2 / (hbar dt), C2 = -i dy ky, C3 = -m \omega i dy / hbar
    *
    */
  
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
-  c2 = CUMAKE(0.0, -2.0 * step * ky0); // coeff for moving background
+  c2 = CUMAKE(0.0, -step * ky0); // coeff for moving background
   c3 = CUMAKE(0.0, -mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
   grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, gwf, bc, wrk, wrk2, wrk3, c, c2, c3, step, x0, tstep, amp, lx, hx, ly, hy, lz, hz);
@@ -419,11 +419,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
    * (1 + .5 i (T + V - v0 pz) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - v0 pz) dt / hbar) psi(t) <=> A x = b
    * (C + dz^2 laplace + C2 grad) psi(t+dt) 
    *         = (C - dz^2 laplace - C2 grad) psi(t)
-   * where C = 4 i m dz^2 / (hbar dt), CB = -2m dz^2 / hbar^2, C2 = -2 i dz kz.
+   * where C = 4 i m dz^2 / (hbar dt), CB = -2m dz^2 / hbar^2, C2 = -i dz kz.
    *
    */
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
-  c2 = CUMAKE(0.0, -2.0 * step * kz0); // coeff for moving background
+  c2 = CUMAKE(0.0, -step * kz0); // coeff for moving background
 
   grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, wrk, wrk2, wrk3, c, c2, step, tstep, amp, lx, hx, ly, hy, lz, hz);
   cuda_error_check();

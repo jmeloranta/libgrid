@@ -121,11 +121,11 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace
    * (1 + .5 i (T - \omega Lz - v0 px) dt / hbar) psi(t+dt) = (1 - .5 i (T - \omega Lz - v0 px) dt / hbar) psi(t) <=> A x = b
    * (C + dx^2 laplace + C2 grad + C3 y grad) psi(t+dt) 
    *         = (C - dx^2 laplace - C2 grad - C3 y grad) psi(t)
-   * where C = 4 i m dx^2 / (hbar dt), C2 = -2 i dx kx, C3 = m \omega i dx / hbar
+   * where C = 4 i m dx^2 / (hbar dt), C2 = -i dx kx, C3 = m \omega i dx / hbar
    *
    */
   c = 4.0 * I * gwf->mass * step * step / HBAR; // division by dt included separately below
-  c2 = -2.0 * I * step * kx0; // coeff for moving background
+  c2 = -I * step * kx0; // coeff for moving background; TODO: do we need 2 X for C2????
   c3 = gwf->mass * gwf->grid->omega * I * step / HBAR; // coeff for rotating liquid around Z
   wrk = workspace->value;
   wrk2 = workspace2->value;
@@ -249,11 +249,11 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
    * (1 + .5 i (T - \omega Lz - v0 py) dt / hbar) psi(t+dt) = (1 - .5 i (T - \omega Lz - v0 py) dt / hbar) psi(t) <=> A x = b
    * (C + dy^2 laplace + C2 grad + C3 x grad) psi(t+dt) 
    *         = (C - dx^2 laplace - C2 grad - C3 x grad) psi(t)
-   * where C = 4 i m dy^2 / (hbar dt), C2 = -2 i dy ky, C3 = -m \omega i dy / hbar
+   * where C = 4 i m dy^2 / (hbar dt), C2 = -i dy ky, C3 = -m \omega i dy / hbar
    *
    */
   c = 4.0 * I * gwf->mass * step * step / HBAR; // division by dt included separately below
-  c2 = -2.0 * I * step * ky0;
+  c2 = -I * step * ky0; // TODO: Do we need 2X for C2?
   c3 = -gwf->mass * gwf->grid->omega * I * step / HBAR;
   wrk = workspace->value;
   wrk2 = workspace2->value;
@@ -377,11 +377,11 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
    * (1 + .5 i (T - v0 pz) dt / hbar) psi(t+dt) = (1 - .5 i (T - v0 pz) dt / hbar) psi(t) <=> A x = b
    * (C + dz^2 laplace + C2 grad) psi(t+dt) 
    *         = (C - dz^2 laplace - C2 grad) psi(t)
-   * where C = 4 i m dz^2 / (hbar dt), C2 = -2 i dz kz.
+   * where C = 4 i m dz^2 / (hbar dt), C2 = -i dz kz.
    *
    */
   c = 4.0 * I * gwf->mass * step * step / HBAR; // division by dt included separately below
-  c2 = -2.0 * I * step * kz0;
+  c2 = -I * step * kz0;  // TODO: Do we need 2X for C2?
   wrk = workspace->value;
   wrk2 = workspace2->value;
   wrk3 = workspace3->value;
