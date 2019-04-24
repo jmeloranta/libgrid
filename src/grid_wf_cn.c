@@ -143,7 +143,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(i = 1; i < nx - 1; i++) {
-      if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, k, privdata);
+      if(time) tim = CREAL(tstep) - I * amp * (*time)(i, j, k, privdata);
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -158,7 +158,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace
 
     // Boundary conditions 
     ind = j * nz + k; // i = 0 - left boundary
-    if(time) tim = CREAL(tstep) + I * amp * (*time)(0, j, k, privdata);
+    if(time) tim = CREAL(tstep) - I * amp * (*time)(0, j, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -180,7 +180,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace
     d[0] = cp - 2.0;  // LHS: -2 diag elem from Laplacian, cp = c / dt
 
     ind = (nx - 1) * nyz + j * nz + k;  // i = nx - 1, right boundary
-    if(time) tim = CREAL(tstep) + I * amp * (*time)(nx-1, j, k, privdata);
+    if(time) tim = CREAL(tstep) - I * amp * (*time)(nx-1, j, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -271,7 +271,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(j = 1; j < ny - 1; j++) {
-      if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, k, privdata);
+      if(time) tim = CREAL(tstep) - I * amp * (*time)(i, j, k, privdata);
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -287,7 +287,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
     // Boundary conditions
  
     ind = i * nyz + k; // j = 0 - left boundary
-    if(time) tim = CREAL(tstep) + I * amp * (*time)(i, 0, k, privdata);
+    if(time) tim = CREAL(tstep) - I * amp * (*time)(i, 0, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -309,7 +309,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
     d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
     ind = i * nyz + (ny-1) * nz + k;  // j = ny - 1 - right boundary
-    if(time) tim = CREAL(tstep) + I * amp * (*time)(i, ny-1, k, privdata);
+    if(time) tim = CREAL(tstep) - I * amp * (*time)(i, ny-1, k, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -397,7 +397,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
 
     /* create left-hand diagonal element (d) and right-hand vector (b) */
     for(k = 1; k < nz - 1; k++) {
-      if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, k, privdata);  // TODO: Why + ? Should be -I * delta t ?
+      if(time) tim = CREAL(tstep) - I * amp * (*time)(i, j, k, privdata);
       else tim = tstep;
       cp = c / tim;
       ind = i * nyz + j * nz + k;
@@ -413,7 +413,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
     // Boundary conditions
  
     ind = i * nyz + j * nz; // k = 0 - left boundary
-    if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, 0, privdata);
+    if(time) tim = CREAL(tstep) - I * amp * (*time)(i, j, 0, privdata);
     else tim = tstep;
     cp = c / tim;
     /* Right-hand side (-) */
@@ -435,7 +435,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
     d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
     ind = i * nyz + j * nz + (nz - 1);  // k = nz-1 - right boundary
-    if(time) tim = CREAL(tstep) + I * amp * (*time)(i, j, nz-1, privdata);
+    if(time) tim = CREAL(tstep) - I * amp * (*time)(i, j, nz-1, privdata);
     else tim = tstep;
     cp = c / tim;
     switch(gwf->boundary) {
