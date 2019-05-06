@@ -245,7 +245,7 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
   if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
   else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz; // TODO: This should be nz - hz rather than lz (but nz not available)
 
-  return ab->amp * t / 3.0;
+  return t / 3.0;
 }
 
 /*
