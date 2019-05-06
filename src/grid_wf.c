@@ -134,9 +134,13 @@ EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT
     return;
   }
 
-  if(gwf->propagator < WF_2ND_ORDER_CN) gwf->abs_data.amp = amp * GRID_ABS_BC_FFT;
-  else gwf->abs_data.amp = amp * GRID_ABS_BC_CN;
-  gwf->abs_data.rho0 = rho0;
+  if(gwf->propagator < WF_2ND_ORDER_CN) {
+    gwf->abs_data.amp = amp * GRID_ABS_BC_FFT;
+    gwf->abs_data.rho0 = rho0;
+  } else {
+    gwf->abs_data.amp = amp * GRID_ABS_BC_CN;
+    gwf->abs_data.rho0 = 0.0;
+  }
   gwf->abs_data.data[0] = lx;
   gwf->abs_data.data[1] = hx;
   gwf->abs_data.data[2] = ly;
@@ -144,9 +148,13 @@ EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT
   gwf->abs_data.data[4] = lz;
   gwf->abs_data.data[5] = hz;
   if(gwfp) {
-    if(gwfp->propagator < WF_2ND_ORDER_CN) gwfp->abs_data.amp = amp * GRID_ABS_BC_FFT;
-    else gwfp->abs_data.amp = amp * GRID_ABS_BC_CN;
-    gwfp->abs_data.rho0 = rho0;
+    if(gwfp->propagator < WF_2ND_ORDER_CN) {
+      gwfp->abs_data.amp = amp * GRID_ABS_BC_FFT;
+      gwfp->abs_data.rho0 = rho0;
+    } else {
+      gwfp->abs_data.amp = amp * GRID_ABS_BC_CN;
+      gwfp->abs_data.rho0 = 0.0;
+    }
     gwfp->abs_data.data[0] = lx;
     gwfp->abs_data.data[1] = hx;
     gwfp->abs_data.data[2] = ly;
@@ -216,7 +224,7 @@ EXPORT void grid_wf_free(wf *gwf) {
  * data        = Pointer to struct grid_abs holding values for specifying the absorbing region (void *; INPUT).
  *               This will specify amp, lx, hx, ly, hy, lz, hz.
  * 
- * Returns the scaling factor for imaginary time.
+ * Returns the scaling factor for imaginary time (value between 0 and 1.0).
  *
  */
 
@@ -229,13 +237,13 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
   t = 0.0;
 
   if(i < lx) t += ((REAL) (lx - i)) / (REAL) lx;
-  else if(i > hx) t += ((REAL) (i - hx)) / (REAL) lx;
+  else if(i > hx) t += ((REAL) (i - hx)) / (REAL) lx; // TODO: This should be nx - hx rather than lx (but nx not available)
 
   if(j < ly) t += ((REAL) (ly - j)) / (REAL) ly;
-  else if(j > hy) t += ((REAL) (j - hy)) / (REAL) ly;
+  else if(j > hy) t += ((REAL) (j - hy)) / (REAL) ly; // TODO: This should be ny - hy rather than ly (but ny not available)
 
   if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
-  else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz;
+  else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz; // TODO: This should be nz - hz rather than lz (but nz not available)
 
   return ab->amp * t / 3.0;
 }
