@@ -138,7 +138,7 @@ EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT
     gwf->abs_data.amp = amp * GRID_ABS_BC_FFT;
     gwf->abs_data.rho0 = rho0;
   } else {
-    gwf->abs_data.amp = amp * GRID_ABS_BC_CN;
+    gwf->abs_data.amp = 1.0;
     gwf->abs_data.rho0 = 0.0;
   }
   gwf->abs_data.data[0] = lx;
@@ -152,7 +152,7 @@ EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT
       gwfp->abs_data.amp = amp * GRID_ABS_BC_FFT;
       gwfp->abs_data.rho0 = rho0;
     } else {
-      gwfp->abs_data.amp = amp * GRID_ABS_BC_CN;
+      gwfp->abs_data.amp = 1.0;
       gwfp->abs_data.rho0 = 0.0;
     }
     gwfp->abs_data.data[0] = lx;
@@ -513,10 +513,10 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
-  REAL (*time)(INT, INT, INT, void *) = gwf->ts_func;
+  REAL (*time)(INT, INT, INT, void *) = gwf->ts_func, tmp;
   struct grid_abs *privdata = &(gwf->abs_data);
   char add_abs = 0;  
-  REAL rho0 = privdata->rho0;
+  REAL rho0 = privdata->rho0, amp = privdata->amp;
 
   if(!potential) return;
 #ifdef USE_CUDA
@@ -531,17 +531,19 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
     time = NULL;            /* Imag time scheme disabled for FFT */
   }
 
-#pragma omp parallel for firstprivate(cons,add_abs,rho0,ny,nz,nxy,psi,pot,time,tstep,privdata) private(i, j, k, ij, ijnz, c) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(amp,cons,add_abs,rho0,ny,nz,nxy,psi,pot,time,tstep,privdata) private(tmp, i, j, k, ij, ijnz, c) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++) {
       /* psi(t+dt) = exp(- i V dt / hbar) psi(t) */
-      if(time) c = -((*time)(i, j, k, privdata) + I * CREAL(tstep)) / HBAR;
-      else c = -I * tstep / HBAR;
+      if(time) {
+        tmp = ((*time)(i, j, k, privdata));
+        c = -I * ((1.0 - tmp) * CREAL(tstep) - I * CREAL(tstep) * tmp) / HBAR;
+      } else c = -I * tstep / HBAR;
       if(add_abs) psi[ijnz + k] = psi[ijnz + k] * 
-         CEXP(c * (pot[ijnz + k] - I * grid_wf_absorb(i, j, k, privdata) * (sqnorm(psi[ijnz + k]) - rho0)));
+         CEXP(c * (pot[ijnz + k] - I * amp * grid_wf_absorb(i, j, k, privdata) * (sqnorm(psi[ijnz + k]) - rho0)));
       else psi[ijnz + k] = psi[ijnz + k] * CEXP(c * (cons + pot[ijnz + k]));
     }
   }
