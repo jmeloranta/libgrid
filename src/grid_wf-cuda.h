@@ -35,5 +35,8 @@ static __device__ CUREAL grid_cuda_wf_absorb(INT i, INT j, INT k, INT lx, INT hx
   if(k < lz) t += ((CUREAL) (lz - k)) / (CUREAL) lz;
   else if(k > hz) t += ((CUREAL) (k - hz)) / (CUREAL) lz;
 
-  return t / 3.0;
+  t *= 2.0 / 3.0;   // new
+  if(t > 1.0) return 1.0; // new
+  return t; // new
+//  return t / 3.0; // old code
 }

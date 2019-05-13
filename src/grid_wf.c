@@ -138,7 +138,7 @@ EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT
     gwf->abs_data.amp = amp * GRID_ABS_BC_FFT;
     gwf->abs_data.rho0 = rho0;
   } else {
-    gwf->abs_data.amp = 1.0;
+    gwf->abs_data.amp = 1.0;  // not used
     gwf->abs_data.rho0 = 0.0;
   }
   gwf->abs_data.data[0] = lx;
@@ -245,7 +245,10 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
   if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
   else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz; // TODO: This should be nz - hz rather than lz (but nz not available)
 
-  return t / 3.0;
+  t *= 2.0 / 3.0;  // new
+  if(t > 1.0) return 1.0;  // new
+  return t; // new
+//  return t / 3.0;  // old
 }
 
 /*
