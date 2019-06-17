@@ -67,22 +67,22 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   
   switch(boundary) {
     case WF_DIRICHLET_BOUNDARY:
-      value_outside = cgrid_value_outside_constantdirichlet;
+      value_outside = CGRID_DIRICHLET_BOUNDARY;
       break;
     case WF_NEUMANN_BOUNDARY:
-      value_outside = cgrid_value_outside_neumann;
+      value_outside = CGRID_NEUMANN_BOUNDARY;
       break;
     case WF_PERIODIC_BOUNDARY:
-      value_outside = cgrid_value_outside;
+      value_outside = CGRID_PERIODIC_BOUNDARY;
       break;
     case WF_VORTEX_X_BOUNDARY:
-      value_outside = cgrid_value_outside_vortex_x;
+      value_outside = CGRID_VORTEX_X_BOUNDARY;
       break;
     case WF_VORTEX_Y_BOUNDARY:
-      value_outside = cgrid_value_outside_vortex_y;
+      value_outside = CGRID_VORTEX_Y_BOUNDARY;
       break;
     case WF_VORTEX_Z_BOUNDARY:
-      value_outside = cgrid_value_outside_vortex_z;
+      value_outside = CGRID_VORTEX_Z_BOUNDARY;
       break;
     default:
       fprintf(stderr, "libgrid: Unknown boundary condition in grid_wf_alloc().\n");

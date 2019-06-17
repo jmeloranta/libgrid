@@ -94,7 +94,13 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   /* X-Y plane rotation frequency */
   grid->omega = 0.0;
 
-  grid->fft_norm = 1.0 / (REAL) (grid->nx * grid->ny * grid->nz);
+  if(value_outside == CGRID_NEUMANN_BOUNDARY || 
+    value_outside == CGRID_VORTEX_X_BOUNDARY ||
+    value_outside == CGRID_VORTEX_Y_BOUNDARY ||
+    value_outside == CGRID_VORTEX_Z_BOUNDARY)
+    grid->fft_norm = 1.0 / (REAL) (2 * grid->nx * 2 * grid->ny * 2 * grid->nz);
+  else
+    grid->fft_norm = 1.0 / (REAL) (grid->nx * grid->ny * grid->nz);
 
   // Account for the correct dimensionality of the grid
   grid->fft_norm2 = grid->fft_norm;
