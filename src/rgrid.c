@@ -120,7 +120,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   if (value_outside)
     grid->value_outside = value_outside;
   else
-    grid->value_outside = rgrid_value_outside_constantdirichlet;
+    grid->value_outside = rgrid_value_outside_dirichlet;
 
   if (outside_params_ptr) grid->outside_params_ptr = outside_params_ptr;
   else {

@@ -1,5 +1,5 @@
 /*
- * cgrid boundary conditions.
+ * Complex grid (cgrid) boundary conditions.
  *
  */
 
@@ -18,7 +18,7 @@
  *
  */
 
-EXPORT REAL complex cgrid_value_outside_constantdirichlet(cgrid *grid, INT i, INT j, INT k) {
+EXPORT REAL complex cgrid_value_outside_dirichlet(cgrid *grid, INT i, INT j, INT k) {
 
   return *((REAL complex *) grid->outside_params_ptr);
 }
@@ -74,7 +74,7 @@ EXPORT REAL complex cgrid_value_outside_neumann(cgrid *grid, INT i, INT j, INT k
  * 
  */
 
-EXPORT REAL complex cgrid_value_outside(cgrid *grid, INT i, INT j, INT k) {
+EXPORT REAL complex cgrid_value_outside_periodic(cgrid *grid, INT i, INT j, INT k) {
 
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
   

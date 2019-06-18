@@ -114,7 +114,7 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   if (value_outside)
     grid->value_outside = value_outside;
   else
-    grid->value_outside = cgrid_value_outside_constantdirichlet;
+    grid->value_outside = cgrid_value_outside_dirichlet;
     
   if (outside_params_ptr)
     grid->outside_params_ptr = outside_params_ptr;
