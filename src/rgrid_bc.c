@@ -37,22 +37,16 @@ EXPORT REAL rgrid_value_outside_dirichlet(rgrid *grid, INT i, INT j, INT k) {
 
 EXPORT REAL rgrid_value_outside_neumann(rgrid *grid, INT i, INT j, INT k) {
 
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nd;
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
-  nd = nx * 2;
   if (i < 0) i = -i;
-  if (i >= nd) i %= nd;
-  if (i >= nx) i = nd - i;
+  if (i > nx-1) i = 2 * nx - i - 2;
   
-  nd = ny * 2;
   if (j < 0) j = -j;
-  if (j >= nd) j %= nd;
-  if (j >= ny) j = nd - j;
+  if (j > ny-1) j = 2 * ny - j - 2;
   
-  nd = nz * 2;
   if (k < 0) k = -k;
-  if (k >= nd) k %= nd;
-  if (k >= nz) k = nd - k;
+  if (k > nz-1) k = 2 * nz - k - 2;
 
   return rgrid_value_at_index(grid, i, j, k);
 }

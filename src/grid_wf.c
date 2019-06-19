@@ -18,9 +18,14 @@
  *              WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition.
  *              WF_NEUMANN_BOUNDARY   = Neumann boundary condition.
  *              WF_PERIODIC_BOUNDARY  = Periodic boundary condition.
- *              WF_VORTEX_X_BOUNDARY  = Vortex line along X.
- *              WF_VORTEX_Y_BOUNDARY  = Vortex line along Y.
- *              WF_VORTEX_Z_BOUNDARY  = Vortex line along Z.
+ *              WF_FFT_EEE_BOUNDARY   = Even/Even/Even boundary condition.
+ *              WF_FFT_OEE_BOUNDARY   = Odd/Even/Even boundary condition.
+ *              WF_FFT_EOE_BOUNDARY   = Even/Odd/Even boundary condition.
+ *              WF_FFT_EEO_BOUNDARY   = Even/Even/Odd boundary condition.
+ *              WF_FFT_OOE_BOUNDARY   = Odd/Odd/Even boundary condition.
+ *              WF_FFT_EOO_BOUNDARY   = Even/Odd/Odd boundary condition.
+ *              WF_FFT_OEO_BOUNDARY   = Odd/Even/Odd boundary condition.
+ *              WF_FFT_OOO_BOUNDARY   = Odd/Odd/Odd boundary condition.
  * propagator = which time propagator to use for this wavefunction (char):
  *              WF_2ND_ORDER_FFT      = 2nd order in time (FFT).
  *              WF_4TH_ORDER_FFT      = 4th order in time (FFT).
@@ -40,12 +45,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   wf *gwf;
   REAL complex (*value_outside)(struct cgrid_struct *grid, INT i, INT j, INT k);
   
-  if(boundary != WF_DIRICHLET_BOUNDARY 
-     && boundary != WF_NEUMANN_BOUNDARY 
-     && boundary != WF_PERIODIC_BOUNDARY
-     && boundary != WF_VORTEX_X_BOUNDARY
-     && boundary != WF_VORTEX_Y_BOUNDARY
-     && boundary != WF_VORTEX_Z_BOUNDARY) {
+  if(boundary < WF_DIRICHLET_BOUNDARY || boundary > WF_FFT_OOO_BOUNDARY) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Unknown boundary condition.\n");
     return 0;
   }
@@ -65,6 +65,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
     return 0;
   }
   
+  value_outside = NULL;
   switch(boundary) {
     case WF_DIRICHLET_BOUNDARY:
       value_outside = CGRID_DIRICHLET_BOUNDARY;
@@ -75,18 +76,30 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
     case WF_PERIODIC_BOUNDARY:
       value_outside = CGRID_PERIODIC_BOUNDARY;
       break;
-    case WF_VORTEX_X_BOUNDARY:
-      value_outside = CGRID_VORTEX_X_BOUNDARY;
+    case WF_FFT_EEE_BOUNDARY:
+      value_outside = CGRID_FFT_EEE_BOUNDARY;
       break;
-    case WF_VORTEX_Y_BOUNDARY:
-      value_outside = CGRID_VORTEX_Y_BOUNDARY;
+    case WF_FFT_OEE_BOUNDARY:
+      value_outside = CGRID_FFT_OEE_BOUNDARY;
       break;
-    case WF_VORTEX_Z_BOUNDARY:
-      value_outside = CGRID_VORTEX_Z_BOUNDARY;
+    case WF_FFT_EOE_BOUNDARY:
+      value_outside = CGRID_FFT_EOE_BOUNDARY;
       break;
-    default:
-      fprintf(stderr, "libgrid: Unknown boundary condition in grid_wf_alloc().\n");
-      exit(1);
+    case WF_FFT_EEO_BOUNDARY:
+      value_outside = CGRID_FFT_EEO_BOUNDARY;
+      break;
+    case WF_FFT_OOE_BOUNDARY:
+      value_outside = CGRID_FFT_OOE_BOUNDARY;
+      break;
+    case WF_FFT_EOO_BOUNDARY:
+      value_outside = CGRID_FFT_EOO_BOUNDARY;
+      break;
+    case WF_FFT_OEO_BOUNDARY:
+      value_outside = CGRID_FFT_OEO_BOUNDARY;
+      break;
+    case WF_FFT_OOO_BOUNDARY:
+      value_outside = CGRID_FFT_OOO_BOUNDARY;
+      break;
   }
   
   if(!(gwf->grid = cgrid_alloc(nx, ny, nz, step, value_outside, 0, id))) {

@@ -33,37 +33,32 @@ EXPORT REAL complex cgrid_value_outside_dirichlet(cgrid *grid, INT i, INT j, INT
  *
  * Returns grid value subject to the boundary condition.
  * 
- * TODO:
- * The symmetry point are i=0 and i=nx-1 for consistency with the FFT plan FFTW_REDFT00. 
- * If one wants to use REDFT01 the symmetry points are i=-0.5 and i=nx-0.5 
- * Do we want to have nd - i - 1 (FFT compatibility)?
+ * NOTE: For efficiency, this does not roll over if the indices are too large.
  *
  */
 
 EXPORT REAL complex cgrid_value_outside_neumann(cgrid *grid, INT i, INT j, INT k) {
 
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nd;
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
-  nd = nx * 2;
-  if (i < 0) i  = -i;
-  if (i >= nd) i %= nd;
-  if (i >= nx) i  = nd - i - 1;
-  
-  nd = ny * 2;
-  if (j < 0) j  = -j;
-  if (j >= nd) j %= nd;
-  if (j >= ny) j  = nd - j - 1;
-  
-  nd = nz * 2;
-  if (k < 0) k  = -k;
-  if (k >= nd) k %= nd;
-  if (k >= nz) k  = nd - k - 1;
+  /* Symmetry points 0 and nx-1; finite difference first derivative: f(x + h) = f(x - h) */
+  if (i < 0) i = -i;
+  if (i > nx-1) i = 2 * nx - i - 2;
+
+  /* Symmetry points 0 and ny-1; finite difference first derivative: f(y + h) = f(y - h) */
+  if (j < 0) j = -j;
+  if (j > ny-1) j = 2 * ny - j - 2;
+
+  /* Symmetry points 0 and nz-1; finite difference first derivative: f(z + h) = f(z - h) */
+  if (k < 0) k = -k;
+  if (k > nz-1) k = 2 * nz - k - 2;
 
   return cgrid_value_at_index(grid, i, j, k);
 }
 
 /*
- * Periodic boundary condition.
+ * FFT fully periodic boundary condition. The symmetry points are 0 and N.
+ * This is to be used with regular FFT.
  *
  * grid = grid to be evaluated (cgrid *; input).
  * i    = grid index (INT; input).
@@ -78,10 +73,15 @@ EXPORT REAL complex cgrid_value_outside_periodic(cgrid *grid, INT i, INT j, INT 
 
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
   
+  /* periodic points 0 and nx */
   i %= nx;
   if (i < 0) i = nx + i;
+
+  /* periodic points 0 and ny */
   j %= ny;
   if (j < 0) j = ny + j;
+
+  /* periodic points 0 and nz */
   k %= nz;
   if (k < 0) k = nz + k;
   
@@ -89,61 +89,16 @@ EXPORT REAL complex cgrid_value_outside_periodic(cgrid *grid, INT i, INT j, INT 
 }
 
 /*
- * Vortex boundary condition (x).
+ * For the following routines, see section 2.5.2 (Real even/odd DFTs (cosine/sine transforms)) in FFTW manual.
+ * FFTW_REDFT10 etc.
  *
- * grid = grid to be evaluated (cgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
- *
- * NOTE: Not tested and possibly out of date.
+ * These have been only implemented for CPUs (not GPUs).
  *
  */
-
-EXPORT REAL complex cgrid_value_outside_vortex_x(cgrid *grid, INT i, INT j, INT k) {
-
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nd;
-
-  /* In vortex direction, map i to {0,nx-1}. This does not introduce any phase */
-  nd = nx * 2;
-  if (i < 0) i  = -i - 1;
-  if (i >= nd) i %= nd;
-  if (i >= nx) i  = nd -1 - i;
-  
-  /* First, map j,k to {0,2*nx-1} range
-   * (this does not introduce any phase)
-   */
-  nd = ny * 2;
-  if (j < 0) j = j % nd + nd;
-  if (j >= nd) j %= nd;
-
-  nd = nz * 2;
-  if (k < 0 ) k = k % nd + nd;
-  if (k >= nd) k %= nd;
-
-  /* Then, if j has to be mapped to {0,nx-1} return -phi*
-   *       if k has to be mapped to {0,ny-1} return +phi*
-   *       if both have to be mapped return -phi
-   */
-  if(j >= ny) {
-    j = 2 * ny - 1 - j;
-    if(k >= nz) {
-      k = nd - 1 - k;
-      return -cgrid_value_at_index(grid, i, j, k);
-    } else
-       return -CONJ(cgrid_value_at_index(grid, i, j, k));
-  } else {
-    if(k >= nz) {
-      k = nd - 1 - k;
-      return CONJ(cgrid_value_at_index(grid, i, j, k));
-    } else return cgrid_value_at_index(grid, i, j, k);
-  }
-}
 
 /*
- * Vortex boundary condition (y).
+ * FFT fully even boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
  *
  * grid = grid to be evaluated (cgrid *; input).
  * i    = grid index (INT; input).
@@ -151,52 +106,33 @@ EXPORT REAL complex cgrid_value_outside_vortex_x(cgrid *grid, INT i, INT j, INT 
  * k    = grid index (INT; input).
  *
  * Returns grid value subject to the boundary condition.
- *
- * NOTE: Not tested and possibly out of date.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
  *
  */
 
-EXPORT REAL complex cgrid_value_outside_vortex_y(cgrid *grid, INT i, INT j, INT k) {
+EXPORT REAL complex cgrid_value_outside_fft_eee(cgrid *grid, INT i, INT j, INT k) {
 
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nd;
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (i < 0) i = -i - 1;
+  if (i > nx-1) i = i - nx - 1;
 
-  /* In vortex direction, map i to {0,nx-1}. This does not introduce any phase */
-  nd = ny * 2;
+  /* Even with respect to -0.5 and N - 0.5 */
   if (j < 0) j = -j - 1;
-  if (j >= nd) j %= nd;
-  if (j >= ny) j = nd - 1 - j;
+  if (j > ny-1) j = j - ny - 1;
 
-  /* First, map i,j to {0,2*nx-1} range
-   * (this does not introduce any phase)
-   */
-  nd = nz * 2;
-  if (k < 0) k = k % nd + nd;
-  if (k >= nd) k %= nd;
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (k < 0) k = -k - 1;
+  if (k > nz-1) k = k - nz - 1;
 
-  nd = nx * 2;
-  if (i < 0 ) i = i % nd + nd;
-  if (i >= nd) i %= nd;
-
-  /* Then, if i has to be mapped to {0,nx-1} return -phi*
-   *       if j has to be mapped to {0,ny-1} return +phi*
-   *       if both have to be mapped return -phi
-   */
-  if(k >= nz) {
-    k = 2*nz - 1 - k;
-    if(i >= nx) {
-      i = nd - 1 - i;
-      return -cgrid_value_at_index(grid, i, j, k);
-    } else return -CONJ(cgrid_value_at_index(grid, i, j, k));
-  } else {
-    if(i >= nx) {
-      i = nd - 1 - i;
-      return CONJ(cgrid_value_at_index(grid, i, j, k));
-    } else return cgrid_value_at_index(grid, i, j, k);
-  }
+  return cgrid_value_at_index(grid, i, j, k);
 }
 
 /*
- * Vortex boundary condition (z).
+ * FFT odd(x)/even(y)/even(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
  *
  * grid = grid to be evaluated (cgrid *; input).
  * i    = grid index (INT; input).
@@ -204,46 +140,237 @@ EXPORT REAL complex cgrid_value_outside_vortex_y(cgrid *grid, INT i, INT j, INT 
  * k    = grid index (INT; input).
  *
  * Returns grid value subject to the boundary condition.
- *
- * NOTE: Not tested and possibly out of date.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
  *
  */
 
-EXPORT REAL complex cgrid_value_outside_vortex_z(cgrid *grid, INT i, INT j, INT k) {
+EXPORT REAL complex cgrid_value_outside_fft_oee(cgrid *grid, INT i, INT j, INT k) {
 
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nd;
-
-  /* In vortex direction, map k to {0,nx-1}. This does not introduce any phase */
-  nd = nz * 2;
-  if (k < 0) k = -k - 1;
-  if (k >= nd) k %= nd;
-  if (k >= nz) k = nd - 1 - k;
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
   
-  /* First, map i,j to {0,2*nx-1} range
-   * (this does not introduce any phase)
-   */
-  nd = nx * 2;
-  if (i < 0) i = i%nd + nd;
-  if (i >= nd) i %= nd;
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (i < 0) {i = -i - 1; m *= -1.0;}
+  if (i > nx-1) {i = i - nx - 1; m *= -1.0;}
 
-  nd = ny * 2;
-  if (j < 0 ) j = j%nd + nd;
-  if (j >= nd) j %= nd;
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (j < 0) j = -j - 1;
+  if (j > ny-1) j = j - ny - 1;
 
-  /* Then, if i has to be mapped to {0,nx-1} return -phi*
-   *       if j has to be mapped to {0,ny-1} return +phi*
-   *       if both have to be mapped return -phi
-   */
-  if(i >= nx) {
-    i = 2 * nx - 1 - i;
-    if(j >= ny) {
-      j = nd - 1 - j;
-      return -cgrid_value_at_index(grid, i, j, k);
-    } else return -CONJ(cgrid_value_at_index(grid, i, j, k));
-  } else {
-    if(j >= ny) {
-      j = nd - 1 - j;
-      return CONJ(cgrid_value_at_index(grid, i, j, k));
-    } else return cgrid_value_at_index(grid, i, j, k);
-  }
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (k < 0) k = -k - 1;
+  if (k > nz-1) k = k - nz - 1;
+
+  return m * cgrid_value_at_index(grid, i, j, k);
+}
+
+/*
+ * FFT even(x)/odd(y)/even(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
+ *
+ * grid = grid to be evaluated (cgrid *; input).
+ * i    = grid index (INT; input).
+ * j    = grid index (INT; input).
+ * k    = grid index (INT; input).
+ *
+ * Returns grid value subject to the boundary condition.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
+ *
+ */
+
+EXPORT REAL complex cgrid_value_outside_fft_eoe(cgrid *grid, INT i, INT j, INT k) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
+  
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (i < 0) i = -i - 1;
+  if (i > nx-1) i = i - nx - 1;
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (j < 0) {j = -j - 1; m *= -1.0;}
+  if (j > ny-1) {j = j - ny - 1; m *= -1.0;}
+
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (k < 0) k = -k - 1;
+  if (k > nz-1) k = k - nz - 1;
+
+  return m * cgrid_value_at_index(grid, i, j, k);
+}
+
+/*
+ * FFT even(x)/even(y)/odd(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
+ *
+ * grid = grid to be evaluated (cgrid *; input).
+ * i    = grid index (INT; input).
+ * j    = grid index (INT; input).
+ * k    = grid index (INT; input).
+ *
+ * Returns grid value subject to the boundary condition.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
+ *
+ */
+
+EXPORT REAL complex cgrid_value_outside_fft_eeo(cgrid *grid, INT i, INT j, INT k) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
+  
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (i < 0) i = -i - 1;
+  if (i > nx-1) i = i - nx - 1;
+
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (j < 0) j = -j - 1;
+  if (j > ny-1) j = j - ny - 1;
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (k < 0) {k = -k - 1; m *= -1.0;}
+  if (k > nz-1) {k = k - nz - 1; m *= -1.0;}
+
+  return m * cgrid_value_at_index(grid, i, j, k);
+}
+
+/*
+ * FFT odd(x)/odd(y)/even(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
+ *
+ * grid = grid to be evaluated (cgrid *; input).
+ * i    = grid index (INT; input).
+ * j    = grid index (INT; input).
+ * k    = grid index (INT; input).
+ *
+ * Returns grid value subject to the boundary condition.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
+ *
+ */
+
+EXPORT REAL complex cgrid_value_outside_fft_ooe(cgrid *grid, INT i, INT j, INT k) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
+  
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (i < 0) {i = -i - 1; m *= -1.0;}
+  if (i > nx-1) {i = i - nx - 1; m *= -1.0;}
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (j < 0) {j = -j - 1; m *= -1.0;}
+  if (j > ny-1) {j = j - ny - 1; m *= -1.0;}
+
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (k < 0) k = -k - 1;
+  if (k > nz-1) k = k - nz - 1;
+
+  return m * cgrid_value_at_index(grid, i, j, k);
+}
+
+/*
+ * FFT even(x)/odd(y)/odd(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
+ *
+ * grid = grid to be evaluated (cgrid *; input).
+ * i    = grid index (INT; input).
+ * j    = grid index (INT; input).
+ * k    = grid index (INT; input).
+ *
+ * Returns grid value subject to the boundary condition.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
+ *
+ */
+
+EXPORT REAL complex cgrid_value_outside_fft_eoo(cgrid *grid, INT i, INT j, INT k) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
+  
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (i < 0) i = -i - 1;
+  if (i > nx-1) i = i - nx - 1;
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (j < 0) {j = -j - 1; m *= -1.0;}
+  if (j > ny-1) {j = j - ny - 1; m *= -1.0;}
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (k < 0) {k = -k - 1; m *= -1.0;}
+  if (k > nz-1) {k = k - nz - 1; m *= -1.0;}
+
+  return m * cgrid_value_at_index(grid, i, j, k);
+}
+
+/*
+ * FFT odd(x)/even(y)/odd(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
+ *
+ * grid = grid to be evaluated (cgrid *; input).
+ * i    = grid index (INT; input).
+ * j    = grid index (INT; input).
+ * k    = grid index (INT; input).
+ *
+ * Returns grid value subject to the boundary condition.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
+ *
+ */
+
+EXPORT REAL complex cgrid_value_outside_fft_oeo(cgrid *grid, INT i, INT j, INT k) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
+  
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (i < 0) {i = -i - 1; m *= -1.0;}
+  if (i > nx-1) {i = i - nx - 1; m *= -1.0;}
+
+  /* Even with respect to -0.5 and N - 0.5 */
+  if (j < 0) j = -j - 1;
+  if (j > ny-1) j = j - ny - 1;
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (k < 0) {k = -k - 1; m *= -1.0;}
+  if (k > nz-1) {k = k - nz - 1; m *= -1.0;}
+
+  return m * cgrid_value_at_index(grid, i, j, k);
+}
+
+/*
+ * FFT odd(x)/odd(y)/odd(z) boundary condition. The symmetry points are -0.5 and N - 0.5.
+ * This is to be used with fast sin/cos transforms (special boundary conditions).
+ *
+ * grid = grid to be evaluated (cgrid *; input).
+ * i    = grid index (INT; input).
+ * j    = grid index (INT; input).
+ * k    = grid index (INT; input).
+ *
+ * Returns grid value subject to the boundary condition.
+ * 
+ * NOTE: Does not roll over properly with respect to indices.
+ *
+ */
+
+EXPORT REAL complex cgrid_value_outside_fft_ooo(cgrid *grid, INT i, INT j, INT k) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+  REAL m = 1.0;
+  
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (i < 0) {i = -i - 1; m *= -1.0;}
+  if (i > nx-1) {i = i - nx - 1; m *= -1.0;}
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (j < 0) {j = -j - 1; m *= 1.0;}
+  if (j > ny-1) {j = j - ny - 1; m *= -1.0;}
+
+  /* Odd with respect to -0.5 and N - 0.5 */
+  if (k < 0) {k = -k - 1; m *= -1.0;}
+  if (k > nz-1) {k = k - nz - 1; m *= -1.0;}
+
+  return m * cgrid_value_at_index(grid, i, j, k);
 }

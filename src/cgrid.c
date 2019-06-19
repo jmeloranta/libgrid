@@ -12,6 +12,8 @@
 #include "grid.h"
 #include "private.h"
 
+#define FFT_BOUNDARY_TEST(X) (X == CGRID_FFT_EEE_BOUNDARY || X == CGRID_FFT_OEE_BOUNDARY || X == CGRID_FFT_EOE_BOUNDARY || X == CGRID_FFT_EEO_BOUNDARY || X == CGRID_FFT_OOE_BOUNDARY || X == CGRID_FFT_EOO_BOUNDARY || X == CGRID_FFT_OEO_BOUNDARY || X == CGRID_FFT_OOO_BOUNDARY)
+
 #ifdef USE_CUDA
 static char cgrid_bc_conv(cgrid *grid) {
 
@@ -36,9 +38,14 @@ static char cgrid_bc_conv(cgrid *grid) {
  *                      CGRID_DIRICHLET_BOUNDARY: Dirichlet boundary
  *                      or CGRID_NEUMANN_BOUNDARY: Neumann boundary
  *                      or CGRID_PERIODIC_BOUNDARY: Periodic boundary
- *                      or CGRID_VORTEX_X_BOUNDARY: Vortex along X
- *                      or CGRID_VORTEX_Y_BOUNDARY: Vortex along Y
- *                      or CGRID_VORTEX_Z_BOUNDARY: Vortex along Z
+ *                      or CGRID_FFT_EEE_BOUNDARY: Even/Even/Even boundary
+ *                      or CGRID_FFT_OEE_BOUNDARY: Odd/Even/Even
+ *                      or CGRID_FFT_EOE_BOUNDARY: Even/Odd/Even
+ *                      or CGRID_FFT_EEO_BOUNDARY: Even/Even/Odd
+ *                      or CGRID_FFT_OOE_BOUNDARY: Odd/Odd/Even
+ *                      or CGRID_FFT_EOO_BOUNDARY: Even/Odd/Odd
+ *                      or CGRID_FFT_OEO_BOUNDARY: Odd/Even/Odd
+ *                      or CGRID_FFT_OOO_BOUNDARY: Odd/Odd/Odd
  *                      or user supplied function with pointer to grid and
  *                         grid index as parameters to provide boundary access.
  * outside_params_ptr = pointer for passing parameters for the given boundary
@@ -94,10 +101,7 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   /* X-Y plane rotation frequency */
   grid->omega = 0.0;
 
-  if(value_outside == CGRID_NEUMANN_BOUNDARY || 
-    value_outside == CGRID_VORTEX_X_BOUNDARY ||
-    value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-    value_outside == CGRID_VORTEX_Z_BOUNDARY)
+  if(FFT_BOUNDARY_TEST(value_outside))
     grid->fft_norm = 1.0 / (REAL) (2 * grid->nx * 2 * grid->ny * 2 * grid->nz);
   else
     grid->fft_norm = 1.0 / (REAL) (grid->nx * grid->ny * grid->nz);
@@ -224,9 +228,9 @@ EXPORT void cgrid_release(cgrid *grid) {
 
 /*
  * Set the origin of coordinates. The coordinates of the grid will be:
- * 	x(i)  = (i - nx/2)* step - x0
- * 	y(j)  = (j - ny/2)* step - y0
- * 	z(k)  = (k - nz/2)* step - z0
+ * 	x(i)  = (i - nx/2) * step - x0
+ * 	y(j)  = (j - ny/2) * step - y0
+ * 	z(k)  = (k - nz/2) * step - z0
  *
  * grid = grid whose origin will be set (cgrid *; input).
  * x0   = X origin (REAL; input).
@@ -2324,10 +2328,7 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
   
   if (gradient_x != grid) cgrid_copy(gradient_x, grid);
 
-  if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Z_BOUNDARY) {
+  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
 #pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue,kx0) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
     for(ij = 0; ij < nxy; ij++) {
       i = ij / ny;
@@ -2392,10 +2393,7 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
   
   if (gradient_y != grid)
     cgrid_copy(gradient_y, grid);
-  if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY  ||
-     grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Z_BOUNDARY ) {
+  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
 #pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue,ky0) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
     for(ij = 0; ij < nxy; ij++) {
       j = ij % ny;
@@ -2460,10 +2458,7 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
   
   if(gradient_z != grid) cgrid_copy(gradient_z, grid);
 
-  if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY  ||
-     grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Z_BOUNDARY ) {
+  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
 #pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue,kz0) private(ij,ijnz,k,kz,lz) default(none) schedule(runtime)
     for(ij = 0; ij < nxy; ij++) {
       ijnz = ij * nz;
@@ -2553,10 +2548,7 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
   
   if (grid != laplace) cgrid_copy(laplace, grid);
   
-  if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY  ||
-     grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Z_BOUNDARY ) {
+  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
     lx = M_PI / (((REAL) nx) * step);
     ly = M_PI / (((REAL) ny) * step);
     lz = M_PI / (((REAL) nz) * step);
@@ -2650,10 +2642,7 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   norm = grid->fft_norm;
   norm = step * step * step * grid->fft_norm;
   
-  if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY  ||
-     grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Z_BOUNDARY ) {
+  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
     lx = M_PI / (((REAL) nx) * step);
     ly = M_PI / (((REAL) ny) * step);
     lz = M_PI / (((REAL) nz) * step);
@@ -3357,10 +3346,7 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
   nxy = nx * ny;
   step = grid->step;
   
-  if(grid -> value_outside == CGRID_NEUMANN_BOUNDARY  ||
-     grid -> value_outside == CGRID_VORTEX_X_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Y_BOUNDARY ||
-     grid -> value_outside == CGRID_VORTEX_Z_BOUNDARY ) {
+  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
     lx = M_PI / ((REAL) nx) * step;
     ly = M_PI / ((REAL) ny) * step;
     lz = M_PI / ((REAL) nz) * step;

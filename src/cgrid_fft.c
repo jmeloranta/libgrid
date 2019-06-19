@@ -42,7 +42,7 @@ EXPORT void cgrid_fftw_alloc(cgrid *grid) {
   memcpy(temp, grid->value, size);
 
   /* NOTE: To see which boundary condition applies, see if grid->implan (or grid->iimplan) is NULL */
-  /* If grid->implan != NULL, this is VORTEX boundary; if it is NULL then the standard PERIODIC boundary */
+  /* If grid->implan != NULL, this is special even/odd boundary; if it is NULL then the standard PERIODIC boundary */
   if(grid->value_outside == CGRID_PERIODIC_BOUNDARY) {
 #if defined(SINGLE_PREC)
     fftwf_plan_with_nthreads((int) grid_threads());
@@ -78,36 +78,46 @@ EXPORT void cgrid_fftw_alloc(cgrid *grid) {
     fftwl_free(temp);
 #endif
     return;
-  } else if (grid->value_outside == CGRID_NEUMANN_BOUNDARY) {
+  } else if(grid->value_outside == CGRID_FFT_EEE_BOUNDARY) {
     rfk[0] = FFTW_REDFT10; rfk[1] = FFTW_REDFT10; rfk[2] = FFTW_REDFT10;
     rbk[0] = FFTW_REDFT01; rbk[1] = FFTW_REDFT01; rbk[2] = FFTW_REDFT01;
     ifk[0] = FFTW_REDFT10; ifk[1] = FFTW_REDFT10; ifk[2] = FFTW_REDFT10;
     ibk[0] = FFTW_REDFT01; ibk[1] = FFTW_REDFT01; ibk[2] = FFTW_REDFT01;
-  } else if (grid->value_outside == CGRID_VORTEX_X_BOUNDARY) {
-    rfk[0] = FFTW_REDFT10; rfk[1] = FFTW_RODFT10; rfk[2] = FFTW_REDFT10;
-    rbk[0] = FFTW_REDFT01; rbk[1] = FFTW_RODFT01; rbk[2] = FFTW_REDFT01;
-    ifk[0] = FFTW_REDFT10; ifk[1] = FFTW_REDFT10; ifk[2] = FFTW_RODFT10;
-    ibk[0] = FFTW_REDFT01; ibk[1] = FFTW_REDFT01; ibk[2] = FFTW_RODFT01;
-  } else if (grid->value_outside == CGRID_VORTEX_Y_BOUNDARY) {
-    rfk[0] = FFTW_REDFT10; rfk[1] = FFTW_REDFT10; rfk[2] = FFTW_RODFT10;
-    rbk[0] = FFTW_REDFT01; rbk[1] = FFTW_REDFT01; rbk[2] = FFTW_RODFT01;
+  } else if (grid->value_outside == CGRID_FFT_OEE_BOUNDARY) {
+    rfk[0] = FFTW_RODFT10; rfk[1] = FFTW_REDFT10; rfk[2] = FFTW_REDFT10;
+    rbk[0] = FFTW_RODFT01; rbk[1] = FFTW_REDFT01; rbk[2] = FFTW_REDFT01;
     ifk[0] = FFTW_RODFT10; ifk[1] = FFTW_REDFT10; ifk[2] = FFTW_REDFT10;
     ibk[0] = FFTW_RODFT01; ibk[1] = FFTW_REDFT01; ibk[2] = FFTW_REDFT01;
-  } else if (grid->value_outside == CGRID_VORTEX_Z_BOUNDARY) {
-    /* X: real part is odd and imaginary part even */
-    /* Y: real part is even and imaginary part odd */
-    /* Z: both real and imaginary parts even */
-#if 0
-    rfk[0] = FFTW_RODFT10; rfk[1] = FFTW_REDFT10; rfk[2] = FFTW_REDFT10;  /* Forward for real part */
-    rbk[0] = FFTW_RODFT01; rbk[1] = FFTW_REDFT01; rbk[2] = FFTW_REDFT01;  /* Reverse for real part */
-    ifk[0] = FFTW_REDFT10; ifk[1] = FFTW_RODFT10; ifk[2] = FFTW_REDFT10;  /* Forward for imag part */
-    ibk[0] = FFTW_REDFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_REDFT01;  /* Reverse for imag part */
-#else
-    rfk[0] = FFTW_RODFT10; rfk[1] = FFTW_RODFT10; rfk[2] = FFTW_REDFT10;  /* Forward for real part */
-    rbk[0] = FFTW_RODFT01; rbk[1] = FFTW_RODFT01; rbk[2] = FFTW_REDFT01;  /* Reverse for real part */
-    ifk[0] = FFTW_RODFT10; ifk[1] = FFTW_RODFT10; ifk[2] = FFTW_REDFT10;  /* Forward for imag part */
-    ibk[0] = FFTW_RODFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_REDFT01;  /* Reverse for imag part */
-#endif
+  } else if (grid->value_outside == CGRID_FFT_EOE_BOUNDARY) {
+    rfk[0] = FFTW_REDFT10; rfk[1] = FFTW_RODFT10; rfk[2] = FFTW_REDFT10;
+    rbk[0] = FFTW_REDFT01; rbk[1] = FFTW_RODFT01; rbk[2] = FFTW_REDFT01;
+    ifk[0] = FFTW_REDFT10; ifk[1] = FFTW_RODFT10; ifk[2] = FFTW_REDFT10;
+    ibk[0] = FFTW_REDFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_REDFT01;
+  } else if (grid->value_outside == CGRID_FFT_EEO_BOUNDARY) {
+    rfk[0] = FFTW_REDFT10; rfk[1] = FFTW_REDFT10; rfk[2] = FFTW_RODFT10;
+    rbk[0] = FFTW_REDFT01; rbk[1] = FFTW_REDFT01; rbk[2] = FFTW_RODFT01;
+    ifk[0] = FFTW_REDFT10; ifk[1] = FFTW_REDFT10; ifk[2] = FFTW_RODFT10;
+    ibk[0] = FFTW_REDFT01; ibk[1] = FFTW_REDFT01; ibk[2] = FFTW_RODFT01;
+  } else if (grid->value_outside == CGRID_FFT_OOE_BOUNDARY) {
+    rfk[0] = FFTW_RODFT10; rfk[1] = FFTW_RODFT10; rfk[2] = FFTW_REDFT10;
+    rbk[0] = FFTW_RODFT01; rbk[1] = FFTW_RODFT01; rbk[2] = FFTW_REDFT01;
+    ifk[0] = FFTW_RODFT10; ifk[1] = FFTW_RODFT10; ifk[2] = FFTW_REDFT10;
+    ibk[0] = FFTW_RODFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_REDFT01;
+  } else if (grid->value_outside == CGRID_FFT_EOO_BOUNDARY) {
+    rfk[0] = FFTW_REDFT10; rfk[1] = FFTW_RODFT10; rfk[2] = FFTW_RODFT10;
+    rbk[0] = FFTW_REDFT01; rbk[1] = FFTW_RODFT01; rbk[2] = FFTW_RODFT01;
+    ifk[0] = FFTW_REDFT10; ifk[1] = FFTW_RODFT10; ifk[2] = FFTW_RODFT10;
+    ibk[0] = FFTW_REDFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_RODFT01;
+  } else if (grid->value_outside == CGRID_FFT_OEO_BOUNDARY) {
+    rfk[0] = FFTW_RODFT10; rfk[1] = FFTW_REDFT10; rfk[2] = FFTW_RODFT10;
+    rbk[0] = FFTW_RODFT01; rbk[1] = FFTW_REDFT01; rbk[2] = FFTW_RODFT01;
+    ifk[0] = FFTW_RODFT10; ifk[1] = FFTW_REDFT10; ifk[2] = FFTW_RODFT10;
+    ibk[0] = FFTW_RODFT01; ibk[1] = FFTW_REDFT01; ibk[2] = FFTW_RODFT01;
+  } else if (grid->value_outside == CGRID_FFT_OOO_BOUNDARY) {
+    rfk[0] = FFTW_RODFT10; rfk[1] = FFTW_RODFT10; rfk[2] = FFTW_RODFT10;
+    rbk[0] = FFTW_RODFT01; rbk[1] = FFTW_RODFT01; rbk[2] = FFTW_RODFT01;
+    ifk[0] = FFTW_RODFT10; ifk[1] = FFTW_RODFT10; ifk[2] = FFTW_RODFT10;
+    ibk[0] = FFTW_RODFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_RODFT01;
   } else {
     fprintf(stderr, "libgrid: Incompatible boundary condition for FFT.\n");
     exit(1);
