@@ -185,14 +185,14 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
 
 #ifdef USE_CUDA
-  if(cudaMallocHost((void **) &(grid->value), len) != cudaSuccess) { /* Use page-locked grids */
+  if(cudaMallocHost((void **) &(ngrid->value), len) != cudaSuccess) { /* Use page-locked grids */
 #else
 #if defined(SINGLE_PREC)
-  if (!(grid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(DOUBLE_PREC)
-  if (!(grid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(QUAD_PREC)
-  if (!(grid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #endif
 #endif
     fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");

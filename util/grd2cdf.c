@@ -76,9 +76,6 @@ int main(int argc, char **argv) {
   }
   for (i = 0; i < nz; i++) z[i] = ((REAL) (i - nz/2)) * step;
   
-  fread(orig->value, sizeof(REAL), (size_t) (nx * ny * nz), fp);
-  fclose(fp);
-
   reverse_xz(orig, final);
 
   if((retval = nc_create(cdffile, NC_CLOBBER| NC_64BIT_OFFSET, &ncid))) {
