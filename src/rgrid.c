@@ -2661,12 +2661,14 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
 /*
  * Calculate rot (curl; \Nabla\times) of a vector field f = (fx, fy, fz).
  *
- * rotx = x component of rot (rgrid *; output). If NULL, not computed.
- * roty = y component of rot (rgrid *; output). If NULL, not computed.
- * rotz = z component of rot (rgrid *; output). If NULL, not computed.
+ * rotx = x component of rot (rgrid *; output). If NULL, not computed (fx not accessed and may also be NULL).
+ * roty = y component of rot (rgrid *; output). If NULL, not computed (fy not accessed and may also be NULL).
+ * rotz = z component of rot (rgrid *; output). If NULL, not computed (fz not accessed and may also be NULL).
  * fx   = x component of the field (rgrid *; input).
  * fy   = y component of the field (rgrid *; input).
  * fz   = z component of the field (rgrid *; input).
+ *
+ * TODO: CUDA implementation missing.
  *
  * No return value.
  *
@@ -2674,11 +2676,25 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
 
 EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *fy, rgrid *fz) {
 
-  INT i, j, k, ij, ijnz, ny = fx->ny, nz = fx->nz, nxy = fx->nx * fx->ny, nzz = fx->nz2;
-  REAL inv_delta = 1.0 / (2.0 * fx->step);
+  INT i, j, k, ij, ijnz, ny, nz, nxy, nzz;
+  REAL inv_delta;
   REAL *lvaluex, *lvaluey, *lvaluez;
 
   if(rotx == NULL && roty == NULL && rotz == NULL) return; /* Nothing to do */
+
+  if(rotx || rotz) {
+    ny = fy->ny;
+    nz = fy->nz;
+    nxy = fy->nx * fy->ny;
+    nzz = fy->nz2;
+    inv_delta = 1.0 / (2.0 * fy->step);
+  } else {
+    ny = fx->ny;
+    nz = fx->nz;
+    nxy = fx->nx * fx->ny;
+    nzz = fx->nz2;
+    inv_delta = 1.0 / (2.0 * fx->step);
+  }
 
   if(rotx) lvaluex = rotx->value;
   else lvaluex = NULL;
@@ -2687,19 +2703,14 @@ EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *f
   if(rotz) lvaluez = rotz->value;
   else lvaluez = NULL;
   
-  if(rotx == fx || rotx == fy || rotx == fz || roty == fx || roty == fy || roty == fz || rotz == fx || rotz == fy || rotz == fz) {
-    fprintf(stderr, "libgrid: Source and destination grids must be different in rgrid_rot().\n");
-    abort();
-  }
-
 #ifdef USE_CUDA
   /* This operation is carried out on the CPU rather than GPU (usually large grids, so they won't fit in GPU memory) */
   if(lvaluex) cuda_remove_block(lvaluex, 0);
   if(lvaluey) cuda_remove_block(lvaluey, 0);
   if(lvaluez) cuda_remove_block(lvaluez, 0);
-  cuda_remove_block(fx->value, 1);
-  cuda_remove_block(fy->value, 1);
-  cuda_remove_block(fz->value, 1);
+  if(roty || rotz) cuda_remove_block(fx->value, 1);
+  if(rotx || rotz) cuda_remove_block(fy->value, 1);
+  if(rotx || roty) cuda_remove_block(fz->value, 1);
 #endif
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvaluex,lvaluey,lvaluez,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -2707,15 +2718,15 @@ EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *f
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++) {
-      /* x: (d/dy) fz - (d/dz) fy */
+      /* x: (d/dy) fz - (d/dz) fy (no access to fx) */
       if(lvaluex)
         lvaluex[ijnz + k] = inv_delta * ((rgrid_value_at_index(fz, i, j+1, k) - rgrid_value_at_index(fz, i, j-1, k))
 				      - (rgrid_value_at_index(fy, i, j, k+1) - rgrid_value_at_index(fy, i, j, k-1)));
-      /* y: (d/dz) fx - (d/dx) fz */
+      /* y: (d/dz) fx - (d/dx) fz (no access to fy) */
       if(lvaluey)
         lvaluey[ijnz + k] = inv_delta * ((rgrid_value_at_index(fx, i, j, k+1) - rgrid_value_at_index(fx, i, j, k-1))
 				      - (rgrid_value_at_index(fz, i+1, j, k) - rgrid_value_at_index(fz, i-1, j, k)));
-      /* z: (d/dx) fy - (d/dy) fx */
+      /* z: (d/dx) fy - (d/dy) fx (no acess to fz) */
       if(lvaluez)
         lvaluez[ijnz + k] = inv_delta * ((rgrid_value_at_index(fy, i+1, j, k) - rgrid_value_at_index(fy, i-1, j, k))
     				      - (rgrid_value_at_index(fx, i, j+1, k) - rgrid_value_at_index(fx, i, j-1, k)));
