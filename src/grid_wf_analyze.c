@@ -458,12 +458,58 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 }
 
 /*
+ * Calculate kinetic energy density as a function of wave vector k (atomic unis).
+ *
+ * E(k) = 4pi (m/2) k^2 \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
+ *
+ * Total K.E. is then int E(k) dk.
+ *
+ * gwf        = Wave function to be analyzed (wf *; input).
+ * bins       = Averages in k-space (REAL *; output). The array length is nbins.
+ * binstep    = Step length in k-space in atomic units (REAL; input).
+ * nbins      = Number of bins to use (INT; input).
+ * workspace1 = Workspace 1 (rgrid *; input/output).
+ * workspace2 = Workspace 2 (rgrid *; input/output).
+ * workspace3 = Workspace 3 (rgrid *; input/output).
+ * workspace4 = Workspace 4 (rgrid *; input/output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
+
+  INT i;
+
+  grid_wf_density(gwf, workspace1);
+  rgrid_power(workspace1, workspace1, 0.5); // sqrt(rho)
+
+  grid_wf_probability_flux_x(gwf, workspace2);  // = rho * v_x
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS); // = sqrt(rho) * v_x
+
+  grid_wf_probability_flux_y(gwf, workspace3);  // = rho * v_y
+  rgrid_division_eps(workspace3, workspace3, workspace1, GRID_EPS); // = sqrt(rho) * v_y
+
+  grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
+  rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
+
+  rgrid_fft(workspace2);
+  rgrid_fft(workspace3);
+  rgrid_fft(workspace4);
+
+  rgrid_spherical_average_reciprocal(workspace2, workspace3, workspace4, bins, binstep, nbins, 1);
+
+  for(i = 0; i < nbins; i++)
+    bins[i] *= 0.5 * gwf->mass;
+}
+
+/*
  * Calculate incompressible kinetic energy density as a function of wave vector k (atomic unis).
  *
- * E(k) = (m/2) * \int [|(1/((2pi^3)) \int exp(ir.k) sqrt(rho)v|^2] k^2 sin(theta) dtheta dphi
+ * E(k) = 4pi (m/2) k^2 \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
  *
- * where (m/2) |sqrt(rho)v|^2 is the incompressible part of kinetic energy.
- * Total incompressible K.E. is then (1/(2 * (2pi)^3)) int (\sqrt(rho)v)^2 dr.
+ * where (m/2) |sqrt(rho)v|^2 corresponds to the incompressible part of kinetic energy.
+ * Total incompressible K.E. is then int E(k) dk.
  *
  * gwf        = Wave function to be analyzed (wf *; input).
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
@@ -482,36 +528,38 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
 
   INT i;
-  REAL step = gwf->grid->step, step3 = step * step * step;
 
-  /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
-  /* workspace2 = flux_y / sqrt(rho) = sqrt(rho) * v_y */
-  /* workspace3 = flux_z / sqrt(rho) = sqrt(rho) * v_z */
-  grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
-  grid_wf_density(gwf, workspace4);
-  rgrid_power(workspace4, workspace4, 0.5);
-  rgrid_division_eps(workspace1, workspace1, workspace4, GRID_EPS2);
-  rgrid_division_eps(workspace2, workspace2, workspace4, GRID_EPS2);
-  rgrid_division_eps(workspace3, workspace3, workspace4, GRID_EPS2);
-  rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
+  grid_wf_density(gwf, workspace1);
+  rgrid_power(workspace1, workspace1, 0.5); // sqrt(rho)
 
-  /* FFT each component */
-  rgrid_fft(workspace1);
+  grid_wf_probability_flux_x(gwf, workspace2);  // = rho * v_x
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS); // = sqrt(rho) * v_x
+
+  grid_wf_probability_flux_y(gwf, workspace3);  // = rho * v_y
+  rgrid_division_eps(workspace3, workspace3, workspace1, GRID_EPS); // = sqrt(rho) * v_y
+
+  grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
+  rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
+
+  rgrid_hodge_incomp(workspace2, workspace3, workspace4, workspace1, workspace5);
+
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
-  
-  for (i = 0; i < nbins; i++)
-    bins[i] = bins[i] * 0.5 * gwf->mass * step3 * step3 * 64.0 * M_PI * M_PI * M_PI * M_PI * M_PI * M_PI;
+  rgrid_fft(workspace4);
+
+  rgrid_spherical_average_reciprocal(workspace2, workspace3, workspace4, bins, binstep, nbins, 1);
+
+  for(i = 0; i < nbins; i++)
+    bins[i] *= 0.5 * gwf->mass;
 }
 
 /*
  * Calculate compressible kinetic energy density as a function of wave vector k (atomic unis).
  *
- * E(k) = (m/2) * (2pi)^3 (k^2/(4pi)) X "spherical average of the compressible part in k-space"
+ * E(k) = 4pi (m/2) \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
  *
  * where (m/2) |sqrt(rho)v|^2 is the compressible part of kinetic energy.
- * Total compressible K.E. is then (1/(2 * (2pi)^3)) int (\sqrt(rho)v)^2 dr.
+ * Total compressible K.E. is then int E(k) dk.
  *
  * gwf        = Wave function to be analyzed (wf *; input).
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
@@ -529,28 +577,29 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
 EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
 
   INT i;
-  REAL step = gwf->grid->step, step3 = step * step * step;
 
-  /* workspace1 = flux_x / sqrt(rho) = sqrt(rho) * v_x */
-  /* workspace2 = flux_y / sqrt(rho) = sqrt(rho) * v_y */
-  /* workspace3 = flux_z / sqrt(rho) = sqrt(rho) * v_z */
-  grid_wf_probability_flux(gwf, workspace1, workspace2, workspace3);
-  grid_wf_density(gwf, workspace4);
-  rgrid_power(workspace4, workspace4, 0.5);
-  rgrid_division_eps(workspace1, workspace1, workspace4, GRID_EPS);
-  rgrid_division_eps(workspace2, workspace2, workspace4, GRID_EPS);
-  rgrid_division_eps(workspace3, workspace3, workspace4, GRID_EPS);
-  rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
+  grid_wf_density(gwf, workspace1);
+  rgrid_power(workspace1, workspace1, 0.5); // sqrt(rho)
 
-  /* FFT each component */
-  rgrid_fft(workspace1);
+  grid_wf_probability_flux_x(gwf, workspace2);  // = rho * v_x
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS); // = sqrt(rho) * v_x
+
+  grid_wf_probability_flux_y(gwf, workspace3);  // = rho * v_y
+  rgrid_division_eps(workspace3, workspace3, workspace1, GRID_EPS); // = sqrt(rho) * v_y
+
+  grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
+  rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
+
+  rgrid_hodge_comp(workspace2, workspace3, workspace4, workspace1);
+
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
+  rgrid_fft(workspace4);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
-  
-  for (i = 0; i < nbins; i++)
-    bins[i] = bins[i] * 0.5 * gwf->mass * step3 * step3 * 64.0 * M_PI * M_PI * M_PI * M_PI * M_PI * M_PI;
+  rgrid_spherical_average_reciprocal(workspace2, workspace3, workspace4, bins, binstep, nbins, 1);
+
+  for(i = 0; i < nbins; i++)
+    bins[i] *= 0.5 * gwf->mass;
 }
 
 /*
@@ -567,8 +616,6 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 
 EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
 
-#if 0
-  // brute force
   rgrid_zero(workspace2);
   grid_wf_probability_flux_x(gwf, workspace1);  // = rho * v_x
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);  // 1/2 * mass * rho^2 * v_x^2
@@ -578,13 +625,9 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);
   
   grid_wf_density(gwf, workspace1);
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);  // divide out extra rho
-  val = rgrid_integral(workspace2);
-  return val;
-#else
-  // total - quantum pressure K.E.
-  return grid_wf_kinetic_energy_cn(gwf) - grid_wf_kinetic_energy_qp(gwf, workspace1, workspace2);
-#endif
+  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);
+
+  return rgrid_integral(workspace2);
 }
 
 /*
@@ -594,7 +637,7 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
  * workspace1 = Workspace (rgrid *; input).
  * workspace2 = Workspace (rgrid *; input).
  * 
- * Returns the kinetic energy (REAL).
+ * Returns the quantum kinetic energy (REAL).
  *
  */
 
@@ -603,7 +646,7 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
   grid_wf_density(gwf, workspace1);
   rgrid_power(workspace1, workspace1, 0.5);
   rgrid_fd_laplace(workspace1, workspace2);
-  rgrid_product(workspace1, workspace1, workspace2);
+  rgrid_product(workspace1, workspace2, workspace1);
   return -(HBAR * HBAR / (2.0 * gwf->mass)) * rgrid_integral(workspace1);
 }
 
