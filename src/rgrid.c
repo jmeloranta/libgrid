@@ -3131,14 +3131,13 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + 2.0*sqnorm(value1[ijnz + k]);
-        if(value2) bins[idx] = bins[idx] + 2.0*sqnorm(value2[ijnz + k]);
-        if(value3) bins[idx] = bins[idx] + 2.0*sqnorm(value3[ijnz + k]);
+        bins[idx] = bins[idx] + 2.0 * sqnorm(value1[ijnz + k]);
+        if(value2) bins[idx] = bins[idx] + 2.0 * sqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + 2.0 * sqnorm(value3[ijnz + k]);
         nvals[idx]++;
       }
     }
   }
-//  norm2 = ((REAL) (nx * ny * input1->nz)) / (2.0 * M_PI * 2.0 * M_PI * 2.0 * M_PI);
   norm2 = input1->step * input1->step * input1->step; norm2 *= norm2;
   if(volel) {
     for(k = 0, kz = 0.0; k < nbins; k++, kz += binstep)
