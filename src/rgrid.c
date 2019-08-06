@@ -185,14 +185,14 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
 
 #ifdef USE_CUDA
-  if(cudaMallocHost((void **) &(grid->value), len) != cudaSuccess) { /* Use page-locked grids */
+  if(cudaMallocHost((void **) &(ngrid->value), len) != cudaSuccess) { /* Use page-locked grids */
 #else
 #if defined(SINGLE_PREC)
-  if (!(grid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(DOUBLE_PREC)
-  if (!(grid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(QUAD_PREC)
-  if (!(grid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #endif
 #endif
     fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");
@@ -2661,12 +2661,14 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
 /*
  * Calculate rot (curl; \Nabla\times) of a vector field f = (fx, fy, fz).
  *
- * rotx = x component of rot (rgrid *; output).
- * roty = y component of rot (rgrid *; output).
- * rotz = z component of rot (rgrid *; output).
+ * rotx = x component of rot (rgrid *; output). If NULL, not computed (fx not accessed and may also be NULL).
+ * roty = y component of rot (rgrid *; output). If NULL, not computed (fy not accessed and may also be NULL).
+ * rotz = z component of rot (rgrid *; output). If NULL, not computed (fz not accessed and may also be NULL).
  * fx   = x component of the field (rgrid *; input).
  * fy   = y component of the field (rgrid *; input).
  * fz   = z component of the field (rgrid *; input).
+ *
+ * TODO: CUDA implementation missing.
  *
  * No return value.
  *
@@ -2674,21 +2676,41 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
 
 EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *fy, rgrid *fz) {
 
-  INT i, j, k, ij, ijnz, ny = rotx->ny, nz = rotx->nz, nxy = rotx->nx * rotx->ny, nzz = rotx->nz2;
-  REAL inv_delta = 1.0 / (2.0 * rotx->step);
-  REAL *lvaluex = rotx->value, *lvaluey = roty->value, *lvaluez = rotz->value;
-  
-  if(rotx == fx || rotx == fy || rotx == fz || roty == fx || roty == fy || roty == fz || rotz == fx || rotz == fy || rotz == fz) {
-    fprintf(stderr, "libgrid: Source and destination grids must be different in rgrid_rot().\n");
-    abort();
+  INT i, j, k, ij, ijnz, ny, nz, nxy, nzz;
+  REAL inv_delta;
+  REAL *lvaluex, *lvaluey, *lvaluez;
+
+  if(rotx == NULL && roty == NULL && rotz == NULL) return; /* Nothing to do */
+
+  if(rotx || rotz) {
+    ny = fy->ny;
+    nz = fy->nz;
+    nxy = fy->nx * fy->ny;
+    nzz = fy->nz2;
+    inv_delta = 1.0 / (2.0 * fy->step);
+  } else {
+    ny = fx->ny;
+    nz = fx->nz;
+    nxy = fx->nx * fx->ny;
+    nzz = fx->nz2;
+    inv_delta = 1.0 / (2.0 * fx->step);
   }
+
+  if(rotx) lvaluex = rotx->value;
+  else lvaluex = NULL;
+  if(roty) lvaluey = roty->value;
+  else lvaluey = NULL;
+  if(rotz) lvaluez = rotz->value;
+  else lvaluez = NULL;
+  
 #ifdef USE_CUDA
-  cuda_remove_block(lvaluex, 0);
-  cuda_remove_block(lvaluey, 0);
-  cuda_remove_block(lvaluez, 0);
-  cuda_remove_block(fx->value, 1);
-  cuda_remove_block(fy->value, 1);
-  cuda_remove_block(fz->value, 1);
+  /* This operation is carried out on the CPU rather than GPU (usually large grids, so they won't fit in GPU memory) */
+  if(lvaluex) cuda_remove_block(lvaluex, 0);
+  if(lvaluey) cuda_remove_block(lvaluey, 0);
+  if(lvaluez) cuda_remove_block(lvaluez, 0);
+  if(roty || rotz) cuda_remove_block(fx->value, 1);
+  if(rotx || rotz) cuda_remove_block(fy->value, 1);
+  if(rotx || roty) cuda_remove_block(fz->value, 1);
 #endif
 #pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvaluex,lvaluey,lvaluez,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -2696,14 +2718,17 @@ EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *f
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++) {
-      /* x: (d/dy) fz - (d/dz) fy */
-      lvaluex[ijnz + k] = inv_delta * ((rgrid_value_at_index(fz, i, j+1, k) - rgrid_value_at_index(fz, i, j-1, k))
+      /* x: (d/dy) fz - (d/dz) fy (no access to fx) */
+      if(lvaluex)
+        lvaluex[ijnz + k] = inv_delta * ((rgrid_value_at_index(fz, i, j+1, k) - rgrid_value_at_index(fz, i, j-1, k))
 				      - (rgrid_value_at_index(fy, i, j, k+1) - rgrid_value_at_index(fy, i, j, k-1)));
-      /* y: (d/dz) fx - (d/dx) fz */
-      lvaluey[ijnz + k] = inv_delta * ((rgrid_value_at_index(fx, i, j, k+1) - rgrid_value_at_index(fx, i, j, k-1))
+      /* y: (d/dz) fx - (d/dx) fz (no access to fy) */
+      if(lvaluey)
+        lvaluey[ijnz + k] = inv_delta * ((rgrid_value_at_index(fx, i, j, k+1) - rgrid_value_at_index(fx, i, j, k-1))
 				      - (rgrid_value_at_index(fz, i+1, j, k) - rgrid_value_at_index(fz, i-1, j, k)));
-      /* z: (d/dx) fy - (d/dy) fx */
-      lvaluez[ijnz + k] = inv_delta * ((rgrid_value_at_index(fy, i+1, j, k) - rgrid_value_at_index(fy, i-1, j, k))
+      /* z: (d/dx) fy - (d/dy) fx (no acess to fz) */
+      if(lvaluez)
+        lvaluez[ijnz + k] = inv_delta * ((rgrid_value_at_index(fy, i+1, j, k) - rgrid_value_at_index(fy, i-1, j, k))
     				      - (rgrid_value_at_index(fx, i, j+1, k) - rgrid_value_at_index(fx, i, j-1, k)));
     }
   }

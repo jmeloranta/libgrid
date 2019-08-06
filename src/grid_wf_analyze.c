@@ -256,9 +256,9 @@ EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgri
    * J(r) = -i (hbar/2m) ( psi^* grad psi - psi grad psi^* )
    *      = (hbar/m) Im[ psi^* grad psi ] 
    */
-  grid_wf_probability_flux_x(gwf, flux_x);
-  grid_wf_probability_flux_y(gwf, flux_y);
-  grid_wf_probability_flux_z(gwf, flux_z);
+  if(flux_x) grid_wf_probability_flux_x(gwf, flux_x);
+  if(flux_y) grid_wf_probability_flux_y(gwf, flux_y);
+  if(flux_z) grid_wf_probability_flux_z(gwf, flux_z);
 }
 
 /*

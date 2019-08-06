@@ -3145,14 +3145,16 @@ EXPORT void cgrid_div(cgrid *div, cgrid *fx, cgrid *fy, cgrid *fz) {
 /*
  * Calculate rot of a vector field.
  *
- * rotx = x component of rot (cgrid *; output).
- * roty = y component of rot (cgrid *; output).
- * rotz = z component of rot (cgrid *; output).
+ * rotx = x component of rot (cgrid *; output). If NULL, not computed (fx not accessed and may also be NULL).
+ * roty = y component of rot (cgrid *; output). If NULL, not computed (fy not accessed and may also be NULL).
+ * rotz = z component of rot (cgrid *; output). If NULL, not computed (fz not accessed and may also be NULL).
  * fx   = x component of the field (cgrid *; input).
  * fy   = y component of the field (cgrid *; input).
  * fz   = z component of the field (cgrid *; input).
  *
  * TODO: CUDA implementation missing.
+ *
+ * No return value.
  *
  */
 
@@ -3161,19 +3163,35 @@ EXPORT void cgrid_rot(cgrid *rotx, cgrid *roty, cgrid *rotz, cgrid *fx, cgrid *f
   INT i, j, k, ij, ijnz, ny = rotx->ny, nz = rotx->nz, nxy = rotx->nx * rotx->ny;
   REAL inv_delta = 1.0 / (2.0 * rotx->step);
   REAL complex *lvaluex = rotx->value, *lvaluey = roty->value, *lvaluez = rotz->value;
-  
-  if(rotx == fx || rotx == fy || rotx == fz || roty == fx || roty == fy || roty == fz || rotz == fx || rotz == fy || rotz == fz) {
-    fprintf(stderr, "libgrid: Source and destination grids must be different in cgrid_rot().\n");
-    abort();
+
+  if(rotx == NULL && roty == NULL && rotz == NULL) return; /* Nothing to do */
+
+  if(rotx || rotz) {
+    ny = fy->ny;
+    nz = fy->nz;
+    nxy = fy->nx * fy->ny;
+    inv_delta = 1.0 / (2.0 * fy->step);
+  } else {
+    ny = fx->ny;
+    nz = fx->nz;
+    nxy = fx->nx * fx->ny;
+    inv_delta = 1.0 / (2.0 * fx->step);
   }
 
+  if(rotx) lvaluex = rotx->value;
+  else lvaluex = NULL;
+  if(roty) lvaluey = roty->value;
+  else lvaluey = NULL;
+  if(rotz) lvaluez = rotz->value;
+  else lvaluez = NULL;
+  
 #ifdef USE_CUDA
-  cuda_remove_block(lvaluex, 0);
-  cuda_remove_block(lvaluey, 0);
-  cuda_remove_block(lvaluez, 0);
-  cuda_remove_block(fx->value, 1);
-  cuda_remove_block(fy->value, 1);
-  cuda_remove_block(fz->value, 1);
+  if(lvaluex) cuda_remove_block(lvaluex, 0);
+  if(lvaluey) cuda_remove_block(lvaluey, 0);
+  if(lvaluez) cuda_remove_block(lvaluez, 0);
+  if(roty || rotz) cuda_remove_block(fx->value, 1);
+  if(rotx || rotz) cuda_remove_block(fy->value, 1);
+  if(rotx || roty) cuda_remove_block(fz->value, 1);
 #endif
 #pragma omp parallel for firstprivate(ny,nz,nxy,lvaluex,lvaluey,lvaluez,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -3181,14 +3199,17 @@ EXPORT void cgrid_rot(cgrid *rotx, cgrid *roty, cgrid *rotz, cgrid *fx, cgrid *f
     i = ij / ny;
     j = ij % ny;
     for(k = 0; k < nz; k++) {
-      /* x: (d/dy) fz - (d/dz) fy */
-      lvaluex[ijnz + k] = inv_delta * ((cgrid_value_at_index(fz, i, j + 1, k) - cgrid_value_at_index(fz, i, j - 1, k))
+      /* x: (d/dy) fz - (d/dz) fy (no access to fx) */
+      if(lvaluex)
+        lvaluex[ijnz + k] = inv_delta * ((cgrid_value_at_index(fz, i, j + 1, k) - cgrid_value_at_index(fz, i, j - 1, k))
 				      - (cgrid_value_at_index(fy, i, j, k + 1) - cgrid_value_at_index(fy, i, j, k - 1)));
-      /* y: (d/dz) fx - (d/dx) fz */
-      lvaluey[ijnz + k] = inv_delta * ((cgrid_value_at_index(fx, i, j, k + 1) - cgrid_value_at_index(fx, i, j, k - 1))
+      /* y: (d/dz) fx - (d/dx) fz (no access to fy) */
+      if(lvaluey)
+        lvaluey[ijnz + k] = inv_delta * ((cgrid_value_at_index(fx, i, j, k + 1) - cgrid_value_at_index(fx, i, j, k - 1))
 				      - (cgrid_value_at_index(fz, i + 1, j, k) - cgrid_value_at_index(fz, i - 1, j, k)));
-      /* z: (d/dx) fy - (d/dy) fx */
-      lvaluez[ijnz + k] = inv_delta * ((cgrid_value_at_index(fy, i + 1, j, k) - cgrid_value_at_index(fy, i - 1, j, k))
+      /* z: (d/dx) fy - (d/dy) fx (no access to fz) */
+      if(lvaluez)
+        lvaluez[ijnz + k] = inv_delta * ((cgrid_value_at_index(fy, i + 1, j, k) - cgrid_value_at_index(fy, i - 1, j, k))
 				      - (cgrid_value_at_index(fx, i, j + 1, k) - cgrid_value_at_index(fx, i, j - 1, k)));
     }
   }
