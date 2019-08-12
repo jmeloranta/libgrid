@@ -125,8 +125,8 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
  *
  * gwf  = wavefunction (wf *; input/output).
  * gwfp = predict wavefunction (wf *; input/output). Set to NULL if predict-correct not used.
- * amp  = amplitude for boundary damping (REAL; input). Use 0.0 to remove the boundary. Relative to the baseline value defined
- *        in src/defs.h.
+ * amp  = amplitude for boundary damping (REAL complex; input). Use 0.0 to remove the boundary. Relative to the baseline value defined
+ *        in src/defs.h. To get real penalty potential, use amp = I * value (real value corresponds to imaginary potential).
  * rho0 = desired value for |\psi|^2 at the boundary (complex potential only) (REAL; input).
  * lx   = lower bound index (x) for the boundary (INT; input).
  * hx   = upper bound index (x) for the boundary (INT; input).
@@ -139,7 +139,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
  *
  */
 
-EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL complex amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   if(amp == 0.0) {
     gwf->ts_func = NULL;
@@ -532,7 +532,8 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
   REAL (*time)(INT, INT, INT, void *) = gwf->ts_func, tmp;
   struct grid_abs *privdata = &(gwf->abs_data);
   char add_abs = 0;  
-  REAL rho0 = privdata->rho0, amp = privdata->amp;
+  REAL rho0 = privdata->rho0;
+  REAL complex amp = privdata->amp;
 
   if(!potential) return;
 #ifdef USE_CUDA

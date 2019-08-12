@@ -24,11 +24,13 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
   INT lx, hx, ly, hy, lz, hz;
   CUCOMPLEX ts;
   char add_abs = 0;
-  CUREAL amp, rho0;
+  CUREAL rho0;
+  CUCOMPLEX amp;
 
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
-    amp = rho0 = 0.0;
+    amp.x = amp.y = 0.0;
+    rho0 = 0.0;
   } else {
     lx = ab->data[0];
     hx = ab->data[1];
@@ -36,7 +38,8 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
     hy = ab->data[3];
     lz = ab->data[4];
     hz = ab->data[5];
-    amp = ab->amp;
+    amp.x = CREAL(ab->amp);
+    amp.y = CIMAG(ab->amp);
     rho0 = ab->rho0;
   }
 

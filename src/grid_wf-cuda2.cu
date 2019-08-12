@@ -49,7 +49,7 @@ __global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *b, CUCOMPLEX *p
 }
 
 /* abs using complex potential */
-__global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, CUREAL amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *b, CUCOMPLEX *pot, CUCOMPLEX c, CUCOMPLEX amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
@@ -67,7 +67,7 @@ __global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *b, CUCOMPLEX *p
  * pot      = Potential grid (CUCOMPLEX *; input).
  * time_step= Time step length (CUCOMPLEX; input).
  * add_abs  = Add complex abs potential? (char; input).
- * amp      = Amplitude for complex boundary (REAL; input).
+ * amp      = Amplitude for complex boundary (CUCOMPLEX; input).
  * rho0     = Target value for |psi|^2 (REAL; input).
  * cons     = Constant to add to potential (REAL; input).
  * lx       = Lower bound for absorbing bc (INT; input).
@@ -84,7 +84,7 @@ __global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *b, CUCOMPLEX *p
  *
  */
 
-extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *pot, CUCOMPLEX time_step, char add_abs, CUREAL amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_wf_propagate_potentialW(CUCOMPLEX *grid, CUCOMPLEX *pot, CUCOMPLEX time_step, char add_abs, CUCOMPLEX amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
