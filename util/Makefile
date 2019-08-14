@@ -1,6 +1,6 @@
 include ../make.conf
 
-PROGS = wf2cdf wf2cdf2 grd2cdf vector2cdf gview gview2
+PROGS = wf2cdf wf2cdf2 grd2cdf vector2cdf gview gview2 gview3
 
 all: $(PROGS)
 
@@ -44,6 +44,12 @@ gview2: gview2.o
 gview2.o: gview2.c
 	$(CC) $(CFLAGS) -c gview2.c
 
+gview3: gview3.o
+	$(CC) $(CFLAGS) -o gview3 gview3.o -lgrace_np
+
+gview3.o: gview3.c
+	$(CC) $(CFLAGS) -c gview3.c
+
 clean:
-	-rm grd2cdf wf2cdf wf2cdf2 *~ *.o vector2cdf gview gview2
+	-rm grd2cdf wf2cdf wf2cdf2 *~ *.o vector2cdf gview gview2 gview3
 

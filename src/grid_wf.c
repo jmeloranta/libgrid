@@ -250,13 +250,13 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
   t = 0.0;
 
   if(i < lx) t += ((REAL) (lx - i)) / (REAL) lx;
-  else if(i > hx) t += ((REAL) (i - hx)) / (REAL) lx; // TODO: This should be nx - hx rather than lx (but nx not available)
+  else if(i > hx) t += ((REAL) (i - hx)) / (REAL) lx;
 
   if(j < ly) t += ((REAL) (ly - j)) / (REAL) ly;
-  else if(j > hy) t += ((REAL) (j - hy)) / (REAL) ly; // TODO: This should be ny - hy rather than ly (but ny not available)
+  else if(j > hy) t += ((REAL) (j - hy)) / (REAL) ly;
 
   if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
-  else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz; // TODO: This should be nz - hz rather than lz (but nz not available)
+  else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz;
 
   t *= 2.0 / 3.0;  // new
   if(t > 1.0) return 1.0;  // new
