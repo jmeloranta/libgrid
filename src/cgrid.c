@@ -2734,11 +2734,7 @@ EXPORT inline REAL complex cgrid_value_at_index(cgrid *grid, INT i, INT j, INT k
     return grid->value_outside(grid, i, j, k);
 
 #ifdef USE_CUDA
-  if(cuda_find_block(grid->value)) {
-    REAL complex tmp;
-    cuda_get_element(grid->value, (size_t) ((i * grid->ny + j) * grid->nz + k), sizeof(REAL complex), &tmp);
-    return tmp;
-  } else
+  cuda_remove_block(grid->value, 1);
 #endif
   return grid->value[(i * grid->ny + j) * grid->nz + k];
 }
