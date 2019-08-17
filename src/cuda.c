@@ -1207,9 +1207,9 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, char *id1, ch
   if(!enable_cuda) return -1;
   if(host_mem1 == host_mem2) return cuda_three_block_policy(host_mem1, length1, id1, (char) (copy1 + copy2), host_mem3, length3, id3, copy3, host_mem4, length4, id4, copy4);
   if(host_mem1 == host_mem3) return cuda_three_block_policy(host_mem1, length1, id1, (char) (copy1 + copy3), host_mem2, length2, id2, copy2, host_mem4, length4, id4, copy4);
-  if(host_mem1 == host_mem4) return cuda_three_block_policy(host_mem1, length1, id1, (char) (copy1 + copy4), host_mem2, length2, id2, copy2, host_mem3, length4, id3, copy3);
+  if(host_mem1 == host_mem4) return cuda_three_block_policy(host_mem1, length1, id1, (char) (copy1 + copy4), host_mem2, length2, id2, copy2, host_mem3, length3, id3, copy3);
   if(host_mem2 == host_mem3) return cuda_three_block_policy(host_mem1, length1, id1, copy1, host_mem2, length2, id2, (char) (copy2 + copy3), host_mem4, length4, id4, copy4);
-  if(host_mem2 == host_mem4) return cuda_three_block_policy(host_mem1, length1, id1, copy1, host_mem2, length2, id2, (char) (copy2 + copy4), host_mem3, length4, id3, copy3);
+  if(host_mem2 == host_mem4) return cuda_three_block_policy(host_mem1, length1, id1, copy1, host_mem2, length2, id2, (char) (copy2 + copy4), host_mem3, length3, id3, copy3);
   if(host_mem3 == host_mem4) return cuda_three_block_policy(host_mem1, length1, id1, copy1, host_mem2, length2, id2, copy2, host_mem3, length3, id3, (char) (copy3 + copy4));
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: four blocks policy check for host mem1 %lx, host mem2 %lx, host mem3 %lx, and host mem4 %lx.\n", (unsigned long int) host_mem1, (unsigned long int) host_mem2, (unsigned long int) host_mem3, (unsigned long int) host_mem4);
