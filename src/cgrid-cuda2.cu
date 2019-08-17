@@ -23,7 +23,7 @@ extern "C" void cuda_error_check();
  *
  */
 
-__global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPLEX *b, CUREAL norm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, CUREAL norm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z,
       idx;
@@ -32,30 +32,45 @@ __global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *c, CUCOMPLEX *a, CUCOMPL
 
   idx = (i * ny + j) * nz + k;
   if((i + j + k) & 1) norm *= -1.0;
-  c[idx] = a[idx] * b[idx] * norm;
+  dst[idx] = src1[idx] * src2[idx] * norm;
 }
 
 /*
  * Convolution in the Fourier space (data in GPU). Not called directly.
  *
- * gridc = convolution output (CUCOMPLEX *; output).
- * grida = 1st grid to be convoluted (CUCOMPLEX *; input).
- * gridb = 2nd grid to be convoluted (CUCOMPLEX *; input).
+ * dst   = convolution output (cudaXtDesc_t *; output).
+ * src1  = 1st grid to be convoluted (cudaXtDesc_t *; input).
+ * src2  = 2nd grid to be convoluted (cudaXtDesc_t *; input).
  * norm  = FFT norm (REAL complex; input).
  * nx    = Grid dim x (INT; input).
  * ny    = Grid dim y (INT; input).
  * nz    = Grid dim z (INT; input).
  *
+ * NOTE: This is in Fourier space -> partitioned along y (where the grid is data[x][y][z])
+ *
  */
 
-extern "C" void cgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL norm, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_convoluteW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, CUREAL norm, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = ny % gpu2, nny2 = ny / ngpu2, nny1 = nny2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK, 
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
+              (nny1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (nny2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fft_convolute_gpu<<<blocks,threads>>>(gridc, grida, gridb, norm, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets 
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_fft_convolute_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], norm, nx, nny1, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_fft_convolute_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLES *) src2->data[i], norm, nx, nny2, nz);
+  }
+
   cuda_error_check();
 }
 
@@ -66,38 +81,50 @@ extern "C" void cgrid_cuda_fft_convoluteW(CUCOMPLEX *gridc, CUCOMPLEX *grida, CU
  *
  */
 
-__global__ void cgrid_cuda_abs_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_abs_power_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z,
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
 
-  a[idx].x = POW(CUCREAL(b[idx]) * CUCREAL(b[idx]) + CUCIMAG(b[idx]) * CUCIMAG(b[idx]), x / 2.0);
-  a[idx].y = 0.0;
+  dst[idx].x = POW(CUCREAL(src[idx]) * CUCREAL(src[idx]) + CUCIMAG(src[idx]) * CUCIMAG(src[idx]), x / 2.0);
+  dst[idx].y = 0.0;
 }
 
 /*
  * Grid abs power.
  *
- * gridb    = Destination for operation (REAL complex *; output).
- * grida    = Source for operation (REAL complex *; input).
+ * dst      = Destination for operation (cudaXtDesc_t *; input).
+ * src      = Source for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_abs_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL exponent, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_abs_powerW(cudaXtDesc_t *dst, cudaXtDesc_t *src, CUREAL exponent, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_abs_power_gpu<<<blocks,threads>>>(gridb, grida, exponent, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_abs_power_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src->data[i], exponent, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_abs_power_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src->data[i], exponent, nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
@@ -108,7 +135,7 @@ extern "C" void cgrid_cuda_abs_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL
  *
  */
 
-__global__ void cgrid_cuda_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_power_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, CUREAL x, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
       idx;
@@ -117,28 +144,41 @@ __global__ void cgrid_cuda_power_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL x, INT n
 
   idx = (i * ny + j) * nz + k;
 
-  a[idx] = CUCPOW(b[idx], x);
+  dst[idx] = CUCPOW(src[idx], x);
 }
 
 /*
  * Grid power.
  *
- * gridb    = Destination for operation (REAL complex *; output).
- * grida    = Source for operation (REAL complex *; input).
+ * dst      = Destination for operation (cudaXtDesc_t *; output).
+ * src      = Source for operation (cudaXtDesc_t *; input).
+ * exponent = Exponent (CUREAL; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL exponent, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_powerW(cudaXtDesc_t *dst, cudaXtDesc_t *src, CUREAL exponent, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_power_gpu<<<blocks,threads>>>(gridb, grida, exponent, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_power_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src->data[i], exponent, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_power_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLES *) src->data[i], exponent, nnx2, ny, nz);
+  }
   cuda_error_check();
 }
 
@@ -149,7 +189,7 @@ extern "C" void cgrid_cuda_powerW(CUCOMPLEX *gridb, CUCOMPLEX *grida, CUREAL exp
  *
  */
 
-__global__ void cgrid_cuda_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_multiply_gpu(CUCOMPLEX *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
       idx;
@@ -157,13 +197,13 @@ __global__ void cgrid_cuda_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT n
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = a[idx] * c;
+  dst[idx] = dst[idx] * c;
 }
 
 /*
  * Multiply grid by a constant.
  *
- * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
+ * dst      = Grid to be operated on (cudaXtDesc_t *; input/output).
  * c        = Multiplying constant (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -171,14 +211,26 @@ __global__ void cgrid_cuda_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT n
  *
  */
 
-extern "C" void cgrid_cuda_multiplyW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_multiplyW(cudaXtDesc_t *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_multiply_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_multiply_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], c, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_multiply_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], c, nnx2, ny, nz);
+  }
   cuda_error_check();
 }
 
@@ -189,232 +241,289 @@ extern "C" void cgrid_cuda_multiplyW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT n
  *
  */
 
-__global__ void cgrid_cuda_sum_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_sum_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = b[idx] + c[idx];
+  dst[idx] = src1[idx] + src2[idx];
 }
 
 /*
  * Sum of two grids.
  *
- * grida    = Destination grid (CUCOMPLEX *; output).
- * gridb    = Input grid 1 (CUCOMPLEX *; input).
- * gridc    = Input grid 2 (CUCOMPLEX *; input).
+ * dst      = Destination grid (cudaXtDesc_t *; output).
+ * src1     = Input grid 1 (cudaXtDesc_t *; input).
+ * src2     = Input grid 2 (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_sumW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_sumW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_sum_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_sum_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_sum_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, ny, nz);
+  }
   cuda_error_check();
 }
 
 /*
  * Subtract of two grids.
  *
- * A = B - C
+ * dst = src1 - src2
  *
  */
 
-__global__ void cgrid_cuda_difference_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_difference_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = b[idx] - c[idx];
+  dst[idx] = src1[idx] - src2[idx];
 }
 
 /*
  * Subtract two grids.
  *
- * grida    = Destination grid (CUCOMPLEX *; output).
- * gridb    = Input grid 1 (CUCOMPLEX *; input).
- * gridc    = Input grid 2 (CUCOMPLEX *; input).
+ * dst      = Destination grid (cudaXtDesc_t *; output).
+ * src1     = Input grid 1 (cudaXtDesc_t *; input).
+ * src2     = Input grid 2 (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_differenceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_differenceW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_difference_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_difference_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_difference_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, ny, nz);
+  }
   cuda_error_check();
 }
 
 /*
  * Product of two grids.
  *
- * A = B * C.
+ * dst = src1 * src2.
  *
  */
 
-__global__ void cgrid_cuda_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_product_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = b[idx] * c[idx];
+  dst[idx] = src1[idx] * src2[idx];
 }
 
 /*
  * Product of two grids.
  *
- * grida    = Destination grid (CUCOMPLEX *; output).
- * gridb    = Source grid 1 (CUCOMPLEX *; input).
- * gridc    = Source grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (cudaXtDesc_t *; output).
+ * gridb    = Source grid 1 (cudaXtDesc_t *; input).
+ * gridc    = Source grid 2 (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_productW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_productW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_product_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(grida->GPUs[i]);
+    cgrid_cuda_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) gridc->data[i], nnx2, ny, nz);
+  }
   cuda_error_check();
 }
 
 /*
  * Conjugate product of two grids.
  *
- * A = B^* X C.
+ * dst = src1^* X src2.
  *
  */
 
-__global__ void cgrid_cuda_conjugate_product_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_conjugate_product_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = CUCONJ(b[idx]) * c[idx];
+  dst[idx] = CUCONJ(src1[idx]) * src2[idx];
 }
 
 /*
  * Conjugate product of two grids.
  *
- * grida    = Destination grid (CUCOMPLEX *; output).
- * gridb    = Source grid 1 (complex conjugated) (CUCOMPLEX *; input).
- * gridc    = Source grid 2 (CUCOMPLEX *; input).
+ * dst      = Destination grid (cudaXtDesc_t *; output).
+ * src1     = Source grid 1 (cudaXtDesc_t *; input).
+ * src2     = Source grid 2 (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_conjugate_productW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_conjugate_productW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_conjugate_product_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_conjugate_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_conjugate_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Division of two grids.
  *
- * A = B / C.
+ * dst = src1 / src2.
  *
- * Note: One should avoid division as it is slow.
+ * Note: One should avoid division as it is slow on GPUs.
+ *
  */
 
-__global__ void cgrid_cuda_division_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_division_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = b[idx] / c[idx];
+  dst[idx] = src1[idx] / src2[idx];
 }
 
 /*
  * Division of two grids.
  *
- * grida    = Destination grid (CUCOMPLEX *; output).
- * gridb    = Source grid 1 (CUCOMPLEX *; input).
- * gridc    = Source grid 2 (CUCOMPLEX *; input).
+ * grida    = Destination grid (cudaXtDesc_t *; output).
+ * gridb    = Source grid 1 (cudaXtDesc_t *; input).
+ * gridc    = Source grid 2 (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_divisionW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_divisionW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_division_gpu<<<blocks,threads>>>(grida, gridb, gridc, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_division_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_division_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Safe division of two grids.
  *
- * A = B / (C + eps).
+ * dst = src1 / (src2 + eps).
  *
- * Note: One should avoid division as it is slow.
+ * Note: One should avoid division as it is slow on GPUs.
  *
  */
 
-__global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *c, CUREAL eps, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, CUREAL eps, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   
-  a[idx] = b[idx] / (c[idx] + eps);
+  dst[idx] = src1[idx] / (src2[idx] + eps);
 }
 
 /*
  * "Safe" division of two grids.
  *
- * grida    = Destination grid (CUCOMPLEX *; output).
- * gridb    = Source grid 1 (CUCOMPLEX *; input).
- * gridc    = Source grid 2 (CUCOMPLEX *; input).
+ * dst      = Destination grid (cudaXtDesc_t *; output).
+ * src1     = Source grid 1 (cudaXtDesc_t *; input).
+ * src2     = Source grid 2 (cudaXtDesc_t *; input).
  * eps      = Epsilon (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -422,39 +531,51 @@ __global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLE
  *
  */
 
-extern "C" void cgrid_cuda_division_epsW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUCOMPLEX *gridc, CUREAL eps, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_division_epsW(cudaXtDesc_t *dst, cudaXtDesc_t *src1, cudaXtDesc_t *src2, CUREAL eps, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_division_eps_gpu<<<blocks,threads>>>(grida, gridb, gridc, eps, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_division_eps_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], eps, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_division_eps_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], eps, nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add constant to grid device code. This cannot not be called directly.
  *
- * A = A + c
+ * dst = dst + c
  *
  */
 
-__global__ void cgrid_cuda_add_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_add_gpu(CUCOMPLEX *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = a[idx] + c;
+  dst[idx] = dst[idx] + c;
 }
 
 /*
  * Add constant to grid.
  *
- * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
+ * dst      = Grid to be operated on (cudaXtDesc_t *; input/output).
  * c        = Constant (CUCOMPLEX).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -462,39 +583,51 @@ __global__ void cgrid_cuda_add_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, IN
  *
  */
 
-extern "C" void cgrid_cuda_addW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_addW(cudaXtDesc_t *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_add_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], c, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], c, nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add multiply and add device code. This cannot not be called directly.
  *
- * A = cm * A + ca
+ * dst = cm * dst + ca
  *
  */
 
-__global__ void cgrid_cuda_multiply_and_add_gpu(CUCOMPLEX *a, CUCOMPLEX cm, CUCOMPLEX ca, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_multiply_and_add_gpu(CUCOMPLEX *dst, CUCOMPLEX cm, CUCOMPLEX ca, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = (cm * a[idx]) + ca;
+  dst[idx] = (cm * dst[idx]) + ca;
 }
 
 /*
  * Grid multiply and add.
  *
- * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
+ * dst      = Grid to be operated on (cudaXtDesc_t *; input/output).
  * cm       = Multiplier (CUCOMPLEX; input).
  * ca       = Additive constant (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
@@ -503,39 +636,51 @@ __global__ void cgrid_cuda_multiply_and_add_gpu(CUCOMPLEX *a, CUCOMPLEX cm, CUCO
  *
  */
 
-extern "C" void cgrid_cuda_multiply_and_addW(CUCOMPLEX *grid, CUCOMPLEX cm, CUCOMPLEX ca, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_multiply_and_addW(cudaXtDesc_t *dst, CUCOMPLEX cm, CUCOMPLEX ca, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_multiply_and_add_gpu<<<blocks,threads>>>(grid, cm, ca, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_multiply_and_add_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], cm, ca, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_multiply_and_add_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], cm, ca, nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add multiply and add device code.
  *
- * A = cm * (A + ca)
+ * dst = cm * (dst + ca)
  *
  */
 
-__global__ void cgrid_cuda_add_and_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX ca, CUCOMPLEX cm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_add_and_multiply_gpu(CUCOMPLEX *dst, CUCOMPLEX ca, CUCOMPLEX cm, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = cm * (a[idx] + ca);
+  dst[idx] = cm * (dst[idx] + ca);
 }
 
 /*
  * Grid multiply and add.
  *
- * grid     = Grid to be operated on (CUCOMPLEX *; input/output).
+ * dst      = Grid to be operated on (cudaXtDesc_t *; input/output).
  * ca       = Additive constant (CUCOMPLEX; input).
  * cm       = Multiplier (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
@@ -544,137 +689,186 @@ __global__ void cgrid_cuda_add_and_multiply_gpu(CUCOMPLEX *a, CUCOMPLEX ca, CUCO
  *
  */
 
-extern "C" void cgrid_cuda_add_and_multiplyW(CUCOMPLEX *grid, CUCOMPLEX ca, CUCOMPLEX cm, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_add_and_multiplyW(cudaXtDesc_t *dst, CUCOMPLEX ca, CUCOMPLEX cm, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_add_and_multiply_gpu<<<blocks,threads>>>(grid, ca, cm, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_and_multiply_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], ca, cm, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_and_multiply_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], ca, cm, nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add scaled grid device code.
  *
- * A = A + d * B
+ * dst = dst + d * src
  *
  */
 
-__global__ void cgrid_cuda_add_scaled_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUCOMPLEX *b, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_add_scaled_gpu(CUCOMPLEX *dst, CUCOMPLEX d, CUCOMPLEX *src, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = a[idx] + (d * b[idx]);
+  dst[idx] = dst[idx] + (d * src[idx]);
 }
 
 /*
  * Scaled add grid.
  *
- * grida    = Destination for operation (REAL complex *; output).
- * d        = Scaling factor (REAL complex; input).
- * gridb    = Source for operation (REAL complex *; input).
+ * dst      = Destination for operation (cudaXtDesc_t *; output).
+ * d        = Scaling factor (CUCOMPLEX; input).
+ * srd      = Source for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_add_scaledW(CUCOMPLEX *grida, CUCOMPLEX d, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_add_scaledW(cudaXtDesc_t *dst, CUCOMPLEX d, cudaXtDesc_t *src, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_add_scaled_gpu<<<blocks,threads>>>(grida, d, gridb, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_scaled_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], d, (CUCOMPLEX *) src->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_scaled_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], d, (CUCOMPLEX *) src->data[i], nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add scaled product grid device code.
  *
- * A = A + d * B * C
+ * dst = dst + d * src1 * src2
  *
  */
 
-__global__ void cgrid_cuda_add_scaled_product_gpu(CUCOMPLEX *a, CUCOMPLEX d, CUCOMPLEX *b, CUCOMPLEX *c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_add_scaled_product_gpu(CUCOMPLEX *dst, CUCOMPLEX d, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = a[idx] + (d * b[idx] * c[idx]);
+  dst[idx] = dst[idx] + (d * src1[idx] * src2[idx]);
 }
 
 /*
  * Add scaled product.
  *
- * grida    = Destination for operation (REAL complex *; output).
- * d        = Scaling factor (REAL complex; input).
- * gridb    = Source for operation (REAL complex *; input).
- * gridc    = Source for operation (REAL complex *; input).
+ * dst      = Destination for operation (cudaXtDesc_t *; output).
+ * d        = Scaling factor (CUCOMPLEX; input).
+ * src1     = Source for operation (cudaXtDesc_t *; input).
+ * src2     = Source for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_add_scaled_productW(CUCOMPLEX *grida, CUCOMPLEX d, CUCOMPLEX *gridb, CUCOMPLEX *gridc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_add_scaled_productW(cudaXtDesc_t *dst, CUCOMPLEX d, cudaXtDesc_t *src1, cudaXtDesc_t *src2, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_add_scaled_product_gpu<<<blocks,threads>>>(grida, d, gridb, gridc, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_scaled_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], d, (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_scaled_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], d, (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
 /*
- * Set A to constant.
+ * Set dst to constant.
  *
- * A = c
+ * dst = c
  *
  */
 
-__global__ void cgrid_cuda_constant_gpu(CUCOMPLEX *a, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_constant_gpu(CUCOMPLEX *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, 
-      idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = c;
+  dst[idx] = c;
 }
 
 /*
  * Set grid to constant.
  *
- * grid     = Destination for operation (REAL complex *; output).
- * c        = Constant (REAL complex; input).
+ * dst      = Destination for operation (cudaXtDesc_t *; output).
+ * c        = Constant (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_constantW(CUCOMPLEX *grid, CUCOMPLEX c, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_constantW(cudaXtDesc_t *grid, CUCOMPLEX c, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_constant_gpu<<<blocks,threads>>>(grid, c, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_constant_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], c, nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_constant_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], c, nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
 
@@ -709,7 +903,7 @@ __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks, INT nblocks) {
 }
 
 /*
- * Integrate over grid A.
+ * Integrate over grid a.
  *
  */
 
@@ -743,30 +937,47 @@ __global__ void cgrid_cuda_integral_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, INT nx,
 /*
  * Integrate over grid.
  *
- * grid     = Source for operation (REAL complex *; input).
+ * grid     = Source for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral in grid_gpu_mem[0].
- *
  */
 
-extern "C" void cgrid_cuda_integralW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
+extern "C" CUCOMPLEX cgrid_cuda_integralW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
 
+  CUCOMPLEX value = 0.0, tmp;
+  int i, ngpu2 = grid->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b3 = blocks.x * blocks.y * blocks.z;
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
 
-  cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
-  // Blocks, Threads, dynamic memory size
-  cgrid_cuda_integral_gpu<<<blocks,threads,s*sizeof(CUCOMPLEX)>>>(grid, (CUCOMPLEX *) grid_gpu_mem_addr, nx, ny, nz);
-  cuda_error_check();
-  cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(grid->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i],nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(grid->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
 }
 
 /*
@@ -817,17 +1028,22 @@ __global__ void cgrid_cuda_integral_region_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, 
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
- * Returns the value of integral in grid_gpu_mem[0].
+ * Returns the value of integral in grid_gpu_mem[0]. Integral in real space.
  *
  */
 
 extern "C" void cgrid_cuda_integral_regionW(CUCOMPLEX *grid, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, INT nx, INT ny, INT nz) {
 
+  CUCOMPLEX value = 0.0, tmp;
+  int i, ngpu2 = grid->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, idx;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b3 = blocks.x * blocks.y * blocks.z;
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
 
   if(il < 0) il = 0;  
   if(jl < 0) jl = 0;  
@@ -836,12 +1052,32 @@ extern "C" void cgrid_cuda_integral_regionW(CUCOMPLEX *grid, INT il, INT iu, INT
   if(ju > ny-1) ju = ny-1;
   if(ku > nz-1) ku = nz-1;
 
-  cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
-  cgrid_cuda_integral_region_gpu<<<blocks,threads,s*sizeof(CUCOMPLEX)>>>(grid, (CUCOMPLEX *) grid_gpu_mem_addr, il, iu, jl, ju, kl, ku, nx, ny, nz);
-  cuda_error_check();
-  cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
+  idx = 0;
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(grid->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_region_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], 
+                                    il - idx, iu - idx, jl, ju, kl, ku, nnx1, ny, nz);  // shift x limit as the x index has been shifted
+    idx -= nnx1;
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(grid->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_region_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], 
+                                    il - idx, iu - idx, jl, ju, kl, ku, nnx1, ny, nz);
+    idx -= nnx2;
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
 }
 
 /*
@@ -879,7 +1115,7 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
 /*
  * Integral of square (|grid|^2).
  *
- * grid     = Source for operation (REAL complex *; input).
+ * grid     = Source for operation (udaXtDesc_t *; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -888,20 +1124,40 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
  *
  */
 
-extern "C" void cgrid_cuda_integral_of_squareW(CUCOMPLEX *grid, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc_t *grid, INT nx, INT ny, INT nz) {
 
+  CUCOMPLEX value = 0.0, tmp;
+  int i, ngpu2 = grid->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b3 = blocks.x * blocks.y * blocks.z;
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
 
-  cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
-  cgrid_cuda_integral_of_square_gpu<<<blocks,threads,s*sizeof(CUREAL)>>>(grid, (CUCOMPLEX *) grid_gpu_mem_addr, nx, ny, nz);
-  cuda_error_check();
-  cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(grid->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_of_square_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i],nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(grid->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_of_square_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
 }
 
 /*
@@ -940,8 +1196,8 @@ __global__ void cgrid_cuda_integral_of_conjugate_product_gpu(CUCOMPLEX *a, CUCOM
 /*
  * Integral of conjugate product (overlap).
  *
- * grid1    = Source 1 for operation (REAL complex *; input).
- * grid2    = Source 2 for operation (REAL complex *; input).
+ * grida    = Source 1 for operation (cudaXtDesc_t *; input).
+ * gridn    = Source 2 for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
@@ -950,21 +1206,40 @@ __global__ void cgrid_cuda_integral_of_conjugate_product_gpu(CUCOMPLEX *a, CUCOM
  *
  */
 
-extern "C" void cgrid_cuda_integral_of_conjugate_productW(CUCOMPLEX *grid1, CUCOMPLEX *grid2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_integral_of_conjugate_productW(cudaXtDesc_t *grida, cudaXtDesc_t *gridb, INT nx, INT ny, INT nz) {
 
+  CUCOMPLEX value = 0.0, tmp;
+  int i, ngpu2 = grida->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b3 = blocks.x * blocks.y * blocks.z;
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
 
-  cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
-  // Blocks, Threads, dynamic memory size
-  cgrid_cuda_integral_of_conjugate_product_gpu<<<blocks,threads,s*sizeof(CUCOMPLEX)>>>(grid1, grid2, (CUCOMPLEX *) grid_gpu_mem_addr, nx, ny, nz);
-  cuda_error_check();
-  cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(grida->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_of_conjugate_product_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(grida->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_integral_of_square_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
 }
 
 /*
@@ -1004,8 +1279,8 @@ __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b
 /*
  * Integral A * |B|^2.
  *
- * grid1    = Source 1 (A) for operation (REAL complex *; input).
- * grid2    = Source 2 (B) for operation (REAL complex *; input).
+ * grida    = Source 1 (A) for operation (cudaXtDesc_t *; input).
+ * gridb    = Source 2 (B) for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
@@ -1014,43 +1289,62 @@ __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b
  *
  */
 
-extern "C" void cgrid_cuda_grid_expectation_valueW(CUCOMPLEX *grid1, CUCOMPLEX *grid2, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_grid_expectation_valueW(cudaXtDesc_t *grida, cudaXtDesc_t *gridb, INT nx, INT ny, INT nz) {
 
+  CUCOMPLEX value = 0.0, tmp;
+  int i, ngpu2 = grida->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b3 = blocks.x * blocks.y * blocks.z;
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
 
-  cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
-  cgrid_cuda_grid_expectation_value_gpu<<<blocks,threads,s*sizeof(CUCOMPLEX)>>>(grid1, grid2, (CUCOMPLEX *) grid_gpu_mem_addr, nx, ny, nz);
-  cuda_error_check();
-  cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr, b3);
-  cuda_error_check();
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(grida->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(grida->GPUs[i]);
+    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cuda_error_check();
+    // Blocks, Threads, dynamic memory size
+    cgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>(CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, ny, nz);
+    cuda_error_check();
+    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b3);
+    cuda_error_check();
+  }
 }
 
 /*
- * B = FD_X(A).
+ * dst = FD_X(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_x_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
+  dst[idx] = inv_delta * (cgrid_cuda_bc_x_plus(src, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_x_minus(src, bc, i, j, k, nx, ny, nz));
 }
 
 /*
- * B = FD_X(A)
+ * dst = FD_X(src)
  *
- * grida     = Source for operation (REAL complex *; input).
- * gridb     = Destination for operation (REAL complex *; input).
+ * src       = Source for operation (cudaXtDesc_t *; input).
+ * dst       = Destination for operation (cudaXtDesc_t *; input).
  * inv_delta = 1 / (2 * step) (REAL; input).
  * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  * nx        = # of points along x (INT; input).
@@ -1059,23 +1353,29 @@ __global__ void cgrid_cuda_fd_gradient_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL 
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_xW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
+  if(dst>nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst>GPUs[0]);
+  cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = FD_Y(A).
+ * dst = FD_Y(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
@@ -1083,15 +1383,15 @@ __global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta * (cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
+  dst[idx] = inv_delta * (cgrid_cuda_bc_y_plus(src, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_y_minus(src, bc, i, j, k, nx, ny, nz));
 }
 
 /*
  * B = FD_Y(A)
  *
- * grida     = Source for operation (REAL complex *; input).
- * gridb     = Destination for operation (REAL complex *; input).
- * inv_delta = 1 / (2 * step) (REAL; input).
+ * src       = Source for operation (cudaXtDesc_t *; input).
+ * dst       = Destination for operation (cudaXtDesc_t *; input).
+ * inv_delta = 1 / (2 * step) (CUREAL; input).
  * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  * nx        = # of points along x (INT; input).
  * ny        = # of points along y (INT; input).
@@ -1099,39 +1399,44 @@ __global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL 
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_yW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst->GPUs[0]);
+  cgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = FD_Z(A).
+ * dst = FD_Z(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_gradient_z_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta * (cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
+  dst[idx] = inv_delta * (cgrid_cuda_bc_z_plus(src, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_z_minus(src, bc, i, j, k, nx, ny, nz));
 }
 
 /*
  * B = FD_Z(A)
  *
- * grida     = Source for operation (REAL complex *; input).
- * gridb     = Destination for operation (REAL complex *; input).
- * inv_delta = 1 / (2 * step) (REAL; input).
+ * src       = Source for operation (cudaXtDesc_t *; input).
+ * dst       = Destination for operation (cudaXtDesc_t *; input).
+ * inv_delta = 1 / (2 * step) (CUREAL; input).
  * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  * nx        = # of points along x (INT; input).
  * ny        = # of points along y (INT; input).
@@ -1139,68 +1444,79 @@ __global__ void cgrid_cuda_fd_gradient_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL 
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_zW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst>GPUs[0]);
+  cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = LAPLACE(A).
+ * dst = LAPLACE(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_laplace_gpu(CUCOMPLEX *arc, CUCOMPLEX *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta2 * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
-                         + cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
-                         + cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
-                         - 6.0 * a[idx]);
+  dst[idx] = inv_delta2 * (cgrid_cuda_bc_x_plus(src, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_x_minus(src, bc, i, j, k, nx, ny, nz)
+                         + cgrid_cuda_bc_y_plus(src, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_y_minus(src, bc, i, j, k, nx, ny, nz)
+                         + cgrid_cuda_bc_z_plus(src, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_z_minus(src, bc, i, j, k, nx, ny, nz)
+                         - 6.0 * src[idx]);
 }
 
 /*
  * B = LAPLACE(A)
  *
- * grida      = Source for operation (REAL complex *; input).
- * gridb      = Destination for operation (REAL complex *; output).
- * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * src        = Source for operation (cudaXtDesc_t *; input).
+ * dst        = Destination for operation (cudaXtDesc_t *; output).
+ * inv_delta2 = 1 / (2 * step) (CUREAL; input).
  * bc         = Boundary condition (char; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
  * nz         = # of points along z (INT; input).
  *
- * Returns laplacian in grid.
+ * Returns laplacian in dst.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplaceW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplaceW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst->GPUs[0]);
+  cgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = LAPLACE_X(A).
+ * dst = LAPLACE_X(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void cgrid_cuda_fd_laplace_x_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT idx;
@@ -1208,102 +1524,112 @@ __global__ void cgrid_cuda_fd_laplace_x_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL i
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta2 * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz)
-                         - 2.0 * a[idx]);
+  dst[idx] = inv_delta2 * (cgrid_cuda_bc_x_plus(src, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_x_minus(src, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * src[idx]);
 }
 
 /*
- * B = LAPLACE_X(A)
+ * dst = LAPLACE_X(src)
  *
- * grida      = Source for operation (REAL complex *; input).
- * gridb      = Destination for operation (REAL complex *; output).
- * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * src        = Source for operation (cudaXtDesc_t *; input).
+ * dst        = Destination for operation (cudaXtDesc_t *; output).
+ * inv_delta2 = 1 / (2 * step) (CUREAL; input).
  * bc         = Boundary condition (char; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
  * nz         = # of points along z (INT; input).
  *
- * Returns laplace in gridb.
+ * Returns laplace in dst.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplace_xW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplace_xW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst->GPUs[0]);
+  cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = LAPLACE_Y(A).
+ * dst = LAPLACE_Y(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_y_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+__global__ void cgrid_cuda_fd_laplace_y_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta2 * (cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz)
-                         - 2.0 * a[idx]);
+  dst[idx] = inv_delta2 * (cgrid_cuda_bc_y_plus(src, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_y_minus(src, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * src[idx]);
 }
 
 /*
  * B = LAPLACE_Y(A)
  *
- * grida      = Source for operation (REAL complex *; input).
- * gridb      = Destination for operation (REAL complex *; output).
- * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * src        = Source for operation (cudaXtDesc_t *; input).
+ * dst        = Destination for operation (cudaXtDesc_t *; output).
+ * inv_delta2 = 1 / (2 * step) (CUREAL; input).
  * bc         = Boundary condition (char; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
  * nz         = # of points along z (INT; input).
  *
- * Returns laplace in gridb.
+ * Returns laplace in dst.
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplace_yW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplace_yW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst->GPUs[0]);
+  cgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = LAPLACE_Z(A).
+ * dst = LAPLACE_Z(src).
  *
  */
 
-__global__ void cgrid_cuda_fd_laplace_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+__global__ void cgrid_cuda_fd_laplace_z_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  b[idx] = inv_delta2 * (cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz)
-                         - 2.0 * a[idx]);
+  dst[idx] = inv_delta2 * (cgrid_cuda_bc_z_plus(src, bc, i, j, k, nx, ny, nz) + cgrid_cuda_bc_z_minus(src, bc, i, j, k, nx, ny, nz)
+                         - 2.0 * src[idx]);
 }
 
 /*
- * B = LAPLACE_Z(A)
+ * dst = LAPLACE_Z(src)
  *
- * grida      = Source for operation (REAL complex *; input).
- * gridb      = Destination for operation (REAL complex *; output).
- * inv_delta2 = 1 / (2 * step) (REAL; input).
+ * src        = Source for operation (cudaXtDesc_t *; input).
+ * dst        = Destination for operation (cudaXtDesc_t *; output).
+ * inv_delta2 = 1 / (2 * step) (CUREAL; input).
  * bc         = Boundary condition (char; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
@@ -1313,49 +1639,54 @@ __global__ void cgrid_cuda_fd_laplace_z_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL i
  *
  */
 
-extern "C" void cgrid_cuda_fd_laplace_zW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_laplace_zW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst->GPUs[0]);
+  cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
- * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
+ * dst = FD_X(src)^2 + FD_Y(src)^2 + FD_Z(src)^2.
  *
  */
 
-__global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
+__global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUCOMPLEX tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
 
-  b[idx] = CUMAKE(0.0, 0.0);
+  dst[idx] = CUMAKE(0.0, 0.0);
 
-  tmp = inv_delta * (cgrid_cuda_bc_x_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_x_minus(a, bc, i, j, k, nx, ny, nz));
-  b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
+  tmp = inv_delta * (cgrid_cuda_bc_x_plus(src, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_x_minus(src, bc, i, j, k, nx, ny, nz));
+  dst[idx] = dst[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
 
-  tmp = inv_delta * (cgrid_cuda_bc_y_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_y_minus(a, bc, i, j, k, nx, ny, nz));
-  b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
+  tmp = inv_delta * (cgrid_cuda_bc_y_plus(src, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_y_minus(src, bc, i, j, k, nx, ny, nz));
+  dst[idx] = dst[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
 
-  tmp = inv_delta * (cgrid_cuda_bc_z_plus(a, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_z_minus(a, bc, i, j, k, nx, ny, nz));
-  b[idx] = b[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
+  tmp = inv_delta * (cgrid_cuda_bc_z_plus(src, bc, i, j, k, nx, ny, nz) - cgrid_cuda_bc_z_minus(src, bc, i, j, k, nx, ny, nz));
+  dst[idx] = dst[idx] + CUCREAL(tmp) * CUCREAL(tmp) + CUCIMAG(tmp) * CUCIMAG(tmp);
 }
 
 /*
- * B = FD_X(A)^2 + FD_Y(A)^2 + FD_Z(A)^2.
+ * dst = FD_X(src)^2 + FD_Y(src)^2 + FD_Z(src)^2.
  *
- * grida      = Source for operation (REAL complex *; input).
- * gridb      = Destination for operation (REAL complex *; output).
+ * src        = Source for operation (cudaXtDesc_t *; input).
+ * dst        = Destination for operation (cudaXtDesc_t *; output).
  * inv_delta2 = 1 / (4 * step * step) (REAL; input).
  * bc         = Boundary condition (char; input).
  * nx         = # of points along x (INT; input).
@@ -1364,56 +1695,76 @@ __global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *a, CUCOMPLEX 
  *
  */
 
-extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(CUCOMPLEX *grida, CUCOMPLEX *gridb, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(cudaXtDesc_t *src, cudaXtDesc_t *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>(grida, gridb, inv_delta2, bc, nx, ny, nz);
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+
+  CudaSetDevice(dst->GPUs[0]);
+  cgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>((CUCOMPLEX *) src->data[0], (CUCOMPLEX *) dst->data[0], inv_delta2, bc, nx, ny, nz);
   cuda_error_check();
 }
 
 /*
  * Complex conjugate.
  *
- * A = B*
+ * dst = src*
  *
  */
 
-__global__ void cgrid_cuda_conjugate_gpu(CUCOMPLEX *a, CUCOMPLEX *b, INT nx, INT ny, INT nz) {
+__global__ void cgrid_cuda_conjugate_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, INT nx, INT ny, INT nz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  a[idx] = CUCONJ(b[idx]);
+  dst[idx] = CUCONJ(src[idx]);
 }
 
 /*
  * Grid conjugate.
  *
- * gridb    = Destination for operation (REAL complex *; output).
- * grida    = Source for operation (REAL complex *; input).
+ * dst      = Destination for operation (cudaXtDesc_t *; output).
+ * src      = Source for operation (cudaXtDesc_t *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void cgrid_cuda_conjugateW(CUCOMPLEX *gridb, CUCOMPLEX *grida, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_conjugateW(cudaXtDesc_t *dst, cudaXtDesc_t *src, INT nx, INT ny, INT nz) {
 
+  int i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  cgrid_cuda_conjugate_gpu<<<blocks,threads>>>(gridb, grida, nx, ny, nz);
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_conjugate_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx1, ny, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_conjugate_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx2, ny, nz);
+  }
+
   cuda_error_check();
 }
+
+///////////// LEFT HERE //////////////
 
 /*
  * FFT gradient_x

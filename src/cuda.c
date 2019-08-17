@@ -19,7 +19,7 @@ static gpu_mem_block *gpu_blocks_head = NULL;
 static long gpu_memory_hits = 0, gpu_memory_misses = 0;
 static char enable_cuda = 0;
 static size_t total_alloc = 0;
-static int first_gpu = 0, ngpus = 0;
+static int *use_gpus, use_ngpus = 0;
 #ifdef CUDA_DEBUG
 static char cuda_debug_flag = 0;
 #endif
@@ -31,36 +31,24 @@ static char cuda_debug_flag = 0;
 /*
  * Allocate GPUs.
  *
- * first_dev = First GPU to allocate (int).
- * last_dev  = Last GPU to allocate (int).
- *
- * If first_dev or last_dev is set to -1, allocate all available GPUs.
+ * ngpus = Number of GPUs to allocate (int).
+ * gpus  = GPU numbers to use (int *).
  *
  * No return value.
  *
  */
 
-EXPORT void cuda_alloc_gpus(int first_dev, int last_dev) {
 
-  if(first_dev == -1 || last_dev == -1) {
-    int ndev;
-    first_dev = 0;
-    if(cudaGetDeviceCount(&ndev) != cudaSuccess) {
-      fprintf(stderr, "libgrid(cuda): Cannot get device count.\n");
-      abort();
-    }
-    last_dev = ndev - 1;
-  }
-  ngpus = last_dev - first_dev + 1;
-  if(ngpus > MAX_GPU) {
-    fprintf(stderr, "libgrid(cuda): Too many GPUs - increase MAX_GPU\n");
+EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
+
+  int i;
+
+  if(!(use_gpus = (int *) malloc(sizeof(int) * ngpus))) {
+    fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
     abort();
   }
-  if(first_dev > ndev || last_dev > ndev) {
-    fprintf(stderr, "libgrid(cuda): Illegal values for first and last GPU numbers.\n");
-    abort();
-  }
-  first_gpu = first_dev;
+  for(i = 0; i < ngpus; i++) use_gpus[i] = gpus[i];
+  use_ngpus = ngpus;
   fprintf(stderr, "libgrid(cuda): Initialized with %d GPUs.\n", ngpus);
 }
 
@@ -91,7 +79,7 @@ EXPORT inline void cuda_error_check() {
 }
 
 /*
- * Returns the total amount (= all GPUs combined) of free GPU memory (in bytes).
+ * Returns the total amount (= all allocated GPUs combined) of free GPU memory (in bytes).
  *
  */
 
@@ -100,8 +88,8 @@ EXPORT size_t cuda_memory() {
   int i;
   size_t free = 0, total = 0, tmp1, tmp2;
 
-  for(i = 0; i < ngpus; i++) { 
-    if(cudaSetDevice(i) != cudaSuccess) {
+  for(i = 0; i < use_ngpus; i++) { 
+    if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
       fprintf(stderr, "cuda: Error getting memory info (setdevice).\n");
       abort();
     }    
@@ -331,9 +319,9 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
       fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
       abort();
     }
-    block->gpu_info->descriptor->nGPUs = ngpus;
-    for(i = 0; i < ngpus; i++) {
-      block->gpu_info->descriptor->GPUs[i] = first_gpu + i;
+    block->gpu_info->descriptor->nGPUs = use_ngpus;
+    for(i = 0; i < use_ngpus; i++) {
+      block->gpu_info->descriptor->GPUs[i] = use_gpus[i];
       block->gpu_info->descriptor->version = 0;
       block->gpu_info->descriptor->cudaXtState = NULL;
       if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i])), length) != cudaSuccess) {
@@ -348,6 +336,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
       block->gpu_info->descriptor->size[i] = length;
     }
   } else {
+    cufftXtSetGPUs(block->cufft_plan, use_ngpus, use_gpus);
     if(cufftXtMalloc(block->cufft_plan, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE) != cudaSuccess)
       return -1;
   }
@@ -1045,7 +1034,7 @@ EXPORT void cuda_statistics(char verbose) {
  *
  */
 
-EXPORT void *cuda_block_address(void *host_mem) {
+EXPORT cudaXtDesc_t *cuda_block_address(void *host_mem) {
 
   gpu_mem_block *ptr;
 
@@ -1060,7 +1049,7 @@ EXPORT void *cuda_block_address(void *host_mem) {
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: Block found with GPU address %lx.\n", (unsigned long int) ptr->gpu_mem);
 #endif
-  return ptr->gpu_mem;
+  return ptr->gpu_info->descriptor;
 }
 
 /*

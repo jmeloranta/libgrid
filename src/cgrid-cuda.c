@@ -14,8 +14,8 @@
 #include <cufft.h>
 
 /* Global variables */
-void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_mem)
-void *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
+void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_)
+cudaLibXDesc_t *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
 
 /*
  * Initialize the CUDA portion of cgrid routines.
@@ -48,7 +48,7 @@ EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in
       fprintf(stderr, "libgrid(CUDA): Not enough memory in cgrid_cuda_init().\n");
       abort();
     }
-    if(!(cuda_add_block(grid_gpu_mem, len, "GPU TEMP", 0))) {
+    if(!(cuda_add_block(grid_gpu_mem, len, -1, "GPU TEMP", 0))) {
       fprintf(stderr, "libgrid(CUDA): Failed to allocate temporary space on GPU.\n");
       abort();
     }
@@ -422,12 +422,18 @@ EXPORT char cgrid_cuda_constant(cgrid *grid, REAL complex c) {
 
 EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
-  REAL step = grid->step;
+  REAL step = grid->step, tmp;
+  INT i;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
   cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL complex), value);
+  *value = 0.0;
+  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
+    cuda_get_element(grid_gpu_mem, grid->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
+    *value += tmp;
+  }
+
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
@@ -449,12 +455,18 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
 EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, REAL complex *value) {
 
-  REAL step = grid->step;
+  REAL step = grid->step, tmp;
+  INT i;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
   cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL complex), value);
+  *value = 0.0;
+  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
+    cuda_get_element(grid_gpu_mem, grid->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
+    *value += tmp;
+  }
+
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
