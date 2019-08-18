@@ -342,8 +342,8 @@ EXPORT char rgrid_cuda_constant(rgrid *grid, REAL c) {
 /*
  * Integrate over a grid.
  *
- * grid = grid for integration (rgrid *; input).
- * value= integral value (REAL *; output).
+ * grid  = grid for integration (rgrid *; input).
+ * value = integral value (REAL *; output).
  *
  */
 
@@ -351,8 +351,7 @@ EXPORT char rgrid_cuda_integral(rgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  rgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
+  rgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
 
   if(grid->nx != 1) *value *= grid->step;
   if(grid->ny != 1) *value *= grid->step;
@@ -371,6 +370,7 @@ EXPORT char rgrid_cuda_integral(rgrid *grid, REAL *value) {
  * yu   = upper limit for y (REAL; input).
  * zl   = lower limit for z (REAL; input).
  * zu   = upper limit for z (REAL; input).
+ * value = integral value (REAL *; output).
  *
  */
 
@@ -378,8 +378,7 @@ EXPORT char rgrid_cuda_integral_region(rgrid *grid, INT il, INT iu, INT jl, INT 
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  rgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
+  rgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, value);
 
   if(grid->nx != 1) *value *= grid->step;
   if(grid->ny != 1) *value *= grid->step;
@@ -391,8 +390,8 @@ EXPORT char rgrid_cuda_integral_region(rgrid *grid, INT il, INT iu, INT jl, INT 
 /* 
  * Integrate over the grid squared (int grid^2).
  *
- * grid = grid for integration (rgrid *; input).
- * value= integral value (REAL *; output).
+ * grid  = grid for integration (rgrid *; input).
+ * value = integral value (REAL *; output).
  *
  */
 
@@ -400,8 +399,7 @@ EXPORT char rgrid_cuda_integral_of_square(rgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  rgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
+  rgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
 
   if(grid->nx != 1) *value *= grid->step;
   if(grid->ny != 1) *value *= grid->step;
@@ -423,9 +421,7 @@ EXPORT char rgrid_cuda_integral_of_product(rgrid *grida, rgrid *gridb, REAL *val
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->id, 1, gridb->value, gridb->grid_len, gridb->id, 1) < 0) return -1;
 
-  rgrid_cuda_integral_of_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), 
-                                  grida->nx, grida->ny, grida->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
+  rgrid_cuda_integral_of_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz, value);
 
   if(grida->nx != 1) *value *= grida->step;
   if(grida->ny != 1) *value *= grida->step;
@@ -448,9 +444,7 @@ EXPORT char rgrid_cuda_grid_expectation_value(rgrid *grida, rgrid *gridb, REAL *
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->id, 1, gridb->value, gridb->grid_len, gridb->id, 1) < 0) return -1;
 
-  rgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), 
-                                     grida->nx, grida->ny, grida->nz);
-  cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
+  rgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz, value);
 
   if(grida->nx != 1) *value *= grida->step;
   if(grida->ny != 1) *value *= grida->step;

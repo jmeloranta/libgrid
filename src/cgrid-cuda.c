@@ -412,21 +412,16 @@ EXPORT char cgrid_cuda_constant(cgrid *grid, REAL complex c) {
 
 EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
-  REAL step = grid->step, tmp;
-  INT i;
+  REAL step = grid->step;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
-  *value = 0.0;
-  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
-    cuda_get_element(grid_gpu_mem, grid->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
-    *value += tmp;
-  }
+  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
+
   return 0;
 }
 
@@ -445,21 +440,16 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
 EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, REAL complex *value) {
 
-  REAL step = grid->step, tmp;
-  INT i;
+  REAL step = grid->step;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz);
-  *value = 0.0;
-  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
-    cuda_get_element(grid_gpu_mem, grid->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
-    *value += tmp;
-  }
+  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
+
   return 0;
 }
 
@@ -473,21 +463,16 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 
 EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
-  REAL step = grid->step, tmp;
-  INT i;
+  REAL step = grid->step;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
-  *value = 0.0;
-  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
-    cuda_get_element(grid_gpu_mem, grid->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
-    *value += tmp;
-  }
+  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
+
   return 0;
 }
 
@@ -502,21 +487,16 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
 EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb, REAL complex *value) {
 
-  REAL step = grida->step, tmp;
-  INT i;
+  REAL step = grida->step;
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grid->nx, grid->ny, grid->nz);
-  *value = 0.0;
-  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
-    cuda_get_element(grid_gpu_mem, grida->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
-    *value += tmp;
-  }
+  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
+
   return 0;
 }
 
@@ -531,21 +511,16 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 
 EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL complex *value) {
 
-  REAL step = grida->step, tmp;
-  INT i;
+  REAL step = grida->step;
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grid->nx, grid->ny, grid->nz);
-  *value = 0.0;
-  for(i = 0; i < grid->gpu_info->descriptor->nGPUs; i++) {
-    cuda_get_element(grid_gpu_mem, grida->gpu_info->descriptor->GPUs[i], 0, sizeof(REAL complex), &tmp);
-    *value += tmp;
-  }
+  cgrid_cuda_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
   *value *= step;
+
   return 0;
 }
 
