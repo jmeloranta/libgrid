@@ -769,7 +769,7 @@ EXPORT char rgrid_cuda_fft_gradient_x(rgrid *gradient_x) {
   if(cuda_one_block_policy(gradient_x->value, gradient_x->grid_len, gradient_x->id, 1) < 0) return -1;
 
   rgrid_cuda_fft_gradient_xW((CUCOMPLEX *) cuda_block_address(gradient_x->value), gradient_x->kx0, gradient_x->step,
-                             gradient_x->fft_norm, gradient_x->nx, gradient_x->ny, gradient_x->nz2 / 2);
+                             gradient_x->fft_norm, gradient_x->nx, gradient_x->ny, gradient_x->nz);
 
   return 0;
 }
@@ -786,7 +786,7 @@ EXPORT char rgrid_cuda_fft_gradient_y(rgrid *gradient_y) {
   if(cuda_one_block_policy(gradient_y->value, gradient_y->grid_len, gradient_y->id, 1) < 0) return -1;
 
   rgrid_cuda_fft_gradient_yW((CUCOMPLEX *) cuda_block_address(gradient_y->value), gradient_y->ky0, gradient_y->step,
-                             gradient_y->fft_norm, gradient_y->nx, gradient_y->ny, gradient_y->nz2 / 2);
+                             gradient_y->fft_norm, gradient_y->nx, gradient_y->ny, gradient_y->nz);
 
   return 0;
 }
@@ -803,7 +803,7 @@ EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
   if(cuda_one_block_policy(gradient_z->value, gradient_z->grid_len, gradient_z->id, 1) < 0) return -1;
 
   rgrid_cuda_fft_gradient_zW((CUCOMPLEX *) cuda_block_address(gradient_z->value), gradient_z->kz0, gradient_z->step, 
-                             gradient_z->fft_norm, gradient_z->nx, gradient_z->ny, gradient_z->nz2 / 2);
+                             gradient_z->fft_norm, gradient_z->nx, gradient_z->ny, gradient_z->nz);
 
   return 0;
 }
@@ -822,7 +822,7 @@ EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
     return -1;
 
   rgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), laplace->fft_norm, laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, 
-                          laplace->nx, laplace->ny, laplace->nz2 / 2);
+                          laplace->nx, laplace->ny, laplace->nz);
   return 0;
 }
 
