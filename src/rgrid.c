@@ -2602,7 +2602,7 @@ EXPORT void rgrid_poisson(rgrid *grid) {
   nz = grid->nz2 / 2; // nz2 = 2 * (nz/2 + 1)
   ilx = 2.0 * M_PI / ((REAL) nx);
   ily = 2.0 * M_PI / ((REAL) ny);
-  ilz = 2.0 * M_PI / ((REAL) nz - 1);  // -1 was missing from nz
+  ilz = 2.0 * M_PI / ((REAL) nz);
 #pragma omp parallel for firstprivate(val, nx, ny, nz, grid, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
   for(i = 0; i < nx; i++) {
     kx = COS(ilx * (REAL) i);
