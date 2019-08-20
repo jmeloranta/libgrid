@@ -160,7 +160,7 @@ EXPORT void grid_wf_fft_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
-  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL c = HBAR / (2.0 * gwf->mass);
   REAL complex tmp;
 
 #ifdef USE_CUDA
@@ -210,7 +210,7 @@ EXPORT void grid_wf_fft_velocity_x(wf *gwf, rgrid *vx) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
-  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL c = HBAR / (2.0 * gwf->mass);
   REAL complex tmp;
 
 #ifdef USE_CUDA
@@ -252,7 +252,7 @@ EXPORT void grid_wf_fft_velocity_y(wf *gwf, rgrid *vy) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
-  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL c = HBAR / (2.0 * gwf->mass);
   REAL complex tmp;
 
 #ifdef USE_CUDA
@@ -294,7 +294,7 @@ EXPORT void grid_wf_fft_velocity_z(wf *gwf, rgrid *vz) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
-  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL c = HBAR / (2.0 * gwf->mass);
   REAL complex tmp;
 
 #ifdef USE_CUDA
