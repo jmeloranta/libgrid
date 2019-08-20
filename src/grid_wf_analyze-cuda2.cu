@@ -50,7 +50,7 @@ __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL in
  * wf       = Source for operation (REAL complex *; input).
  * vx       = Destination grid (CUREAL *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
- * cutoff   = Velocity cutoff limi (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -103,7 +103,7 @@ __global__ void grid_cuda_wf_velocity_y_gpu(CUCOMPLEX *wf, CUREAL *vy, CUREAL in
  * wf       = Source for operation (REAL complex *; input).
  * vy       = Destination grid (CUREAL *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
- * cutoff   = Velocity cutoff limi (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -158,7 +158,7 @@ __global__ void grid_cuda_wf_velocity_z_gpu(CUCOMPLEX *wf, CUREAL *vz, CUREAL in
  * wf       = Source for operation (REAL complex *; input).
  * vz       = Destination grid (CUREAL *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
- * cutoff   = Velocity cutoff limi (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -174,6 +174,52 @@ extern "C" void grid_cuda_wf_velocity_zW(CUCOMPLEX *gwf, CUREAL *vz, CUREAL inv_
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
   grid_cuda_wf_velocity_z_gpu<<<blocks,threads>>>(gwf, vz, inv_delta, cutoff, nx, ny, nz, nz2);
+  cuda_error_check();
+}
+
+/********************************************************************************************************************/
+
+/********************************************************************************************************************/
+
+/*
+ * Set up LOG(wf / wf*) for differentiation in the Fourier space (FFT based velocity).
+ *
+ */
+
+__global__ void grid_cuda_wf_fft_velocity_setup_gpu(CUCOMPLEX *wf, CUREAL *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nz2) {  /* Exectutes at GPU */
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  idx2 = (i * ny + j) * nz2 + k;
+  veloc[idx2] = c * CUCARG(wf[idx] / CUCONJ(wf[idx]));
+}
+
+/*
+ * Velocity grid setup (for FFT)
+ *
+ * wf       = Source for operation (REAL complex *; input).
+ * veloc    = Destination grid (CUREAL *; output).
+ * c        = hbar / (2 * mass) (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
+ * nx       = # of points along x (INT).
+ * ny       = # of points along y (INT).
+ * nz       = # of points along z (INT).
+ * nz2      = # of points along z for real grid (INT).
+ *
+ */
+
+extern "C" void grid_cuda_wf_fft_velocity_setupW(CUCOMPLEX *gwf, CUREAL *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nz2) {
+
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  grid_cuda_wf_fft_velocity_setup_gpu<<<blocks,threads>>>(gwf, veloc, c, nx, ny, nz, nz2); // prepare vx
+  
   cuda_error_check();
 }
 

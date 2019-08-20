@@ -145,6 +145,182 @@ EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL cutoff) {
 }
 
 /*
+ * Calculate the velocity field (derivatives in the Fourier space).
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vx     = x output grid containing the velocity (rgrid *).
+ * vy     = y output grid containing the velocity (rgrid *).
+ * vz     = z output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_fft_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz) {
+
+  cgrid *grid = gwf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
+  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_fft_velocity_setup(gwf, vz, c)) {
+    rgrid_fft(vz);
+    rgrid_fft_gradient_x(vz, vx);
+    rgrid_fft_gradient_y(vz, vy);
+    rgrid_fft_gradient_z(vz, vz);
+    rgrid_inverse_fft(vx);
+    rgrid_inverse_fft(vy);
+    rgrid_inverse_fft(vz);
+    return;
+  }
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vx,vy,vz,c) private(i,j,ij,k,tmp) default(none) schedule(runtime)
+  /* Prepare ln(psi/psi*) */
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      tmp = rgrid_value_at_index(vx, i, j, k);
+      rgrid_value_to_index(vz, i, j, k, c * CARG(tmp / CONJ(tmp))); // - or + 
+    }
+  }
+  rgrid_fft(vz);
+  rgrid_fft_gradient_x(vz, vx);
+  rgrid_fft_gradient_y(vz, vy);
+  rgrid_fft_gradient_z(vz, vz);
+  rgrid_inverse_fft(vx);
+  rgrid_inverse_fft(vy);
+  rgrid_inverse_fft(vz);
+}
+
+/*
+ * Calculate the velocity field x component using:
+ * v = -\frac{i\hbar}{2m} (d/dx) ln(\psi/\psi^*)
+ * where d/dx is evaluated in the Fourier space.  
+ * 
+ * gwf    = wavefunction for the operation (wf *).
+ * vx     = x output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_fft_velocity_x(wf *gwf, rgrid *vx) {
+
+  cgrid *grid = gwf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
+  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_fft_velocity_setup(gwf, vx, c)) {
+    rgrid_fft(vx);
+    rgrid_fft_gradient_x(vx, vx);
+    rgrid_inverse_fft(vx);
+    return;
+  }
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vx,c) private(i,j,ij,k,tmp) default(none) schedule(runtime)
+  /* Prepare ln(psi/psi*) */
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      tmp = rgrid_value_at_index(vx, i, j, k);
+      rgrid_value_to_index(vx, i, j, k, c * CARG(tmp / CONJ(tmp)));
+    }
+  }
+  rgrid_fft(vx);
+  rgrid_fft_gradient_x(vx, vx);
+  rgrid_inverse_fft(vx);
+}
+
+/*
+ * Calculate the velocity field y component using:
+ * v = -\frac{i\hbar}{2m} (d/dy) ln(\psi/\psi^*)
+ * where d/dx is evaluated in the Fourier space.
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vy     = y output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_fft_velocity_y(wf *gwf, rgrid *vy) {
+
+  cgrid *grid = gwf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
+  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_fft_velocity_setup(gwf, vy, c)) {
+    rgrid_fft(vy);
+    rgrid_fft_gradient_y(vy, vy);
+    rgrid_inverse_fft(vy);
+    return;
+  }
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vy,c) private(i,j,ij,k,tmp) default(none) schedule(runtime)
+  /* Prepare ln(psi/psi*) */
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      tmp = rgrid_value_at_index(vy, i, j, k);
+      rgrid_value_to_index(vy, i, j, k, c * CARG(tmp / CONJ(tmp)));
+    }
+  }
+  rgrid_fft(vy);
+  rgrid_fft_gradient_y(vy, vy);
+  rgrid_inverse_fft(vy);
+}
+
+/*
+ * Calculate the velocity field z component using:
+ * v = -\frac{i\hbar}{2m} (d/dz) ln(\psi/\psi^*)
+ * where d/dx is evaluated in the Fourier space.
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vz     = z output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_fft_velocity_z(wf *gwf, rgrid *vz) {
+
+  cgrid *grid = gwf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
+  REAL c = HBAR / (4.0 * gwf->mass);
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_fft_velocity_setup(gwf, vz, c)) {
+    rgrid_fft(vz);
+    rgrid_fft_gradient_y(vz, vz);
+    rgrid_inverse_fft(vz);
+    return;
+  }
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vz,c) private(i,j,ij,k,tmp) default(none) schedule(runtime)
+  /* Prepare ln(psi/psi*) */
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      tmp = rgrid_value_at_index(vz, i, j, k);
+      rgrid_value_to_index(vz, i, j, k, c * CARG(tmp / CONJ(tmp)));
+    }
+  }
+  rgrid_fft(vz);
+  rgrid_fft_gradient_z(vz, vz);
+  rgrid_inverse_fft(vz);
+}
+
+/*
  * Calculate the probability flux x component (m^-2 s^-1). This is related to liquid momentum:
  * rho_mass * velocity = mass * flux.
  * 

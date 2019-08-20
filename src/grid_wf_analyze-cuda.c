@@ -55,6 +55,22 @@ EXPORT char grid_cuda_wf_velocity_z(wf *gwf, rgrid *vz, REAL inv_delta, REAL cut
 }
 
 /*
+ * Setup for FFT-based evaluation of velocity.
+ *
+ */
+
+EXPORT char grid_cuda_wf_fft_velocity_setup(wf *gwf, rgrid *veloc, REAL c) {
+
+  cgrid *grid = gwf->grid;
+
+  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->id, 1, veloc->value, veloc->grid_len, veloc->id, 0) < 0) return -1;
+
+  grid_cuda_wf_fft_velocity_setupW(cuda_block_address(grid->value), cuda_block_address(veloc->value), c, grid->nx, grid->ny, grid->nz, veloc->nz2);
+
+  return 0;
+}
+
+/*
  * Calculate the probability flux x component.
  * 
  */
