@@ -1,4 +1,3 @@
-
  /*
  * Routines for complex grids.
  *

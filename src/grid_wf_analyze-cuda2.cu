@@ -67,6 +67,12 @@ extern "C" void grid_cuda_wf_velocity_xW(CUCOMPLEX *gwf, CUREAL *vx, CUREAL inv_
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   grid_cuda_wf_velocity_x_gpu<<<blocks,threads>>>(gwf, vx, inv_delta, cutoff, nx, ny, nz, nz2);
   cuda_error_check();
 }
@@ -119,6 +125,12 @@ extern "C" void grid_cuda_wf_velocity_yW(CUCOMPLEX *gwf, CUREAL *vy, CUREAL inv_
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
 
   grid_cuda_wf_velocity_y_gpu<<<blocks,threads>>>(gwf, vy, inv_delta, cutoff, nx, ny, nz, nz2);
   cuda_error_check();
@@ -175,11 +187,73 @@ extern "C" void grid_cuda_wf_velocity_zW(CUCOMPLEX *gwf, CUREAL *vz, CUREAL inv_
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   grid_cuda_wf_velocity_z_gpu<<<blocks,threads>>>(gwf, vz, inv_delta, cutoff, nx, ny, nz, nz2);
   cuda_error_check();
 }
 
 /********************************************************************************************************************/
+
+/*
+ * Set up LOG(wf / wf*) for differentiation in the Fourier space (FFT based velocity).
+ *
+ */
+
+__global__ void grid_cuda_wf_fft_velocity_setup_gpu(CUCOMPLEX *wf, CUREAL *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nz2) {  /* Exectutes at GPU */
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  idx2 = (i * ny + j) * nz2 + k;
+  veloc[idx2] = c * CUCARG(wf[idx] / CUCONJ(wf[idx]));
+}
+
+/*
+ * Velocity grid setup (for FFT)
+ *
+ * wf       = Source for operation (REAL complex *; input).
+ * veloc    = Destination grid (CUREAL *; output).
+ * c        = hbar / (2 * mass) (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
+ * nx       = # of points along x (INT).
+ * ny       = # of points along y (INT).
+ * nz       = # of points along z (INT).
+ * nzz      = # of points along z for real grid (INT).
+ *
+ * In real space.
+ *
+ */
+
+extern "C" void grid_cuda_wf_fft_velocity_setupW(CUCOMPLEX *gwf, CUREAL *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
+
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_wf_fft_velocity_setup_gpu<<<blocks1,threads>>>((CUCOMPLEX *) gwf->data[i], (CUREAL *) veloc->data[i], c, nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_wf_fft_velocity_setup_gpu<<<blocks2,threads>>>((CUCOMPLEX *) gwf->data[i], (CUREAL *) veloc->data[i], c, nnx2, ny, nz, nzz);
+  }
+
+  cuda_error_check();
+}
 
 /*
  * Flux X.
@@ -223,6 +297,12 @@ extern "C" void grid_cuda_wf_probability_flux_xW(CUCOMPLEX *gwf, CUREAL *flux, C
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
 
   grid_cuda_wf_probability_flux_x_gpu<<<blocks,threads>>>(gwf, flux, inv_delta, nx, ny, nz, nz2);
   cuda_error_check();
@@ -275,6 +355,12 @@ extern "C" void grid_cuda_wf_probability_flux_yW(CUCOMPLEX *gwf, CUREAL *flux, C
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   grid_cuda_wf_probability_flux_y_gpu<<<blocks,threads>>>(gwf, flux, inv_delta, nx, ny, nz, nz2);
   cuda_error_check();
 }
@@ -325,6 +411,12 @@ extern "C" void grid_cuda_wf_probability_flux_zW(CUCOMPLEX *gwf, CUREAL *flux, C
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
 
   grid_cuda_wf_probability_flux_z_gpu<<<blocks,threads>>>(gwf, flux, inv_delta, nx, ny, nz, nz2);
   cuda_error_check();
@@ -393,6 +485,12 @@ extern "C" void grid_cuda_wf_lxW(CUCOMPLEX *gwf, CUREAL *workspace, CUREAL inv_d
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   grid_cuda_wf_lx_gpu<<<blocks,threads>>>(gwf, workspace, inv_delta, nx, ny, nz, nzz, ny/2, nz/2, y0, z0, step);
   cuda_error_check();
 }
@@ -459,6 +557,12 @@ extern "C" void grid_cuda_wf_lyW(CUCOMPLEX *gwf, CUREAL *workspace, CUREAL inv_d
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   grid_cuda_wf_ly_gpu<<<blocks,threads>>>(gwf, workspace, inv_delta, nx, ny, nz, nzz, nx/2, nz/2, x0, z0, step);
   cuda_error_check();
 }
@@ -524,6 +628,12 @@ extern "C" void grid_cuda_wf_lzW(CUCOMPLEX *gwf, CUREAL *workspace, CUREAL inv_d
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
 
   grid_cuda_wf_lz_gpu<<<blocks,threads>>>(gwf, workspace, inv_delta, nx, ny, nz, nzz, nx/2, ny/2, x0, y0, step);
   cuda_error_check();
