@@ -22,7 +22,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_fft(wf *gwf, REAL complex time_mass) 
   CUCOMPLEX t;
   cgrid *grid = gwf->grid;
 
-  if(cuda_fft_policy(grid->value, grid->grid_len, grid->id) < 0) return -1;
+  if(cuda_fft_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   t.x = CREAL(time_mass);
   t.y = CIMAG(time_mass);
@@ -44,7 +44,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time_mass)
   CUCOMPLEX t;
   cgrid *grid = gwf->grid;
 
-  if(cuda_fft_policy(grid->value, grid->grid_len, grid->id) < 0) return -1;
+  if(cuda_fft_policy(grid->value, grid->grid_len, grid->cuff_handle, grid->id) < 0) return -1;
 
   t.x = CREAL(time_mass);
   t.y = CIMAG(time_mass);

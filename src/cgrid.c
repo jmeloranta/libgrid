@@ -127,13 +127,13 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
     grid->outside_params_ptr = &grid->default_outside_params;
   }
   
-  grid->plan = grid->iplan = grid->implan = grid->iimplan = NULL;
+  grid->plan = grid->iplan = grid->implan = grid->iimplan = NULL; // No need to set these up yet
 #ifdef USE_CUDA
-  grid->cufft_handle = -1;
+  grid->cufft_handle = cgrid_cufft_alloc(grid); // We have to allocate these for cuda.c to work
 #endif
   
 #ifdef USE_CUDA
-  cuda_set_gpu(CUDA_DEVICE);
+  cuda_set_gpu(CUDA_DEVICE); // FIXME
   cgrid_cuda_init(sizeof(REAL complex) 
      * ((((size_t) nx) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
      * ((((size_t) ny) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 

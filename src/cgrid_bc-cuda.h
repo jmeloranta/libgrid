@@ -1,5 +1,5 @@
 /*
- * BC routines / CUDA.
+ * BC routines / CUDA. Not accessed in multi-GPU case (FD disabled).
  *
  * bc = Boundary condition as follows:
  * 0 = Dirichlet

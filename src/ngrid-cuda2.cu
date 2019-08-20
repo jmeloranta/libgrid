@@ -17,98 +17,121 @@ extern "C" void cuda_error_check();
 /*
  * Real to complex_re.
  *
- * A.re = B(real). (zeroes the imag part)
+ * dst.re = src(real). (zeroes the imag part)
  *
  */
 
-__global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *dst, CUREAL *dst, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;    // Index for complex grid
   idx2 = (i * ny + j) * nzz + k;  // Index for real grid
 
-  a[idx] = CUMAKE(b[idx2], 0.0);
+  dst[idx] = CUMAKE(src[idx2], 0.0);
 }
 
 /*
  * Real to complex_re
  *
- * grida   = Destination for operation (REAL complex *; output).
- * gridb   = Source for operation (REAL *; input).
+ * dst     = Destination for operation (cudaXtDesc_t *; output).
+ * sr      = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_real_to_complex_reW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_real_to_complex_reW(cudaXtDesc_t *dst, cudaXtDesc_t *src, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_real_to_complex_re_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Real to complex_im.
  *
- * A.im = B(real). (zeroes the real part)
+ * dst.im = src(real). (zeroes the real part)
  *
  */
 
-__global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
   idx2 = (i * ny + j) * nzz + k;
 
-  a[idx] = CUMAKE(0.0, b[idx2]);
+  dst[idx] = CUMAKE(0.0, src[idx2]);
 }
 
 /*
  * Real to complex_im
  *
- * grida   = Destination for operation (REAL complex *; output).
- * gridb   = Source for operation (REAL *; input).
+ * grida   = Destination for operation (cudaXtDesc_t *; output).
+ * gridb   = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_real_to_complex_imW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_real_to_complex_imW(cudaXtDesc_t *dst, cudaXtDesc_t *src, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_real_to_complex_im_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add real to complex_re.
  *
- * A.re = A.re + B(real).
+ * dst.re = dst.re + src(real).
  *
  */
 
-__global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_add_real_to_complex_re_gpu(cudaXtDesc_t *dst, cudaXtDesc_t *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2, tmp;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -116,42 +139,54 @@ __global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *a, CUREAL *b, IN
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  a[idx].x = CUCREAL(a[idx]) + b[idx2];
+  dst[idx].x = CUCREAL(dst[idx]) + src[idx2];
 }
 
 /*
  * Add real to complex.re
  *
- * grida   = Destination for operation (REAL complex *; output).
- * gridb   = Source for operation (REAL *; input).
+ * grida   = Destination for operation (cudaXtDesc_t *; output).
+ * gridb   = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_add_real_to_complex_reW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_add_real_to_complex_reW(cudaXtDesc_t *dst, cudaXtDesc_t *src, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_add_real_to_complex_re_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_add_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Add real to complex_im.
  *
- * A.im = A.im + B(real).
+ * dst.im = dst.im + src(real).
  *
  */
 
-__global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2, tmp;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -159,42 +194,54 @@ __global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *a, CUREAL *b, IN
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  a[idx].y = CUCIMAG(a[idx]) + b[idx2];
+  dst[idx].y = CUCIMAG(dst[idx]) + src[idx2];
 }
 
 /*
  * Add real to complex_im
  *
- * grida   = Destination for operation (REAL complex *; output).
- * gridb   = Source for operation (REAL *; input).
+ * grida   = Destination for operation (cudaXtDesc_t *; output).
+ * gridb   = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_add_real_to_complex_imW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_add_real_to_complex_imW(cudaXtDesc_t *dst, cudaXtDesc_t *src, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_add_real_to_complex_im_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_add_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_add_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
 /*
- * Product A(complex) and B(real).
+ * Product dst(complex) and src(real).
  *
- * A = A * B(real).
+ * dst = dst * src(real).
  *
  */
 
-__global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *a, CUREAL *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *dst, CUREAL *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2, tmp;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -202,42 +249,54 @@ __global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *a, CUREAL *b,
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  a[idx] = a[idx] * b[idx2];
+  dst[idx] = dst[idx] * src[idx2];
 }
 
 /*
- * Product A(complex) with B(real).
+ * Product dst(complex) with src(real).
  *
- * grida   = Destination for operation (REAL complex *; output).
- * gridb   = Source for operation (REAL *; input).
+ * dst     = Destination for operation (cudaXtDesc_t *; output).
+ * sr      = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_product_complex_with_realW(CUCOMPLEX *grida, CUREAL *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_product_complex_with_realW(cudaXtDesc_t *grida, cudaXtDesc_t *gridb, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_product_complex_with_real_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_product_complex_with_real_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_product_complex_with_real_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Imag. part to real grid.
  *
- * A(real) = B.im;
+ * dst(real) = src.im;
  *
  */
 
-__global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *dst, CUCOMPLEX *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2, tmp;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -245,42 +304,54 @@ __global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  a[idx2] = CUCIMAG(b[idx]);
+  dst[idx2] = CUCIMAG(src[idx]);
 }
 
 /*
- * Imag. part of B to real A.
+ * Imag. part of src to real dst.
  *
- * grida   = Destination for operation (REAL *; output).
- * gridb   = Source for operation (REAL complex *; input).
+ * grida   = Destination for operation (cudaXtDesc_t *; output).
+ * gridb   = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_complex_im_to_realW(CUREAL *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_complex_im_to_realW(CUREAL *dst, CUCOMPLEX *src, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_complex_im_to_real_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_complex_im_to_real_gpu<<<blocks1,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_complex_im_to_real_gpu<<<blocks2,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
 /*
  * Real part to real grid.
  *
- * A(real) = B.re;
+ * dst(real) = src.re;
  *
  */
 
-__global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx, INT ny, INT nz, INT nzz) {
+__global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *dst, CUCOMPLEX *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
-  INT idx, idx2, tmp;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -288,27 +359,40 @@ __global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *a, CUCOMPLEX *b, INT nx
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  a[idx2] = CUCREAL(b[idx]);
+  dst[idx2] = CUCREAL(src[idx]);
 }
 
 /*
  * Real part of B to real A.
  *
- * grida   = Destination for operation (REAL *; output).
- * gridb   = Source for operation (REAL complex *; input).
+ * grida   = Destination for operation (cudaXtDesc_t *; output).
+ * gridb   = Source for operation (cudaXtDesc_t *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_complex_re_to_realW(CUREAL *grida, CUCOMPLEX *gridb, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_complex_re_to_realW(cudaXtDesc_t *grida, cudaXtDesc_t *gridb, INT nx, INT ny, INT nz) {
 
+  INT i, ngpu2 = dst->nGPUs, ngpu1 = nx % ngpus, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
-  grid_cuda_complex_re_to_real_gpu<<<blocks,threads>>>(grida, gridb, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) { // Full sets
+    CudaSetDevice(dst->GPUs[i]);
+    rgrid_cuda_complex_re_to_real_gpu<<<blocks1,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+    CudaSetDevice(dst->GPUs[i]);
+    cgrid_cuda_complex_re_to_real_gpu<<<blocks2,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }

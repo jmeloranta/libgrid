@@ -1071,7 +1071,7 @@ extern "C" void cgrid_cuda_integral_regionW(CUCOMPLEX *grid, INT il, INT iu, INT
     cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_region_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], il, iu, jl, ju, kl, ku, nnx1, ny, nz, seg);
-    seg -= nnx1;
+    seg += nnx1;
     cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
@@ -1084,7 +1084,7 @@ extern "C" void cgrid_cuda_integral_regionW(CUCOMPLEX *grid, INT il, INT iu, INT
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_region_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], 
                                     il, iu, jl, ju, kl, ku, nnx2, ny, nz, seg);
-    seg -= nnx2;
+    seg += nnx2;
     cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();

@@ -128,9 +128,10 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
     grid->outside_params_ptr = &grid->default_outside_params;
   }
   
-  grid->plan = grid->iplan = NULL;
-#ifdef USE_CUDA
-  grid->cufft_handle_r2c = grid->cufft_handle_c2r = -1;
+  grid->plan = grid->iplan = NULL;  // No need to allocate these yet
+#ifdef USE_CUDA  
+  grid->cufft_handle_r2c = rgrid_cufft_alloc_r2c(grid);
+  grid->cufft_handle_c2r = rgrid_cufft_alloc_c2r(grid);
 #endif
   
   if (grid->value_outside == RGRID_NEUMANN_BOUNDARY)
@@ -2578,7 +2579,7 @@ EXPORT void rgrid_poisson(rgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, idx, nzz = nz / 2 + 1;
   REAL step = grid->step, step2 = step * step, ilx = 2.0 * M_PI / ((REAL) nx), ily = 2.0 * M_PI / ((REAL) ny);
-  REAL norm = grid->fft_norm, ilz = 2.0 * M_PI / ((REAL) nz), kx, ky, kz;
+  REAL norm = grid->fft_norm, ilz = M_PI / ((REAL) nzz - 1), kx, ky, kz;
   REAL complex *val = (REAL complex *) grid->value;
 
   if(grid->value_outside != RGRID_PERIODIC_BOUNDARY) {

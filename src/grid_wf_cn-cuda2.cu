@@ -146,6 +146,12 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, ny2 = ny / 2;
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   /*
    * (1 + .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 px) dt / hbar) psi(t) <=> A x = b
    * (C + dx^2 laplace + C2 grad + C3 y grad) psi(t+dt) 
@@ -290,6 +296,12 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, nx2 = nx / 2;
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   /*
    * (1 + .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - \omega Lz - v0 py) dt / hbar) psi(t) <=> A x = b
    * (C + dy^2 laplace + C2 grad + C3 x grad) psi(t+dt) 
@@ -431,6 +443,12 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   CUCOMPLEX c, c2;
   INT nyz = ny * nz, nxy = nx * ny;
 
+  if(dst->nGPUs > 1) {
+    fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
+    abort();
+  }
+  CudaSetDevice(dst->GPUs[0]);
+
   /*
    * (1 + .5 i (T + V - v0 pz) dt / hbar) psi(t+dt) = (1 - .5 i (T + V - v0 pz) dt / hbar) psi(t) <=> A x = b
    * (C + dz^2 laplace + C2 grad) psi(t+dt) 
@@ -444,4 +462,3 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, gwf, bc, wrk, wrk2, wrk3, c, c2, step, tstep, lx, hx, ly, hy, lz, hz);
   cuda_error_check();
 }
-

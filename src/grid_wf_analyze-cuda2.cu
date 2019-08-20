@@ -21,6 +21,8 @@ extern "C" void cuda_error_check();
 /*
  * Velocity X.
  *
+ * USES FINITE DIFFERENCE!!
+ *
  */
 
 __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {  /* Exectutes at GPU */

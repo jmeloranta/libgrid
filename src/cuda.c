@@ -29,6 +29,26 @@ static char cuda_debug_flag = 0;
 #define EXPORT
 
 /*
+ * Return GPU usage info.
+ *
+ */
+
+EXPORT int cuda_ngpus() {
+
+  return use_ngpus;
+}
+
+/*
+ * Return GPUs to use.
+ *
+ */
+
+EXPORT int *cuda_gpus() {
+
+  return use_gpus;
+}
+
+/*
  * Allocate GPUs.
  *
  * ngpus = Number of GPUs to allocate (int).
@@ -37,7 +57,6 @@ static char cuda_debug_flag = 0;
  * No return value.
  *
  */
-
 
 EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
 
@@ -310,7 +329,8 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
 
   int i;
 
-  if(block_cufft_handle == -1) {
+  if(block->cufft_handle == -1) {
+    /* This is for GPU blocks that are not to be used with cufft */
     if(!(block->gpu_info = (cudaLibXtDesc_t *) malloc(sizeof(cudaLibXtDesc_t)))) {
       fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
       abort();
@@ -319,11 +339,11 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
       fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
       abort();
     }
+    block->gpu_info->version = 0;
+    block->gpu_info->descriptor->version = CUDA_XT_DESCRIPTOR_VERSION;
     block->gpu_info->descriptor->nGPUs = use_ngpus;
     for(i = 0; i < use_ngpus; i++) {
       block->gpu_info->descriptor->GPUs[i] = use_gpus[i];
-      block->gpu_info->descriptor->version = 0;
-      block->gpu_info->descriptor->cudaXtState = NULL;
       if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i])), length) != cudaSuccess) {
         int j;
         for(j = 0; j < i; j++)
@@ -335,9 +355,13 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
       }
       block->gpu_info->descriptor->size[i] = length;
     }
+    block->gpu_info->descriptor->cudaXtState = NULL;
+    block->gpu_info->library = LIB_FORMAT_UNDEFINED; // Don't run cufft on this!
+    block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+    block->gpu_info->libDescriptor = NULL;
   } else {
-    cufftXtSetGPUs(block->cufft_plan, use_ngpus, use_gpus);
-    if(cufftXtMalloc(block->cufft_plan, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE) != cudaSuccess)
+    /* cufft capable blocks */
+    if(cufftXtMalloc(block->cufft_handle, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE) != cudaSuccess)
       return -1;
   }
   return 0;

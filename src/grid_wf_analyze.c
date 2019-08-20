@@ -67,6 +67,45 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
 }
 
 /*
+ * Calculate the velocity field x component using:
+ * v = -\frac{i\hbar}{2m} (d/dx) ln(\psi/\psi^*).
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vx     = x output grid containing the velocity (rgrid *).
+ * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
+
+  cgrid *grid = gwf->grid;
+  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
+  REAL inv_delta = HBAR / (4.0 * gwf->mass * grid->step), tmp;
+  REAL complex pp, pm;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_velocity_x(gwf, vx, inv_delta, cutoff)) return;
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vx,grid,inv_delta,cutoff) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      pp = cgrid_value_at_index(grid, i+1, j, k);
+      pm = cgrid_value_at_index(grid, i-1, j, k);
+      pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
+      if(CABS(pp) < GRID_EPS) tmp = 0.0;
+      else tmp = inv_delta * CARG(pp);
+      if(tmp > cutoff) tmp = cutoff;
+      else if(tmp < -cutoff) tmp = -cutoff;
+      rgrid_value_to_index(vx, i, j, k, tmp);      
+    }
+  }
+}
+
+/*
  * Calculate the velocity field y component using:
  * v = -\frac{i\hbar}{2m} (d/dy) ln(\psi/\psi^*).
  *

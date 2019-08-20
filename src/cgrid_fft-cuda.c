@@ -17,47 +17,6 @@
 
 #include "grid.h"
 
-extern char grid_cufft_workarea;
-extern cufftHandle highest_plan;
-
-/*
- * Set up workspace for cufft manually in order to avoid double allocation for the various types of transformations.
- * Just make sure that there is enough space for the worst case.
- *
- */
-
-static void ccufft_workspace(cufftHandle *plan, int nx, int ny, int nz) {
-
-  size_t wrksize;
-  gpu_mem_block *block;
-  int i;
-
-  cufftCreate(plan);
-  if(*plan > highest_plan) highest_plan = *plan;
-#ifdef SINGLE_PREC
-  if(cufftGetSize3d(*plan, (int) nx, (int) ny, (int) nz, CUFFT_C2C, &wrksize) != CUFFT_SUCCESS) {
-#else
-  if(cufftGetSize3d(*plan, (int) nx, (int) ny, (int) nz, CUFFT_Z2Z, &wrksize) != CUFFT_SUCCESS) {
-#endif
-    fprintf(stderr, "libgrid(cuda): CUFFT plan size failed.\n");
-    exit(1);
-  }
-  cufftSetAutoAllocation(*plan, 0);
-  if(!(block = cuda_find_block(&grid_cufft_workarea))) {
-    block = cuda_add_block(&grid_cufft_workarea, wrksize, "cufft temp", 0);
-    cuda_lock_block(&grid_cufft_workarea);
-  } else if(wrksize > block->length) {
-    cuda_unlock_block(&grid_cufft_workarea);
-    cuda_remove_block(&grid_cufft_workarea, 0);
-    block = cuda_add_block(&grid_cufft_workarea, wrksize, "cufft temp", 0);
-    cuda_lock_block(&grid_cufft_workarea);
-  }
-
-  // need to update work areas of ALL plans!!! We will set it for all workspaces up to the higest plan number so far (hack)
-  for (i = 0; i <= highest_plan; i++)
-    cufftSetWorkArea(i, cuda_block_address(&grid_cufft_workarea));
-}
-
 static void error_check(cufftResult value) {
 
   switch(value) {
@@ -84,6 +43,26 @@ static void error_check(cufftResult value) {
   }
 }
 
+EXPORT int cgrid_cufft_alloc(cgrid *grid) {
+
+  cufftResult status;
+
+  cufftCreate(&(grid->cufft_handle));
+  cufftXtSetGPUs(grid->cufft_handle, cuda_ngpus(), cuda_gpus());  
+  ccufft_workspace(&(grid->cufft_handle), (int) grid->nx, (int) grid->ny, (int) grid->nz); // includes plan create
+#ifdef SINGLE_PREC
+  if((status = cufftMakePlan3d(grid->cufft_handle, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_C2C, &len)) != CUFFT_SUCCESS) {
+#else /* double */
+  if((status = cufftMakePlan3d(grid->cufft_handle, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_Z2Z, &len)) != CUFFT_SUCCESS) {
+#endif
+    fprintf(stderr, "libgrid(CUDA): Error in forward cplan: ");
+    error_check(status);
+    exit(1);
+  }
+  error_check();
+  return 0; 
+}
+
 /*
  * Forward FFT using cufft (in-place).
  *
@@ -99,28 +78,18 @@ EXPORT int cgrid_cufft_fft(cgrid *grid) {
   
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
   cufftResult status;
-  size_t len;
 
   if(grid->cufft_handle == -1) {
-    ccufft_workspace(&(grid->cufft_handle), (int) nx, (int) ny, (int) nz);
-#ifdef SINGLE_PREC
-    if((status = cufftMakePlan3d(grid->cufft_handle, (int) nx, (int) ny, (int) nz, CUFFT_C2C, &len)) != CUFFT_SUCCESS) {
-#else /* double */
-    if((status = cufftMakePlan3d(grid->cufft_handle, (int) nx, (int) ny, (int) nz, CUFFT_Z2Z, &len)) != CUFFT_SUCCESS) {
-#endif
-      fprintf(stderr, "libgrid(CUDA): Error in forward cplan: ");
-      error_check(status);
-      fprintf(stderr, "Workspace length = %ld\n", len);
-      exit(1);
-    }
+    fprintf(stderr, "libgrid(cuda): cufft not initialized.\n");
+    exit(1);
   }
 
   if(cuda_fft_policy(grid->value, grid->grid_len, grid->id) < 0) return -1;
 
 #ifdef SINGLE_PREC
-  if((status = cufftExecC2C(grid->cufft_handle, (cufftComplex *) cuda_block_address(grid->value), (cufftComplex *) cuda_block_address(grid->value), CUFFT_FORWARD)) != CUFFT_SUCCESS) {
+  if((status = cufftXtExecC2C(grid->cufft_handle, (cufftComplex *) cuda_block_address(grid->value), (cufftComplex *) cuda_block_address(grid->value), CUFFT_FORWARD)) != CUFFT_SUCCESS) {
 #else
-  if((status = cufftExecZ2Z(grid->cufft_handle, (cufftDoubleComplex *) cuda_block_address(grid->value), (cufftDoubleComplex *) cuda_block_address(grid->value), CUFFT_FORWARD)) != CUFFT_SUCCESS) {
+  if((status = cufftXtExecZ2Z(grid->cufft_handle, (cufftDoubleComplex *) cuda_block_address(grid->value), (cufftDoubleComplex *) cuda_block_address(grid->value), CUFFT_FORWARD)) != CUFFT_SUCCESS) {
 #endif
     fprintf(stderr, "libgrid(CUDA): Error in CFFT (forward): ");
     error_check(status);
@@ -147,28 +116,18 @@ EXPORT int cgrid_cufft_fft_inv(cgrid *grid) {
 
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
   cufftResult status;
-  size_t len;
 
   if(grid->cufft_handle == -1) {
-    ccufft_workspace(&(grid->cufft_handle), (int) nx, (int) ny, (int) nz);
-#ifdef SINGLE_PREC
-    if((status = cufftMakePlan3d(grid->cufft_handle, (int) nx, (int) ny, (int) nz, CUFFT_C2C, &len)) != CUFFT_SUCCESS) {
-#else
-    if((status = cufftMakePlan3d(grid->cufft_handle, (int) nx, (int) ny, (int) nz, CUFFT_Z2Z, &len)) != CUFFT_SUCCESS) {
-#endif
-      fprintf(stderr, "libgrid(CUDA): Error in backward cplan: ");
-      error_check(status);
-      fprintf(stderr, "Workspace length = %ld\n", len);
-      exit(1);
-    }
+    fprintf(stderr, "libgrid(cuda): cufft not initialized.\n");
+    exit(1);
   }
 
   if(cuda_fft_policy(grid->value, grid->grid_len, grid->id) < 0) return -1;
 
 #ifdef SINGLE_PREC
-  if((status = cufftExecC2C(grid->cufft_handle, (cufftComplex *) cuda_block_address(grid->value), (cufftComplex *) cuda_block_address(grid->value), CUFFT_INVERSE)) != CUFFT_SUCCESS) {
+  if((status = cufftXtExecC2C(grid->cufft_handle, (cufftComplex *) cuda_block_address(grid->value), (cufftComplex *) cuda_block_address(grid->value), CUFFT_INVERSE)) != CUFFT_SUCCESS) {
 #else /* double */
-  if((status = cufftExecZ2Z(grid->cufft_handle, (cufftDoubleComplex *) cuda_block_address(grid->value), (cufftDoubleComplex *) cuda_block_address(grid->value), CUFFT_INVERSE)) != CUFFT_SUCCESS) {
+  if((status = cufftXtExecZ2Z(grid->cufft_handle, (cufftDoubleComplex *) cuda_block_address(grid->value), (cufftDoubleComplex *) cuda_block_address(grid->value), CUFFT_INVERSE)) != CUFFT_SUCCESS) {
 #endif
     fprintf(stderr, "libgrid(CUDA): Error in CFFT (backward): ");
     error_check(status);
