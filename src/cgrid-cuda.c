@@ -21,7 +21,7 @@ void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_)
 cudaXtDesc *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
 
 /*
- * Initialize the CUDA portion of cgrid routines.
+ * Initialize the CUDA portion of cgrid routines. Common block for each GPU for reduction.
  *
  */
 
@@ -708,12 +708,19 @@ EXPORT char cgrid_cuda_conjugate(cgrid *dst, cgrid *src) {
 
 EXPORT char cgrid_cuda_fft_gradient_x(cgrid *src, cgrid *dst) {
 
+  if(src->space == 0) {
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
+    exit(1);
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
   if (dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
   cgrid_cuda_fft_gradient_xW(cuda_block_address(dst->value), dst->fft_norm, dst->kx0, dst->step, dst->nx, dst->ny, dst->nz, 1);
+  dst->space = 1;
+
   return 0;
 }
 
@@ -727,12 +734,19 @@ EXPORT char cgrid_cuda_fft_gradient_x(cgrid *src, cgrid *dst) {
 
 EXPORT char cgrid_cuda_fft_gradient_y(cgrid *src, cgrid *dst) {
 
+  if(src->space == 0) {
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
+    exit(1);
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
   cgrid_cuda_fft_gradient_yW(cuda_block_address(dst->value), dst->fft_norm, dst->ky0, dst->step, dst->nx, dst->ny, dst->nz, 1);
+  dst->space = 1;
+
   return 0;
 }
 
@@ -746,12 +760,19 @@ EXPORT char cgrid_cuda_fft_gradient_y(cgrid *src, cgrid *dst) {
 
 EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 
+  if(src->space == 0) {
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
+    exit(1);
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
   cgrid_cuda_fft_gradient_zW(cuda_block_address(dst->value), dst->fft_norm, dst->kx0, dst->step, dst->nx, dst->ny, dst->nz, 1);
+  dst->space = 1;
+
   return 0;
 }
 
@@ -765,12 +786,19 @@ EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 
 EXPORT char cgrid_cuda_fft_laplace(cgrid *src, cgrid *dst) {
 
+  if(src->space == 0) {
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
+    exit(1);
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
   cgrid_cuda_fft_laplaceW(cuda_block_address(dst->value), dst->fft_norm, dst->kx0, dst->ky0, dst->kz0, dst->step, dst->nx, dst->ny, dst->nz, 1);
+  dst->space = 1;
+
   return 0;
 }
 
@@ -784,8 +812,7 @@ EXPORT char cgrid_cuda_fft_laplace(cgrid *src, cgrid *dst) {
 
 EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value) {
 
-  REAL step = laplace->step, norm = laplace->fft_norm;
-  REAL complex value2;
+  REAL step = laplace->step, norm = laplace->fft_norm, value2;
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle, laplace->id, 1) < 0) return -1;
 
@@ -795,6 +822,7 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value
   if(laplace->nx != 1) *value *= step;
   if(laplace->ny != 1) *value *= step;
   *value *= step * norm;
+
   return 0;
 }
 
@@ -861,7 +889,7 @@ EXPORT char cgrid_cuda_poisson(cgrid *grid) {
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
   cgrid_cufft_fft(grid);
-  cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz, 1);
+  cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz, grid->space);
   cgrid_cufft_fft_inv(grid);
 
   return 0;
