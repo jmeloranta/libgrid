@@ -763,7 +763,7 @@ EXPORT char cgrid_cuda_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
 
   if(gradient_z != grid) cuda_gpu2gpu(cuda_find_block(gradient_z->value), cuda_find_block(grid->value), 0);
 
-  cgrid_cuda_fft_gradient_zW(cuda_block_address(gradient_z->value), grid->fft_norm, grid->kx0, grid->step, 
+  cgrid_cuda_fft_gradient_zW(cuda_block_address(gradient_z->value), grid->fft_norm, grid->kz0, grid->step, 
                              grid->nx, grid->ny, grid->nz);
   return 0;
 }
