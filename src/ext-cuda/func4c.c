@@ -28,14 +28,15 @@ static inline REAL grid_func4(REAL rhop, REAL beta, REAL rhom, REAL C) {
 #ifdef USE_CUDA
 EXPORT char grid_func4_cuda_operate_one(rgrid *gridc, rgrid *grida, REAL beta, REAL rhom, REAL C) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->id, 1, gridc->value, gridc->grid_len, gridc->id, 0) < 0) return -1;
+  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
   grid_func4_cuda_operate_oneW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(grida->value), beta, rhom, C, grida->nx, grida->ny, grida->nz);
   return 0;
 }
 
 EXPORT char grid_func4_cuda_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, REAL beta, REAL rhom, REAL C) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->id, 1, gridb->value, gridb->grid_len, gridb->id, 1, gridc->value, gridc->grid_len, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0)
+    return -1;
   grid_func4_cuda_operate_one_productW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(gridb->value), (CUREAL *) cuda_block_address(grida->value), beta, rhom, C, grida->nx, grida->ny, grida->nz);
   return 0;
 }

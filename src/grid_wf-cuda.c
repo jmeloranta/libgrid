@@ -50,8 +50,7 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, pot->value, pot->grid_len, pot->cufft_handle, pot->id, 1) < 0) return -1;
    
-  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, add_abs, amp, rho0, cons, lx, hx, ly, hy, lz, hz, 
-     grid->nx, grid->ny, grid->nz);
+  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, add_abs, amp, rho0, cons, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
   return 0;
 }
 
@@ -64,7 +63,7 @@ EXPORT char grid_cuda_wf_density(wf *gwf, rgrid *density) {
 
   cgrid *grid = gwf->grid;
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, density->value, density->grid_len, density->cuff_handle, density->id, 0) < 0)
+  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, density->value, density->grid_len, density->cufft_handle_r2c, density->id, 0) < 0)
     return -1;
   grid_cuda_wf_densityW(cuda_block_address(grid->value), cuda_block_address(density->value), grid->nx, grid->ny, grid->nz);
   return 0;

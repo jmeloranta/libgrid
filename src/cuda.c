@@ -62,7 +62,7 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
 
   int i;
 
-  if(!(use_gpus = (int *) malloc(sizeof(int) * ngpus))) {
+  if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) use_ngpus))) {
     fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
     abort();
   }
@@ -146,12 +146,12 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
 
   if(block->cufft_handle == -1) { /* Copy without cuttf handle */
     for(i = 0; block->gpu_info->descriptor->nGPUs; i++) {
-      CudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
+      cudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
       if(cudaMemcpy(block->gpu_info->descriptor->data[i], block->host_mem + st, block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) return -1;
-      st = block->gpu_info->size[i];
+      st = block->gpu_info->descriptor->size[i];
     }
   } else {
-    if(cufftXtMemcpy(block->cufft_handle, block->gpu_info, block->host_mem, CUFFT_COPY_HOST_TO_DEVICE) != cudaSuccess) return -1;
+    if(cufftXtMemcpy(block->cufft_handle, block->gpu_info, block->host_mem, CUFFT_COPY_HOST_TO_DEVICE) != CUFFT_SUCCESS) return -1;
   }
   return 0;
 }
@@ -180,12 +180,12 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
 
   if(block->cufft_handle == -1) { /* Copy without cuttf handle */
     for(i = 0; block->gpu_info->descriptor->nGPUs; i++) {
-      CudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
+      cudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
       if(cudaMemcpy(block->host_mem + st, block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) return -1;
-      st = block->gpu_info->size[i];
+      st = block->gpu_info->descriptor->size[i];
     }
   } else {
-    if(cufftXtMemcpy(block->cufft_handle, block->host_mem, block->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != cudaSuccess) return -1;
+    if(cufftXtMemcpy(block->cufft_handle, block->host_mem, block->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != CUFFT_SUCCESS) return -1;
   }
   return 0;
 }
@@ -214,12 +214,12 @@ EXPORT inline int cuda_gpu2gpu(gpu_mem_block *dst, gpu_mem_block *src) {
   }
 
   if(src->cufft_handle == -1) { /* Copy without cuttf handle */
-    for(i = 0; block->gpu_info->descriptor->nGPUs; i++) {
-      CudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
+    for(i = 0; dst->gpu_info->descriptor->nGPUs; i++) {
+      cudaSetDevice(dst->gpu_info->descriptor->GPUs[i]);
       if(cudaMemcpy(dst->gpu_info->descriptor->data[i], dst->gpu_info->descriptor->data[i], src->gpu_info->descriptor->size[i], cudaMemcpyDeviceToDevice) != cudaSuccess) return -1;
     }
   } else {
-    if(cufftXtMemcpy(src->cufft_handle, dst->gpu_info, src->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != cudaSuccess) return -1;
+    if(cufftXtMemcpy(dst->cufft_handle, dst->gpu_info, src->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != CUFFT_SUCCESS) return -1;
   }
   return 0;
 }
@@ -302,12 +302,12 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
   for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++)
     total_alloc -= ptr->gpu_info->descriptor->size[i];
   if(ptr->cufft_handle == -1) {
-    for(i = 0; i < ptr->gpu_info->nGPUs; i++)
+    for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++)
       cudaFree(ptr->gpu_info->descriptor->data[i]);
     free(ptr->gpu_info->descriptor);
     free(ptr->gpu_info);
   } else {
-    if(cufftXtFree(ptr->gpu_info) != cudaSuccess) {
+    if(cufftXtFree(ptr->gpu_info) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Failed to free memory.\n");
       abort();
     }
@@ -331,11 +331,11 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
 
   if(block->cufft_handle == -1) {
     /* This is for GPU blocks that are not to be used with cufft */
-    if(!(block->gpu_info = (cudaLibXtDesc_t *) malloc(sizeof(cudaLibXtDesc_t)))) {
+    if(!(block->gpu_info = (cudaLibXtDesc *) malloc(sizeof(cudaLibXtDesc)))) {
       fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
       abort();
     }
-    if(!(block->gpu_info->descriptor = (cudaXtDesc_t *) malloc(sizeof(cudaXtDesc_t)))) {
+    if(!(block->gpu_info->descriptor = (cudaXtDesc *) malloc(sizeof(cudaXtDesc)))) {
       fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
       abort();
     }
@@ -344,7 +344,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
     block->gpu_info->descriptor->nGPUs = use_ngpus;
     for(i = 0; i < use_ngpus; i++) {
       block->gpu_info->descriptor->GPUs[i] = use_gpus[i];
-      if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i])), length) != cudaSuccess) {
+      if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), length) != cudaSuccess) {
         int j;
         for(j = 0; j < i; j++)
           cudaFree(block->gpu_info->descriptor->data[j]);
@@ -361,7 +361,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
     block->gpu_info->libDescriptor = NULL;
   } else {
     /* cufft capable blocks */
-    if(cufftXtMalloc(block->cufft_handle, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE) != cudaSuccess)
+    if(cufftXtMalloc(block->cufft_handle, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE) != CUFFT_SUCCESS)
       return -1;
   }
   return 0;
@@ -387,7 +387,6 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
   gpu_mem_block *ptr, *rptr = NULL, *new;
   time_t current;
   long current_access;
-  int i;
 
   if(!enable_cuda) return NULL;
 #ifdef CUDA_DEBUG
@@ -412,7 +411,7 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
 
   /* Data not in GPU - try to allocate & possibly swap out other blocks */
 
-  while(alloc_mem(new) == -1) { // If successful, also fills out new->gpu_info
+  while(alloc_mem(new, length) == -1) { // If successful, also fills out new->gpu_info
     /* search for swap out candidate (later: also consider memory block sizes) */
     current = time(0) + 1;
     current_access = 0;
@@ -436,7 +435,6 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
   if(cuda_debug_flag) fprintf(stderr, "cuda: Succesfully added new block to GPU.\n");
 #endif
   total_alloc += length;
-  new->length = length;
   new->host_mem = host_mem;
   new->next = gpu_blocks_head;
   gpu_blocks_head = new;
@@ -453,7 +451,7 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing memory of the new block to GPU.\n");
 #endif
-    cuda_mem2gpu(new, 0);
+    cuda_mem2gpu(new);
   }
   return new;
 }
@@ -588,7 +586,7 @@ EXPORT char cuda_add_two_blocks(void *host_mem1, size_t length1, cufftHandle cuf
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
 #endif
-    cuda_mem2gpu(block1, 0);  // Now that everything is OK, we need to also sync block1 to GPU (as it wasn't there already)
+    cuda_mem2gpu(block1);  // Now that everything is OK, we need to also sync block1 to GPU (as it wasn't there already)
   }
   /* Both blocks now successfully in GPU memory */
 #ifdef CUDA_DEBUG
@@ -683,13 +681,13 @@ EXPORT char cuda_add_three_blocks(void *host_mem1, size_t length1, cufftHandle c
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
 #endif
-    cuda_mem2gpu(block1, 0);  // Now that everything is OK, we need to also sync block1
+    cuda_mem2gpu(block1);  // Now that everything is OK, we need to also sync block1
   }
   if(!test2 && copy2) {
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem2 to GPU.\n");
 #endif
-    cuda_mem2gpu(block2, 0);  // Now that everything is OK, we need to also sync block2
+    cuda_mem2gpu(block2);  // Now that everything is OK, we need to also sync block2
   }
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: Successful three-block add.\n");
@@ -813,19 +811,19 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
 #endif
-    cuda_mem2gpu(block1, 0);  // Now that everything is OK, we need to also sync block1
+    cuda_mem2gpu(block1);  // Now that everything is OK, we need to also sync block1
   }
   if(!test2 && copy2) {
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem2 to GPU.\n");
 #endif
-    cuda_mem2gpu(block2, 0);  // Now that everything is OK, we need to also sync block2
+    cuda_mem2gpu(block2);  // Now that everything is OK, we need to also sync block2
   }
   if(!test3 && copy3) {
 #ifdef CUDA_DEBUG
     if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem3 to GPU.\n");
 #endif
-    cuda_mem2gpu(block3, 0);  // Now that everything is OK, we need to also sync block2
+    cuda_mem2gpu(block3);  // Now that everything is OK, we need to also sync block2
   }
   return 0;
 }
@@ -863,8 +861,8 @@ EXPORT int cuda_get_element(void *host_mem, int gpu, size_t index, size_t size, 
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
-  CudaSetDevice(gpu);
-  if(cudaMemcpy(value, &((char *) ptr->gpu_mem)[index * size], size, cudaMemcpyDeviceToHost) != cudaSuccess) return -1;
+  cudaSetDevice(gpu);
+  if(cudaMemcpy(value, &((char *) ptr->gpu_info->descriptor->data)[index * size], size, cudaMemcpyDeviceToHost) != cudaSuccess) return -1;
   return 0;
 }
 
@@ -901,8 +899,8 @@ EXPORT int cuda_set_element(void *host_mem, int gpu, size_t index, size_t size, 
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
-  CudaSetDevice(gpu);
-  if(cudaMemcpy(&((char *) ptr->gpu_mem)[index * size], value, size, cudaMemcpyHostToDevice) != cudaSuccess) return -1;
+  cudaSetDevice(gpu);
+  if(cudaMemcpy(&((char *) ptr->gpu_info->descriptor->data)[index * size], value, size, cudaMemcpyHostToDevice) != cudaSuccess) return -1;
   return 0;
 }
 
@@ -1001,7 +999,7 @@ EXPORT void cuda_statistics(char verbose) {
 
   gpu_mem_block *ptr;
   long n = 0, nl = 0, lc = 999999, hc = 0;
-  size_t total_size = 0;
+  size_t total_size = 0, i;
   time_t oldest = time(0), newest = 0;
 
   if(!enable_cuda) {
@@ -1010,7 +1008,8 @@ EXPORT void cuda_statistics(char verbose) {
   }
   for(ptr = gpu_blocks_head; ptr; ptr = ptr->next, n++) {
     if(ptr->locked) nl++;
-    total_size += ptr->length;
+    for(i = 0; i < use_ngpus; i++)
+      total_size += ptr->gpu_info->descriptor->size[i];
     if(ptr->last_used < oldest) oldest = ptr->last_used;
     if(ptr->last_used > newest) newest = ptr->last_used;
     if(lc > ptr->access_count) lc = ptr->access_count;
@@ -1038,8 +1037,14 @@ EXPORT void cuda_statistics(char verbose) {
       fprintf(stderr, "Block number: %ld\n", n);
       fprintf(stderr, "Block ID    : %s\n", ptr->id);
       fprintf(stderr, "Block mem   : %lx\n", (long unsigned int) ptr->host_mem);
-      fprintf(stderr, "Block gpu   : %lx\n", (long unsigned int) ptr->gpu_mem);
-      fprintf(stderr, "Block size  : %ld MB (%ld bytes)\n", ptr->length / (1024 * 1024), ptr->length);
+      fprintf(stderr, "Block gpu   : ");
+      for(i = 0; i < use_ngpus; i++)
+        printf("%lx ", (long unsigned int) ptr->gpu_info->descriptor->data[i]);
+      printf("\n");
+      total_size = 0;
+      for(i = 0; i < use_ngpus; i++)
+        total_size += ptr->gpu_info->descriptor->size[i];
+      fprintf(stderr, "Block size  : %ld MB (%ld bytes)\n", total_size / (1024 * 1024), total_size);
       fprintf(stderr, "Created     : %s", ctime(&(ptr->created)));
       fprintf(stderr, "Last used   : %s", ctime(&(ptr->last_used)));
       fprintf(stderr, "Access cnt  : %ld\n", ptr->access_count);
@@ -1058,7 +1063,7 @@ EXPORT void cuda_statistics(char verbose) {
  *
  */
 
-EXPORT cudaXtDesc_t *cuda_block_address(void *host_mem) {
+EXPORT cudaXtDesc *cuda_block_address(void *host_mem) {
 
   gpu_mem_block *ptr;
 
@@ -1139,7 +1144,7 @@ EXPORT int cuda_fft_policy(void *host_mem, size_t length, cufftHandle cufft_hand
  *
  */
 
-EXPORT int cuda_one_block_policy(void *host_mem, size_t length, cufft_handle, char *id, char copy) {
+EXPORT int cuda_one_block_policy(void *host_mem, size_t length, cufftHandle cufft_handle, char *id, char copy) {
 
   gpu_mem_block *ptr;
 
@@ -1283,7 +1288,7 @@ EXPORT int cuda_three_block_policy(void *host_mem1, size_t length1, cufftHandle 
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
-  return cuda_add_three_blocks(host_mem1, length1, id1, copy1, host_mem2, length2, id2, copy2, host_mem3, length3, id3, copy3);
+  return cuda_add_three_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, copy3);
 }
 
 /*
@@ -1333,7 +1338,7 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, cufftHandle c
   if(host_mem1 == host_mem4) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, (char) (copy1 + copy4), host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, copy3);
   if(host_mem2 == host_mem3) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, (char) (copy2 + copy3), host_mem4, length4, cufft_handle4, id4, copy4);
   if(host_mem2 == host_mem4) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, (char) (copy2 + copy4), host_mem3, length3, cufft_handle3, id3, copy3);
-  if(host_mem3 == host_mem4) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handl2, id2, copy2, host_mem3, length3, cufft_handle3, id3, (char) (copy3 + copy4));
+  if(host_mem3 == host_mem4) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, (char) (copy3 + copy4));
 #ifdef CUDA_DEBUG
   if(cuda_debug_flag) fprintf(stderr, "cuda: four blocks policy check for host mem1 %lx, host mem2 %lx, host mem3 %lx, and host mem4 %lx.\n", (unsigned long int) host_mem1, (unsigned long int) host_mem2, (unsigned long int) host_mem3, (unsigned long int) host_mem4);
 #endif

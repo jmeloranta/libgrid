@@ -1,5 +1,8 @@
 #include <cuda_runtime_api.h>
 #include <cuda.h>
+#include <cudalibxt.h>
+#include <cufft.h>
+#include <cufftXt.h>
 
 #define MAX_GPU 8   /* Set to zero to disable multi-GPU code */
 
@@ -8,7 +11,7 @@
 
 struct gpu_mem_block {
   void *host_mem;              /* Host memory pointer */
-  cudaLibXtDesc_t *gpu_info;   /* GPU memory information pointer (NULL if not in GPU memory) */
+  cudaLibXtDesc *gpu_info;     /* GPU memory information pointer (NULL if not in GPU memory) */
   cufftHandle cufft_handle;    /* cufft handle (-1 = when not in use) */
   time_t created;              /* time(0) value of block creation */
   time_t last_used;            /* time(0) value of last access */

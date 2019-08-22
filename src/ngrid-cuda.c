@@ -23,7 +23,7 @@
 
 EXPORT char grid_cuda_real_to_complex_re(cgrid *dest, rgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cuda_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_real_to_complex_reW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
@@ -40,7 +40,7 @@ EXPORT char grid_cuda_real_to_complex_re(cgrid *dest, rgrid *source) {
 
 EXPORT char grid_cuda_real_to_complex_im(cgrid *dest, rgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_real_to_complex_imW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
@@ -57,7 +57,7 @@ EXPORT char grid_cuda_real_to_complex_im(cgrid *dest, rgrid *source) {
 
 EXPORT char grid_cuda_add_real_to_complex_re(cgrid *dest, rgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_add_real_to_complex_reW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
@@ -74,7 +74,7 @@ EXPORT char grid_cuda_add_real_to_complex_re(cgrid *dest, rgrid *source) {
 
 EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dest, rgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_add_real_to_complex_imW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
@@ -91,7 +91,7 @@ EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dest, rgrid *source) {
 
 EXPORT char grid_cuda_product_complex_with_real(cgrid *dest, rgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cuff_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_product_complex_with_realW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
@@ -108,7 +108,7 @@ EXPORT char grid_cuda_product_complex_with_real(cgrid *dest, rgrid *source) {
 
 EXPORT char grid_cuda_complex_im_to_real(rgrid *dest, cgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle_r2c, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_complex_im_to_realW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
@@ -125,7 +125,7 @@ EXPORT char grid_cuda_complex_im_to_real(rgrid *dest, cgrid *source) {
 
 EXPORT char grid_cuda_complex_re_to_real(rgrid *dest, cgrid *source) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle_r2c, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
     return -1;
 
   grid_cuda_complex_re_to_realW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);

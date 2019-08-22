@@ -2250,9 +2250,19 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
     return grid->value_outside(grid, i, j, k);
 
 #ifdef USE_CUDA
-  cuda_remove(grid->value, 1);
+  REAL value;
+  if(cuda_find_block(grid->value)) {
+    INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
+    gpu = i / nnx1;
+    if(gpu >= ngpu1) {
+      idx = i % (ngpu1 * nnx1);
+      gpu = idx / nnx2 + ngpu1;
+    } else idx = i % nnx1;
+    cuda_get_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz2 + k), sizeof(REAL), (void *) &value);
+    return value;
+  } else
 #endif
- return grid->value[(i * grid->ny + j) * grid->nz2 + k];
+  return grid->value[(i * grid->ny + j) * grid->nz2 + k];
 }
 
 /*
@@ -2275,11 +2285,17 @@ EXPORT inline void rgrid_value_to_index(rgrid *grid, INT i, INT j, INT k, REAL v
   if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= grid->nz) return;
 
 #ifdef USE_CUDA
-  if(cuda_find_block(grid->value))
-    cuda_set_element(grid->value, (size_t) ((i * grid->ny + j) * grid->nz2 + k), sizeof(REAL), &value);
-  else
+  if(cuda_find_block(grid->value)) {
+    INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
+    gpu = i / nnx1;
+    if(gpu >= ngpu1) {
+      idx = i % (ngpu1 * nnx1);
+      gpu = idx / nnx2 + ngpu1;
+    } else idx = i % nnx1;
+    cuda_set_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL), (void *) &value);
+  } else
 #endif
-   grid->value[(i * grid->ny + j) * grid->nz2 + k] = value;
+  grid->value[(i * grid->ny + j) * grid->nz2 + k] = value;
 }
 
 /*

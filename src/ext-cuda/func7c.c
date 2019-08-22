@@ -45,7 +45,7 @@ EXPORT char grid_func7a_cuda_operate_one(cgrid *grid, REAL rmin, REAL radd, REAL
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
   x0 = grid->x0;
   y0 = grid->y0;
   z0 = grid->z0;
@@ -110,7 +110,7 @@ EXPORT char grid_func7b_cuda_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
   x0 = grid->x0;
   y0 = grid->y0;
   z0 = grid->z0;
@@ -154,7 +154,7 @@ EXPORT char grid_func7c_cuda_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
   x0 = grid->x0;
   y0 = grid->y0;
   z0 = grid->z0;
@@ -198,7 +198,7 @@ EXPORT char grid_func7d_cuda_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
   x0 = grid->x0;
   y0 = grid->y0;
   z0 = grid->z0;
@@ -234,5 +234,3 @@ EXPORT void grid_func7d_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, 
     }
   }
 }
-
-

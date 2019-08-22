@@ -97,7 +97,7 @@ static inline REAL grid_func6a(REAL rhop, REAL mass, REAL temp, REAL c4) {
 #ifdef USE_CUDA
 EXPORT char grid_func6a_cuda_operate_one(rgrid *gridc, rgrid *grida, REAL mass, REAL temp, REAL c4) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->id, 1, gridc->value, gridc->grid_len, gridc->id, 0) < 0) return -1;
+  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
   grid_func6a_cuda_operate_oneW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(grida->value), mass, temp, c4, grida->nx, grida->ny, grida->nz);
   return 0;
 }
@@ -134,7 +134,7 @@ static inline REAL grid_func6b(REAL rhop, REAL mass, REAL temp, REAL c4) {
 #ifdef USE_CUDA
 EXPORT char grid_func6b_cuda_operate_one(rgrid *gridc, rgrid *grida, REAL mass, REAL temp, REAL c4) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->id, 1, gridc->value, gridc->grid_len, gridc->id, 0) < 0) return -1;
+  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
   grid_func6b_cuda_operate_oneW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(grida->value), mass, temp, c4, grida->nx, grida->ny, grida->nz);
   return 0;
 }
