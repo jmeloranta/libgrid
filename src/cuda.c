@@ -353,7 +353,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
         block->gpu_info = NULL;
         return -1;
       }
-      block->gpu_info->descriptor->size[i] = length;
+      block->gpu_info->descriptor->size[i] = length;  /* Reserve length amount of memory on ALL GPUs */
     }
     block->gpu_info->descriptor->cudaXtState = NULL;
     block->gpu_info->library = LIB_FORMAT_UNDEFINED; // Don't run cufft on this!
@@ -374,7 +374,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
  * host_mem     = Host memory pointer containing the data (void *; input).
  * length       = Length of host memory data (size_t; input). If cufft_handle == -1, 
  *                allocate this amount on all GPUs, otherwise use CUFFT partitioning of data over the GPUs.
- * cufft_handle = CUFFT handle (if not known, -1). If != -1, CUFFT multi GPU routines are used for managing memory (cufftHandle).
+ * cufft_handle = CUFFT handle (if not known, -1; allocates length amount of memory on all GPUs). If != -1, CUFFT multi GPU routines are used for managing memory (cufftHandle).
  * id           = String describing the block contents. Useful for debugging. (char *; input).
  * copy         = Copy host_mem to gpu_mem? (1 = yes, 0 = no).
  *

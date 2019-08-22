@@ -37,7 +37,8 @@ typedef struct cgrid_struct { /* complex grid data type */
   fftwl_plan plan, iplan, implan, iimplan;
 #endif
 #ifdef USE_CUDA
-  cufftHandle cufft_handle;
+  cufftHandle cufft_handle;  /* CUFFT plan handle */
+  char space;                /* 0 = Real space (partitioning along x over GPUs) or 1 = Fourier space (partitioning along y over GPUs) */
 #endif
   REAL fft_norm;
   REAL fft_norm2;
@@ -63,8 +64,8 @@ typedef struct rgrid_struct { /* real grid data type */
   fftwl_plan plan, iplan;
 #endif
 #ifdef USE_CUDA
-  cufftHandle cufft_handle_r2c;
-  cufftHandle cufft_handle_c2r;
+  cufftHandle cufft_handle_r2c;   /* CUFFT R2C plan handle */
+  cufftHandle cufft_handle_c2r;   /* CUFFT C2R plan handle */
 #endif
   REAL fft_norm;
   REAL fft_norm2;

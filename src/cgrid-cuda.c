@@ -25,7 +25,7 @@ cudaXtDesc *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
  *
  */
 
-EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in case FFTW should be used for the grid */
+EXPORT void cgrid_cuda_init(size_t len) {
 
   static size_t prev_len = 0;
   int *gpus;
@@ -39,18 +39,10 @@ EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in
         cuda_unlock_block(grid_gpu_mem);
         cuda_remove_block(grid_gpu_mem, 0);
       }
-#ifdef SINGLE_PREC
-      fftwf_free(grid_gpu_mem);
-#else
-      fftw_free(grid_gpu_mem);
-#endif
+      cudaFreeHost(grid_gpu_mem);    
     }
     prev_len = len;
-#ifdef SINGLE_PREC
-    if(!(grid_gpu_mem = (void *) fftwf_malloc(len))) {
-#else
-    if(!(grid_gpu_mem = (void *) fftw_malloc(len))) {
-#endif
+    if(cudaMallocHost((void **) &grid_gpu_mem, len) != cudaSuccess) {
       fprintf(stderr, "libgrid(CUDA): Not enough memory in cgrid_cuda_init().\n");
       abort();
     }
@@ -58,7 +50,7 @@ EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in
       fprintf(stderr, "libgrid(CUDA): Failed to allocate temporary space on GPU.\n");
       abort();
     }
-    grid_gpu_mem_addr = cuda_block_address(grid_gpu_mem);
+    grid_gpu_mem_addr = cuda_block_address(grid_gpu_mem); /* Reserve memory on ALL GPUs (cufft_handle = -1) */
     cuda_lock_block(grid_gpu_mem);
   }
 }
@@ -66,18 +58,24 @@ EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in
 /*
  * Convolute two grids (in Fourier space).
  *
- * gridc = Destination (cgrid *; output).
- * grida = Source 1 (cgrid *; input).
- * gridb = Source 2 (cgrid *; input).
+ * dst   = Destination (cgrid *; output).
+ * src1  = Source 1 (cgrid *; input).
+ * src2  = Source 2 (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
+EXPORT char cgrid_cuda_fft_convolute(cgrid *dst, cgrid *src1, cgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
+  if(src1->space == 0 || src2->space == 0) {
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
+    exit(1);
+  }
 
-  cgrid_cuda_fft_convoluteW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->fft_norm2, grida->nx, grida->ny, grida->nz);
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
+
+  cgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->fft_norm2, dst->nx, dst->ny, dst->nz, 1);
+  dst->space = 1; // Result in Fourier space
 
   return 0;
 }
@@ -91,11 +89,11 @@ EXPORT char cgrid_cuda_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  *
  */
 
-EXPORT char cgrid_cuda_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
+EXPORT char cgrid_cuda_abs_power(cgrid *dst, cgrid *src, REAL exponent) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 0) < 0) return -1;
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_abs_powerW(cuda_block_address(gridb->value), cuda_block_address(grida->value), exponent, grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_abs_powerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
@@ -103,17 +101,17 @@ EXPORT char cgrid_cuda_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
 /* 
  * Rise grid to given power.
  *
- * gridb    = destination grid (cgrid *; output).
- * grida    = 1st source grid (cgrid *; input).
+ * dst      = destination grid (cgrid *; output).
+ * src      = 1st source grid (cgrid *; input).
  * exponent = exponent to be used (REAL complex; input).
  *
  */
 
-EXPORT char cgrid_cuda_power(cgrid *gridb, cgrid *grida, REAL exponent) {
+EXPORT char cgrid_cuda_power(cgrid *dst, cgrid *src, REAL exponent) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 0) < 0) return -1;
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_powerW(cuda_block_address(gridb->value), cuda_block_address(grida->value), exponent, grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_powerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
@@ -134,122 +132,122 @@ EXPORT char cgrid_cuda_multiply(cgrid *grid, REAL complex c) {
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);
-  cgrid_cuda_multiplyW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiplyW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz, grid->space);
 
   return 0;
 }
 
 /*
- * Add two grids: gridc = grida + gridb
+ * Add two grids: dst = src1 + src2
  *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st of the grids to be added (cgrid *; input).
- * gridb = 2nd of the grids to be added (cgrid *; input).
+ * dst  = destination grid (cgrid *; output).
+ * src1 = 1st of the grids to be added (cgrid *; input).
+ * src2 = 2nd of the grids to be added (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_sum(cgrid *gridc, cgrid *grida, cgrid *gridb) {
+EXPORT char cgrid_cuda_sum(cgrid *dst, cgrid *src1, cgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_sumW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_sumW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
 
 /*
- * Subtract two grids: gridc = grida - gridb
+ * Subtract two grids: dst = src1 - src2
  *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st of the grids for subtraction (cgrid *; input).
- * gridb = 2nd of the grids for subtraction (cgrid *; input).
+ * dst = destination grid (cgrid *; output).
+ * src1 = 1st of the grids for subtraction (cgrid *; input).
+ * src2 = 2nd of the grids for subtraction (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_difference(cgrid *gridc, cgrid *grida, cgrid *gridb) {
+EXPORT char cgrid_cuda_difference(cgrid *dst, cgrid *src1, cgrid *src2) {
   
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_differenceW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
-
-  return 0;
-}
-
-/* 
- * Calculate product of two grids: gridc = grida * gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- *
- */
-
-EXPORT char cgrid_cuda_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
-
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
-
-  cgrid_cuda_productW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_differenceW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
 
 /* 
- * Calculate conjugate product of two grids: gridc = grida^* X gridb
+ * Calculate product of two grids: dst = src1 * src2
  *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (complex conjugated) (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
+ * dst  = destination grid (cgrid *; output).
+ * src1 = 1st source grid (cgrid *; input).
+ * src2 = 2nd source grid (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_conjugate_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
+EXPORT char cgrid_cuda_product(cgrid *dst, cgrid *src1, cgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_conjugate_productW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
 
 /* 
- * Divide two grids: gridc = grida / gridb
+ * Calculate conjugate product of two grids: dst = src1^* X src2
  *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
+ * dst = destination grid (cgrid *; output).
+ * src1 = 1st source grid (complex conjugated) (cgrid *; input).
+ * src2 = 2nd source grid (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_division(cgrid *gridc, cgrid *grida, cgrid *gridb) {
+EXPORT char cgrid_cuda_conjugate_product(cgrid *dst, cgrid *src1, cgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_divisionW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_conjugate_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
 
 /* 
- * "Safely" divide two grids: gridc = grida / (gridb + eps)
+ * Divide two grids: dst = src1 / src2
  *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- * eps   = Epsilon (REAL; input).
+ * dst = destination grid (cgrid *; output).
+ * src1 = 1st source grid (cgrid *; input).
+ * src2 = 2nd source grid (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_division_eps(cgrid *gridc, cgrid *grida, cgrid *gridb, REAL eps) {
+EXPORT char cgrid_cuda_division(cgrid *dst, cgrid *src1, cgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_division_epsW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), eps, grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_divisionW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz, dst->space);
+
+  return 0;
+}
+
+/* 
+ * "Safely" divide two grids: dst = src1 / (src2 + eps)
+ *
+ * dst  = destination grid (cgrid *; output).
+ * src1 = 1st source grid (cgrid *; input).
+ * src2 = 2nd source grid (cgrid *; input).
+ * eps  = Epsilon (REAL; input).
+ *
+ */
+
+EXPORT char cgrid_cuda_division_eps(cgrid *dst, cgrid *src1, cgrid *src2, REAL eps) {
+
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
+
+  cgrid_cuda_division_epsW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), eps, dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
@@ -270,7 +268,7 @@ EXPORT char cgrid_cuda_add(cgrid *grid, REAL complex c) {
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);
-  cgrid_cuda_addW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_addW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz, grid->space);
 
   return 0;
 }
@@ -294,7 +292,7 @@ EXPORT char cgrid_cuda_multiply_and_add(cgrid *grid, REAL complex cm, REAL compl
   ccm.y = CIMAG(cm);
   cca.x = CREAL(ca);
   cca.y = CIMAG(ca);
-  cgrid_cuda_multiply_and_addW(cuda_block_address(grid->value), ccm, cca, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiply_and_addW(cuda_block_address(grid->value), ccm, cca, grid->nx, grid->ny, grid->nz, grid->space);
 
   return 0;
 }
@@ -318,53 +316,53 @@ EXPORT char cgrid_cuda_add_and_multiply(cgrid *grid, REAL complex ca, REAL compl
   ccm.y = CIMAG(cm);
   cca.x = CREAL(ca);
   cca.y = CIMAG(ca);
-  cgrid_cuda_add_and_multiplyW(cuda_block_address(grid->value), cca, ccm, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_add_and_multiplyW(cuda_block_address(grid->value), cca, ccm, grid->nx, grid->ny, grid->nz, grid->space);
 
   return 0;
 }
 
 /* 
- * Add scaled grid (multiply/add): gridc = gridc + d * grida
+ * Add scaled grid (multiply/add): dst = dst + d * src
  *
- * gridc = destination grid for the operation (cgrid *; input/output).
+ * dst   = destination grid for the operation (cgrid *; input/output).
  * d     = multiplier for the operation (REAL complex; input).
- * grida = source grid for the operation (cgrid *; input).
+ * src = source grid for the operation (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_add_scaled(cgrid *gridc, REAL complex d, cgrid *grida) {
+EXPORT char cgrid_cuda_add_scaled(cgrid *dst, REAL complex d, cgrid *src) {
 
   CUCOMPLEX dd;
 
-  if(cuda_two_block_policy(gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 1, grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1) < 0) return -1;
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1) < 0) return -1;
 
   dd.x = CREAL(d);
   dd.y = CIMAG(d);
-  cgrid_cuda_add_scaledW(cuda_block_address(gridc->value), dd, cuda_block_address(grida->value), grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_add_scaledW(cuda_block_address(dst->value), dd, cuda_block_address(src->value), dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
 
 /*
- * Perform the following operation: gridc = gridc + d * grida * gridb.
+ * Perform the following operation: dst = dst + d * src1 * src2.
  *
- * gridc = destination grid (cgrid *; input/output).
+ * dst   = destination grid (cgrid *; input/output).
  * d     = constant multiplier (REAL complex; input).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
+ * src1  = 1st source grid (cgrid *; input).
+ * src2  = 2nd source grid (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_add_scaled_product(cgrid *gridc, REAL complex d, cgrid *grida, cgrid *gridb) {
+EXPORT char cgrid_cuda_add_scaled_product(cgrid *dst, REAL complex d, cgrid *src1, cgrid *src2) {
 
   CUCOMPLEX dd;
 
-  if(cuda_three_block_policy(gridc->value, gridc->grid_len, gridc->cufft_handle, gridc->id, 1, grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, 
-                             gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1) < 0) return -1;
 
   dd.x = CREAL(d);
   dd.y = CIMAG(d);
-  cgrid_cuda_add_scaled_productW(cuda_block_address(gridc->value), dd, cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  cgrid_cuda_add_scaled_productW(cuda_block_address(dst->value), dd, cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz, dst->space);
 
   return 0;
 }
@@ -372,17 +370,17 @@ EXPORT char cgrid_cuda_add_scaled_product(cgrid *gridc, REAL complex d, cgrid *g
 /*
  * Copy two grids.
  *
- * copy = destination (cgrid *; output).
- * grid = source (cgrid *; input).
+ * dst  = destination (cgrid *; output).
+ * src  = source (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_copy(cgrid *copy, cgrid *grid) {
+EXPORT char cgrid_cuda_copy(cgrid *dst, cgrid *src) {
 
-  if(cuda_copy_policy(copy->value, copy->grid_len, copy->cufft_handle, copy->id, grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
+  if(cuda_copy_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, src->value, src->grid_len, src->cufft_handle, src->id) < 0) return -1;
 
-  cuda_gpu2gpu(cuda_find_block(copy->value), cuda_find_block(grid->value));
-
+  cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
+  dst->space = src->space;
   return 0;
 }
 
@@ -402,7 +400,8 @@ EXPORT char cgrid_cuda_constant(cgrid *grid, REAL complex c) {
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);
-  cgrid_cuda_constantW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_constantW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz, grid->space);
+  grid->space = 0;  // TODO: Real space but should really be specified by the caller!
 
   return 0;
 }
@@ -421,7 +420,7 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value, grid->space);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
@@ -433,13 +432,14 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 /*
  * Integrate over a grid with limits.
  *
- * grid = grid to be integrated (cgrid *; input).
- * xl   = lower limit for x (REAL; input).
- * xu   = upper limit for x (REAL; input).
- * yl   = lower limit for y (REAL; input).
- * yu   = upper limit for y (REAL; input).
- * zl   = lower limit for z (REAL; input).
- * zu   = upper limit for z (REAL; input).
+ * grid  = grid to be integrated (cgrid *; input).
+ * xl    = lower limit for x (REAL; input).
+ * xu    = upper limit for x (REAL; input).
+ * yl    = lower limit for y (REAL; input).
+ * yu    = upper limit for y (REAL; input).
+ * zl    = lower limit for z (REAL; input).
+ * zu    = upper limit for z (REAL; input).
+ * value = integration result (REAL complex *; output).
  *
  */
 
@@ -449,7 +449,7 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value, grid->space);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
@@ -472,7 +472,7 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value, grid->space);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
@@ -496,7 +496,7 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, (CUCOMPLEX *) value, gridb->space);
 
   if(gridb->nx != 1) *value *= step;
   if(gridb->ny != 1) *value *= step;
@@ -520,7 +520,7 @@ EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL c
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, (CUCOMPLEX *) value, gridb->space);
 
   if(gridb->nx != 1) *value *= step;
   if(gridb->ny != 1) *value *= step;
@@ -532,245 +532,245 @@ EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL c
 /* 
  * Differentiate a grid with respect to x (central difference).
  *
- * grid     = source grid (cgrid *; input).
- * gradient = destination grid (cgrid *; output).
- * inv_delta= 1 / (2 * step) (REAL; input).
+ * src       = source grid (cgrid *; input).
+ * dst       = destination grid (cgrid *; output).
+ * inv_delta = 1 / (2 * step) (REAL; input).
  * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_x(cgrid *grid, cgrid *gradient, REAL inv_delta, char bc) {
+EXPORT char cgrid_cuda_fd_gradient_x(cgrid *src, cgrid *dst, REAL inv_delta, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, gradient->value, gradient->grid_len, gradient->cufft_handle, gradient->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_gradient_xW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_gradient_xW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /* 
  * Differentiate a grid with respect to y (central difference).
  *
- * grid     = source grid (cgrid *; input).
- * gradient = destination grid (cgrid *; output).
- * inv_delta= 1 / (2 * step) (REAL; input).
+ * src       = source grid (cgrid *; input).
+ * dst       = destination grid (cgrid *; output).
+ * inv_delta = 1 / (2 * step) (REAL; input).
  * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_y(cgrid *grid, cgrid *gradient, REAL inv_delta, char bc) {
+EXPORT char cgrid_cuda_fd_gradient_y(cgrid *src, cgrid *dst, REAL inv_delta, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, gradient->value, gradient->grid_len, gradient->cufft_handle, gradient->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_gradient_yW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_gradient_yW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /* 
  * Differentiate a grid with respect to z (central difference).
  *
- * grid     = source grid (cgrid *; input).
- * gradient = destination grid (cgrid *; output).
- * inv_delta= 1 / (2 * step) (REAL; input).
+ * src       = source grid (cgrid *; input).
+ * dst       = destination grid (cgrid *; output).
+ * inv_delta = 1 / (2 * step) (REAL; input).
  * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_z(cgrid *grid, cgrid *gradient, REAL inv_delta, char bc) {
+EXPORT char cgrid_cuda_fd_gradient_z(cgrid *src, cgrid *dst, REAL inv_delta, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, gradient->value, gradient->grid_len, gradient->cufft_handle, gradient->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_gradient_zW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_gradient_zW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /* 
  * Laplace of a grid (central difference).
  *
- * grid      = source grid (cgrid *; input).
- * laplace   = destination grid (cgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * src        = source grid (cgrid *; input).
+ * dst        = destination grid (cgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace(cgrid *grid, cgrid *laplace, REAL inv_delta2, char bc) {
+EXPORT char cgrid_cuda_fd_laplace(cgrid *src, cgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, laplace->value, laplace->grid_len, laplace->cufft_handle, laplace->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplaceW(cuda_block_address(grid->value), cuda_block_address(laplace->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_laplaceW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /*
  * Calculate vector laplacian of the grid (x component). This is the second derivative with respect to x.
  *
- * grid      = source grid (cgrid *; input).
- * laplacex  = destination grid (cgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * src        = source grid (cgrid *; input).
+ * dst        = destination grid (cgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace_x(cgrid *grid, cgrid *laplacex, REAL inv_delta2, char bc) {
+EXPORT char cgrid_cuda_fd_laplace_x(cgrid *src, cgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, laplacex->value, laplacex->grid_len, laplacex->cufft_handle, laplacex->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplace_xW(cuda_block_address(grid->value), cuda_block_address(laplacex->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_laplace_xW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /*
  * Calculate vector laplacian of the grid (y component). This is the second derivative with respect to y.
  *
- * grid     = source grid (cgrid *; input).
- * laplacey = destination grid (cgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * src        = source grid (cgrid *; input).
+ * dst        = destination grid (cgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace_y(cgrid *grid, cgrid *laplacey, REAL inv_delta2, char bc) {
+EXPORT char cgrid_cuda_fd_laplace_y(cgrid *src, cgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, laplacey->value, laplacey->grid_len, laplacey->cufft_handle, laplacey->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplace_yW(cuda_block_address(grid->value), cuda_block_address(laplacey->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_laplace_yW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /*
  * Calculate vector laplacian of the grid (z component). This is the second derivative with respect to z.
  *
- * grid     = source grid (cgrid *; input).
- * laplacez = destination grid (cgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * src        = source grid (cgrid *; input).
+ * dst        = destination grid (cgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_laplace_z(cgrid *grid, cgrid *laplacez, REAL inv_delta2, char bc) {
+EXPORT char cgrid_cuda_fd_laplace_z(cgrid *src, cgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, laplacez->value, laplacez->grid_len, laplacez->cufft_handle, laplacez->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) 
     return -1;
 
-  cgrid_cuda_fd_laplace_zW(cuda_block_address(grid->value), cuda_block_address(laplacez->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_laplace_zW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /*
  * Calculate dot product of the gradient of the grid.
  *
- * grid          = source grid (cgrid *; input).
- * grad_dot_grad = destination grid (cgrid *; output).
- * inv2_delta2   = 1 / (2.0 * step * 2.0 * step) (REAL; input).
- * bc        = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
+ * src         = source grid (cgrid *; input).
+ * dst         = destination grid (cgrid *; output).
+ * inv2_delta2 = 1 / (2.0 * step * 2.0 * step) (REAL; input).
+ * bc          = Boundary condition: 0 = Dirichlet, 1 = Neumann, 2 = Periodic (char; input).
  *
  */
 
-EXPORT char cgrid_cuda_fd_gradient_dot_gradient(cgrid *grid, cgrid *grad_dot_grad, REAL inv_2delta2, char bc) {
+EXPORT char cgrid_cuda_fd_gradient_dot_gradient(cgrid *src, cgrid *dst, REAL inv_2delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, grad_dot_grad->value, grad_dot_grad->grid_len, grad_dot_grad->cufft_handle, grad_dot_grad->id, 0) < 0)
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0)
     return -1;
 
-  cgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(grid->value), cuda_block_address(grad_dot_grad->value), inv_2delta2, bc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_2delta2, bc, dst->nx, dst->ny, dst->nz);
   return 0;
 }
 
 /*
  * Take complex conjugate of grid.
  * 
- * grid      = source grid (cgrid *; input).
- * conjugate = destination grid (cgrid *; output).
+ * dst    = destination grid (cgrid *; output).
+ * src    = source grid (cgrid *; input).
  *
  */
 
-EXPORT char cgrid_cuda_conjugate(cgrid *conjugate, cgrid *grid) {
+EXPORT char cgrid_cuda_conjugate(cgrid *dst, cgrid *src) {
 
-  if(cuda_two_block_policy(conjugate->value, conjugate->grid_len, conjugate->cufft_handle, conjugate->id, 0, grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0)
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0)
     return -1;
 
-  cgrid_cuda_conjugateW(cuda_block_address(conjugate->value), cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_conjugateW(cuda_block_address(dst->value), cuda_block_address(src->value), dst->nx, dst->ny, dst->nz, dst->space);
   return 0;
 }
 
 /*
  * Differentiate grid in the Fourier space along x.
  *
- * grid       = source grid (cgrid *; input).
- * gradient_x = destination grid (cgrid *; output).
+ * src    = source grid (cgrid *; input).
+ * dst    = destination grid (cgrid *; output).
  *
  */
 
-EXPORT char cgrid_cuda_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
+EXPORT char cgrid_cuda_fft_gradient_x(cgrid *src, cgrid *dst) {
 
-  if(cuda_two_block_policy(gradient_x->value, gradient_x->grid_len, gradient_x->cufft_handle, gradient_x->id, 0, grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
-  if (gradient_x != grid) cuda_gpu2gpu(cuda_find_block(gradient_x->value), cuda_find_block(grid->value));
+  if (dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_gradient_xW(cuda_block_address(gradient_x->value), grid->fft_norm, grid->kx0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fft_gradient_xW(cuda_block_address(dst->value), dst->fft_norm, dst->kx0, dst->step, dst->nx, dst->ny, dst->nz, 1);
   return 0;
 }
 
 /*
  * Differentiate grid in the Fourier space along y.
  *
- * grid       = source grid (cgrid *; input).
- * gradient_y = destination grid (cgrid *; output).
+ * src   = source grid (cgrid *; input).
+ * dst   = destination grid (cgrid *; output).
  *
  */
 
-EXPORT char cgrid_cuda_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
+EXPORT char cgrid_cuda_fft_gradient_y(cgrid *src, cgrid *dst) {
 
-  if(cuda_two_block_policy(gradient_y->value, gradient_y->grid_len, gradient_y->cufft_handle, gradient_y->id, 0, grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
-  if(gradient_y != grid) cuda_gpu2gpu(cuda_find_block(gradient_y->value), cuda_find_block(grid->value));
+  if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_gradient_yW(cuda_block_address(gradient_y->value), grid->fft_norm, grid->ky0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fft_gradient_yW(cuda_block_address(dst->value), dst->fft_norm, dst->ky0, dst->step, dst->nx, dst->ny, dst->nz, 1);
   return 0;
 }
 
 /*
  * Differentiate grid in the Fourier space along z.
  *
- * grid       = source grid (cgrid *; input).
- * gradient_z = destination grid (cgrid *; output).
+ * src   = source grid (cgrid *; input).
+ * dst   = destination grid (cgrid *; output).
  *
  */
 
-EXPORT char cgrid_cuda_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
+EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 
-  if(cuda_two_block_policy(gradient_z->value, gradient_z->grid_len, gradient_z->cufft_handle, gradient_z->id, 0, grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
-  if(gradient_z != grid) cuda_gpu2gpu(cuda_find_block(gradient_z->value), cuda_find_block(grid->value));
+  if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_gradient_zW(cuda_block_address(gradient_z->value), grid->fft_norm, grid->kx0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fft_gradient_zW(cuda_block_address(dst->value), dst->fft_norm, dst->kx0, dst->step, dst->nx, dst->ny, dst->nz, 1);
   return 0;
 }
 
 /*
  * Calculate second derivative of a grid (in Fourier space).
  *
- * grid    = source grid (cgrid *; input).
- * laplace = destination grid (cgrid *; output).
+ * src   = source grid (cgrid *; input).
+ * dst   = destination grid (cgrid *; output).
  *
  */
 
-EXPORT char cgrid_cuda_fft_laplace(cgrid *grid, cgrid *laplace) {
+EXPORT char cgrid_cuda_fft_laplace(cgrid *src, cgrid *dst) {
 
-  if(cuda_two_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle, laplace->id, 0, grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
-  if(laplace != grid) cuda_gpu2gpu(cuda_find_block(laplace->value), cuda_find_block(grid->value));
+  if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), grid->fft_norm, grid->kx0, grid->ky0, grid->kz0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_fft_laplaceW(cuda_block_address(dst->value), dst->fft_norm, dst->kx0, dst->ky0, dst->kz0, dst->step, dst->nx, dst->ny, dst->nz, 1);
   return 0;
 }
 
@@ -789,7 +789,7 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle, laplace->id, 1) < 0) return -1;
 
-  cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, laplace->nx, laplace->ny, laplace->nz, (CUCOMPLEX *) &value2);
+  cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, laplace->nx, laplace->ny, laplace->nz, (CUCOMPLEX *) &value2, 1);
   *value = CREAL(value2);
 
   if(laplace->nx != 1) *value *= step;
@@ -809,7 +809,7 @@ EXPORT char cgrid_cuda_zero_re(cgrid *grid) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_zero_reW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_zero_reW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, grid->space);
   return 0;
 }
 
@@ -824,7 +824,7 @@ EXPORT char cgrid_cuda_zero_im(cgrid *grid) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_zero_imW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_zero_imW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, grid->space);
   return 0;
 }
 
@@ -845,7 +845,7 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz, grid->space);
   return 0;
 }
 
@@ -861,7 +861,7 @@ EXPORT char cgrid_cuda_poisson(cgrid *grid) {
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
   cgrid_cufft_fft(grid);
-  cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz, 1);
   cgrid_cufft_fft_inv(grid);
 
   return 0;

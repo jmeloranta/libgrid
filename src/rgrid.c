@@ -201,7 +201,8 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
     return NULL;
   }
 #ifdef USE_CUDA
-  ngrid->cufft_handle_r2c = ngrid->cufft_handle_c2r = -1;
+  grid->cufft_handle_r2c = rgrid_cufft_alloc_r2c(ngrid);
+  grid->cufft_handle_c2r = rgrid_cufft_alloc_c2r(ngrid);
 #endif
   ngrid->plan = ngrid->iplan = NULL;
 

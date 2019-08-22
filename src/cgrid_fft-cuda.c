@@ -97,6 +97,7 @@ EXPORT int cgrid_cufft_fft(cgrid *grid) {
   }
 
   cuda_error_check();
+  grid->space = 1; // Data is now in Fourier space
 
   return 0;
 }
@@ -134,6 +135,7 @@ EXPORT int cgrid_cufft_fft_inv(cgrid *grid) {
   }
 
   cuda_error_check();
+  grid->space = 0; // Data is now in real space
 
   return 0;
 }
