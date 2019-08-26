@@ -2501,7 +2501,29 @@ EXPORT REAL rgrid_min(rgrid *grid) {
 }
 
 /*
- * Add random noise to grid.
+ * Add random noise to grid (normal distribution).
+ *
+ * grid  = Grid where the noise will be added (rgrid *; input/output).
+ * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
+ *
+ */
+
+EXPORT void rgrid_random_normal(rgrid *grid, REAL scale) {
+
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nzz = grid->nz2;
+
+#ifdef USE_CUDA
+  cuda_remove_block(grid->value, 1);  // TODO: use CURand
+#endif
+
+  for(i = 0; i < nx; i++)
+    for(j = 0; j < ny; j++)
+      for(k = 0; k < nz; k++)
+        grid->value[(i * ny + j) * nzz + k] += scale * grid_random_normal();
+}
+
+/*
+ * Add random noise to grid (uniform distribution).
  *
  * grid  = Grid where the noise will be added (rgrid *; input/output).
  * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
@@ -2510,26 +2532,20 @@ EXPORT REAL rgrid_min(rgrid *grid) {
 
 EXPORT void rgrid_random(rgrid *grid, REAL scale) {
 
-  static char been_here = 0;
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nzz = grid->nz2;
 
-  if(!been_here) {
-    srand48(time(0));
-    been_here = 1;
-  }
-
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);
+  cuda_remove_block(grid->value, 1);  // TODO: use CURand
 #endif
 
   for(i = 0; i < nx; i++)
     for(j = 0; j < ny; j++)
       for(k = 0; k < nz; k++)
-        grid->value[(i * ny + j) * nzz + k] += scale * 2.0 * (((REAL) drand48()) - 0.5);
+        grid->value[(i * ny + j) * nzz + k] += scale * grid_random();
 }
 
 /*
- * Add random noise to grid to part of grid.
+ * Add random noise to grid to part of grid (uniform).
  *
  * grid  = Grid where the noise will be added (cgrid *; input/output).
  * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
@@ -2544,14 +2560,8 @@ EXPORT void rgrid_random(rgrid *grid, REAL scale) {
 
 EXPORT void rgrid_random_index(rgrid *grid, REAL scale, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
-  static char been_here = 0;
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
   INT i, j, k;
-
-  if(!been_here) {
-    srand48(time(0));
-    been_here = 1;
-  }
 
 #ifdef USE_CUDA
   cuda_remove_block(grid->value, 1);
@@ -2564,11 +2574,10 @@ EXPORT void rgrid_random_index(rgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
   if(ly < 0) ly = 0;
   if(lz < 0) lz = 0;
 
-  // drand48 is not thread safe.
   for (i = lx; i < hx; i++)
     for (j = ly; j <  hy; j++)
       for (k = lz; k < hz; k++)
-        grid->value[(i * ny + j) * nz + k] += scale * 2.0 * (((REAL) drand48()) - 0.5);
+        grid->value[(i * ny + j) * nz + k] += scale * grid_random();
 }
 
 /*
