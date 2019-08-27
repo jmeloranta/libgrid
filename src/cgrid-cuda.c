@@ -11,7 +11,6 @@
  */
 
 #include "grid.h"
-#include <cufft.h>
 
 /* Global variables */
 void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_mem)

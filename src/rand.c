@@ -4,6 +4,8 @@
  * Based on drand48() - This is NOT thread safe, so do not use these functions
  * inside OMP parallel regions!
  *
+ * The CUDA variants are in cuRAND libary (see rand-cuda.c and rand-cuda2.cu).
+ *
  */
 
 #include <math.h>
@@ -19,7 +21,8 @@ static char init = 0;
  * seed = See value for the radom number generator (INT).
  *        Set to zero to take the seed from current wallclock time.
  *
- * NOTE: This is not thread safe.
+ * NOTE: This is not thread safe. Also if cuda_status is off, when this is called,
+ *       curand initialization is skipped!
  *
  */
 

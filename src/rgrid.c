@@ -2513,7 +2513,8 @@ EXPORT void rgrid_random_normal(rgrid *grid, REAL scale) {
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nzz = grid->nz2;
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);  // TODO: use CURand
+  if(cuda_status() && !rgrid_cuda_random_normal(grid, scale)) return;
+  cuda_remove_block(grid->value, 1);
 #endif
 
   for(i = 0; i < nx; i++)

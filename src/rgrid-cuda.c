@@ -11,7 +11,6 @@
  */
 
 #include "grid.h"
-#include <cufft.h>
 
 extern void *grid_gpu_mem; // Defined in cgrid.c
 
@@ -818,10 +817,9 @@ EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
 
 EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
 
-  if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->id, 1) < 0) 
-    return -1;
+  if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), laplace->fft_norm, laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, 
+  rgrid_cuda_fft_laplaceW(cuda_block_address((CUCOMPLEX *) laplace->value), laplace->fft_norm, laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, 
                           laplace->nx, laplace->ny, laplace->nz);
   return 0;
 }
@@ -840,7 +838,7 @@ EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, 
+  rgrid_cuda_fft_laplace_expectation_valueW((CUCOMPLEX *) cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, 
                                             laplace->step, laplace->nx, laplace->ny, laplace->nz);
   cuda_get_element(grid_gpu_mem, 0, sizeof(REAL), value);
   if(laplace->nx != 1) *value *= step;
