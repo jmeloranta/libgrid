@@ -2988,12 +2988,11 @@ EXPORT void cgrid_phase(rgrid *dst, cgrid *src) {
   }
 }
 
-
 /*
  * Add random noise to both real and imaginary parts of grid (normal distribution).
  *
  * grid  = Grid where the noise will be added (cgrid *; input/output).
- * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
+ * scale = Scaling for random numbers: zero mean and std dev of "scale" (REAL; input).
  *
  */
 
@@ -3002,6 +3001,7 @@ EXPORT void cgrid_random_normal(cgrid *grid, REAL scale) {
   INT i;
 
 #ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_random_normal(grid, scale)) return;
   cuda_remove_block(grid->value, 1);
 #endif
 
@@ -3022,6 +3022,7 @@ EXPORT void cgrid_random(cgrid *grid, REAL scale) {
   INT i;
 
 #ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_random_uniform(grid, scale)) return;
   cuda_remove_block(grid->value, 1);
 #endif
 
@@ -3055,7 +3056,7 @@ EXPORT void cgrid_random_index(cgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
   }
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);
+  cuda_remove_block(grid->value, 1);  // TODO
 #endif
 
   if(hx > nx) hx = nx;

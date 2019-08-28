@@ -2504,7 +2504,7 @@ EXPORT REAL rgrid_min(rgrid *grid) {
  * Add random noise to grid (normal distribution).
  *
  * grid  = Grid where the noise will be added (rgrid *; input/output).
- * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
+ * scale = Scaling for random numbers: zero mean and std dev of "scale" (REAL; input).
  *
  */
 
@@ -2536,7 +2536,8 @@ EXPORT void rgrid_random(rgrid *grid, REAL scale) {
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nzz = grid->nz2;
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);  // TODO: use CURand
+  if(cuda_status() && !rgrid_cuda_random_uniform(grid, scale)) return;
+  cuda_remove_block(grid->value, 1);
 #endif
 
   for(i = 0; i < nx; i++)
@@ -2565,7 +2566,7 @@ EXPORT void rgrid_random_index(rgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
   INT i, j, k;
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);
+  cuda_remove_block(grid->value, 1);  // TODO
 #endif
 
   if(hx > nx) hx = nx;
