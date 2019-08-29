@@ -1,6 +1,9 @@
 /*
  * cuRAND wrapper functions.
  *
+ * We allocate separate states for each thread. There are typically around 8 * 8 * 8 = 512 threads running at the same time.
+ * So we reserve that many state variables. Ideally, each block/thread should have their own but this is too much.
+ *
  */
 
 #include "grid.h"
@@ -23,7 +26,7 @@ static curandGenerator_t *gen = NULL;
 void *grid_gpu_rand = NULL; // cuRAND states (host)
 void *grid_gpu_rand_addr = NULL; // cuRAND states (GPU)
 
-EXPORT INT grid_cuda_random_seed(INT states, INT seed, INT nx, INT ny, INT nz) {
+EXPORT INT grid_cuda_random_seed(INT states, INT seed) {
 
   static size_t prev_len = 0;
   size_t len;
@@ -31,20 +34,17 @@ EXPORT INT grid_cuda_random_seed(INT states, INT seed, INT nx, INT ny, INT nz) {
   /* Every block has its own state */
   len = ((size_t) states) * sizeof(curandState);
 
-  if(len > prev_len) {
+  if(gen && len > prev_len) {
     curandDestroyGenerator(*gen);
     free(gen);
     cuda_unlock_block(grid_gpu_rand);
     cuda_remove_block(grid_gpu_rand, 0);
+    cudaFreeHost(grid_gpu_rand);
     gen = NULL;
   }
   if(gen == NULL) {
-#ifdef SINGLE_PREC
-    if(!(grid_gpu_rand = (void *) fftwf_malloc(len)) {
-#else
-    if(!(grid_gpu_rand = (void *) fftw_malloc(len))) {
-#endif
-      fprintf(stderr, "libgrid(CUDA): Not enough memory in cgrid_cuda_init().\n");
+    if(cudaMallocHost((void **) &grid_gpu_rand, len) != cudaSuccess) {
+      fprintf(stderr, "libgrid(CUDA): Not enough memory in grid_cuda_random_seed().\n");
       abort();
     }
     bzero(grid_gpu_rand, len);
@@ -55,7 +55,7 @@ EXPORT INT grid_cuda_random_seed(INT states, INT seed, INT nx, INT ny, INT nz) {
     grid_gpu_rand_addr = cuda_block_address(grid_gpu_rand);
     cuda_lock_block(grid_gpu_rand);
   }
-  grid_cuda_random_seedW(states, seed, nx, ny, nz);
+  grid_cuda_random_seedW(states, seed);
   return 0;
 }
 
@@ -70,15 +70,12 @@ EXPORT INT grid_cuda_random_seed(INT states, INT seed, INT nx, INT ny, INT nz) {
 EXPORT INT rgrid_cuda_random_uniform(rgrid *grid, REAL scale) {
 
   INT states;
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  states = ((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
-         * ((ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
-         * ((nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  states = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
 
-  grid_cuda_random_seed(states, time(0), nx, ny, nz);
+  if(gen == NULL) grid_cuda_random_seed(states, time(0));
 
   rgrid_cuda_random_uniformW((CUREAL *) cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
@@ -96,15 +93,12 @@ EXPORT INT rgrid_cuda_random_uniform(rgrid *grid, REAL scale) {
 EXPORT INT rgrid_cuda_random_normal(rgrid *grid, REAL scale) {
 
   INT states;
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  states = ((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
-         * ((ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
-         * ((nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  states = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
 
-  grid_cuda_random_seed(states, time(0), nx, ny, nz);
+  if(gen == NULL) grid_cuda_random_seed(states, time(0));
 
   rgrid_cuda_random_normalW((CUREAL *) cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
@@ -122,15 +116,12 @@ EXPORT INT rgrid_cuda_random_normal(rgrid *grid, REAL scale) {
 EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL scale) {
 
   INT states;
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  states = ((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
-         * ((ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
-         * ((nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  states = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
 
-  if(gen == NULL) grid_cuda_random_seed(states, time(0), nx, ny, nz);
+  if(gen == NULL) grid_cuda_random_seed(states, time(0));
 
   cgrid_cuda_random_uniformW((CUCOMPLEX *) cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
@@ -148,15 +139,12 @@ EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL scale) {
 EXPORT INT cgrid_cuda_random_normal(cgrid *grid, REAL scale) {
 
   INT states;
-  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->id, 1) < 0) return -1;
 
-  states = ((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
-         * ((ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
-         * ((nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  states = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
 
-  if(gen == NULL) grid_cuda_random_seed(states, time(0), nx, ny, nz);
+  if(gen == NULL) grid_cuda_random_seed(states, time(0));
 
   cgrid_cuda_random_normalW((CUCOMPLEX *) cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
 

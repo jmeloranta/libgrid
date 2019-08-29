@@ -32,18 +32,10 @@ EXPORT void cgrid_cuda_init(size_t len) { /* We use FFTW malloc routines just in
         cuda_unlock_block(grid_gpu_mem);
         cuda_remove_block(grid_gpu_mem, 0);
       }
-#ifdef SINGLE_PREC
-      fftwf_free(grid_gpu_mem);
-#else
-      fftw_free(grid_gpu_mem);
-#endif
+      cudaFreeHost(grid_gpu_mem);
     }
     prev_len = len;
-#ifdef SINGLE_PREC
-    if(!(grid_gpu_mem = (void *) fftwf_malloc(len))) {
-#else
-    if(!(grid_gpu_mem = (void *) fftw_malloc(len))) {
-#endif
+    if(cudaMallocHost((void **) &grid_gpu_mem, len) != cudaSuccess) {
       fprintf(stderr, "libgrid(CUDA): Not enough memory in cgrid_cuda_init().\n");
       abort();
     }

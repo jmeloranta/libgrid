@@ -34,7 +34,7 @@ extern "C" void cuda_error_check();
 
 __global__ void grid_cuda_random_seed_gpu(curandState *st, INT states, INT seed) {
 
-  INT cstate = blockIdx.z * blockDim.y * blockDim.x + blockIdx.y * blockDim.x + blockIdx.x;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
 
   if(cstate >= states) return;
 
@@ -46,20 +46,16 @@ __global__ void grid_cuda_random_seed_gpu(curandState *st, INT states, INT seed)
  *
  * states = Number of states (= number of blocks) (INT; input).
  * seed   = Base random number seed (INT; input).
- * nx     = Grid dimension X (INT; input).
- * ny     = Grid dimension Y (INT; input).
- * nz     = Grid dimension Z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_random_seedW(INT states, INT seed, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_random_seedW(INT states, INT seed) {
 
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks(1, 1, 1);
   curandState *st = (curandState *) grid_gpu_rand_addr;
 
-  grid_cuda_random_seed_gpu<<<blocks,1>>>(st, states, seed);
+  grid_cuda_random_seed_gpu<<<blocks,threads>>>(st, states, seed);
   cuda_error_check();
 }
 
@@ -71,7 +67,7 @@ extern "C" void grid_cuda_random_seedW(INT states, INT seed, INT nx, INT ny, INT
 __global__ void rgrid_cuda_random_uniform_gpu(CUREAL *grid, curandState *st, CUREAL scale, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  INT cstate = blockIdx.z * blockDim.y * blockDim.x + blockIdx.y * blockDim.x + blockIdx.x;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -115,7 +111,7 @@ extern "C" void rgrid_cuda_random_uniformW(CUREAL *grid, CUREAL scale, INT nx, I
 __global__ void rgrid_cuda_random_normal_gpu(CUREAL *grid, curandState *st, REAL scale, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  INT cstate = blockIdx.z * blockDim.y * blockDim.x + blockIdx.y * blockDim.x + blockIdx.x;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -159,7 +155,7 @@ extern "C" void rgrid_cuda_random_normalW(CUREAL *grid, CUREAL scale, INT nx, IN
 __global__ void cgrid_cuda_random_uniform_gpu(CUCOMPLEX *grid, curandState *st, REAL scale, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  INT cstate = blockIdx.z * blockDim.y * blockDim.x + blockIdx.y * blockDim.x + blockIdx.x;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -202,7 +198,7 @@ extern "C" void cgrid_cuda_random_uniformW(CUCOMPLEX *grid, CUREAL scale, INT nx
 __global__ void cgrid_cuda_random_normal_gpu(CUCOMPLEX *grid, curandState *st, REAL scale, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  INT cstate = blockIdx.z * blockDim.y * blockDim.x + blockIdx.y * blockDim.x + blockIdx.x;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
