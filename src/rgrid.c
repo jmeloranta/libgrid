@@ -3009,7 +3009,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
  * Compute spherical shell average in real space with respect to the grid origin
  * (result 1-D grid).
  *
- * E(r) = 4pi r^2 \int E(r, \theta, \phi) sin(\theta) d\theta d\phi
+ * E_ave(r) = \int E(r, \theta, \phi) sin(\theta) d\theta d\phi / (4 pi r^2)
  * 
  * input1  = Input grid 1 for averaging (rgrid *; input).
  * input2  = Input grid 2 for averaging (rgrid *; input). Can be NULL if N/A.
@@ -3083,7 +3083,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
  * Compute spherical shell average in the reciprocal space of power spectrum with respect to the grid origin
  * (result 1-D grid). Note: Uses power spectrum (Fourier space)!
  *
- * E(k) = 4pi k^2 \int |sqrt(E)(k, \theta_k, \phi_k)|^2 sin(\theta_k}) d\theta_k d\phi_k
+ * E_ave(k) = \int |sqrt(grid(k, \theta_k, \phi_k))|^2 sin(\theta_k) d\theta_k d\phi_k / (4pi k^2)
  * 
  * input1  = Input grid 1 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
  * input2  = Input grid 2 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
@@ -3094,6 +3094,8 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
  * volel   = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
  *
  * No return value.
+ *
+ * Note to compute E(k), grid should correspond to flux / sqrt(rho) = \sqrt(rho) * v.
  *
  */
 
