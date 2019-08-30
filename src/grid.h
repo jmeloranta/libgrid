@@ -27,6 +27,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include "cuda.h"
+#include <curand.h>
 
 #ifdef SINGLE_PREC
 #define CUREAL float

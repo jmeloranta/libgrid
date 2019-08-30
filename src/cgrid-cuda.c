@@ -14,7 +14,6 @@
 #include <cuda/cuda_runtime_api.h>
 #include <cuda/cuda.h>
 #include <cuda/device_launch_parameters.h>
-#include <cuda/cufft.h>
 
 /* Global variables */
 void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_)

@@ -64,7 +64,7 @@ typedef struct rgrid_struct { /* real grid data type */
   fftwl_plan plan, iplan;
 #endif
 #ifdef USE_CUDA
-  cufftHandle cufft_handle_r2c;   /* CUFFT R2C plan handle */
+  cufftHandle cufft_handle_r2c;   /* CUFFT R2C plan handle */  // TODO: Add cufft_handle_current which is either r2c or c2r depending what was done
   cufftHandle cufft_handle_c2r;   /* CUFFT C2R plan handle */
 #endif
   REAL fft_norm;

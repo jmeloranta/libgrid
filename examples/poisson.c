@@ -1,6 +1,8 @@
 /*
  * Example: Solve Poisson equation.
  *
+ * Compare input.? with check.?
+ *
  */
 
 #include <stdio.h>

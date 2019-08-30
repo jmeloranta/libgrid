@@ -2999,8 +2999,30 @@ EXPORT void cgrid_phase(rgrid *dst, cgrid *src) {
   }
 }
 
+
 /*
- * Add random noise to grid.
+ * Add random noise to both real and imaginary parts of grid (normal distribution).
+ *
+ * grid  = Grid where the noise will be added (cgrid *; input/output).
+ * scale = Scaling for random numbers: zero mean and std dev of "scale" (REAL; input).
+ *
+ */
+
+EXPORT void cgrid_random_normal(cgrid *grid, REAL scale) {
+
+  INT i;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_random_normal(grid, scale)) return;
+  cuda_remove_block(grid->value, 1);
+#endif
+
+  for (i = 0; i < grid->nx * grid->ny * grid->nz; i++)
+    grid->value[i] += scale * (grid_random_normal() + I * grid_random_normal());
+}
+
+/*
+ * Add random noise to both real and imaginary parts of grid (uniform distribution).
  *
  * grid  = Grid where the noise will be added (cgrid *; input/output).
  * scale = Scaling for random numbers [-scale,+scale[ (REAL; input).
@@ -3009,21 +3031,15 @@ EXPORT void cgrid_phase(rgrid *dst, cgrid *src) {
 
 EXPORT void cgrid_random(cgrid *grid, REAL scale) {
 
-  static char been_here = 0;
   INT i;
 
-  if(!been_here) {
-    srand48(time(0));
-    been_here = 1;
-  }
-
 #ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_random_uniform(grid, scale)) return;
   cuda_remove_block(grid->value, 1);
 #endif
 
-  // drand48 is not thread safe.
   for (i = 0; i < grid->nx * grid->ny * grid->nz; i++)
-    grid->value[i] += scale * (2.0 * (((REAL) drand48()) - 0.5) + 2.0 * (((REAL) drand48()) - 0.5) * I);
+    grid->value[i] += scale * (grid_random() + I * grid_random());
 }
 
 /*
@@ -3052,7 +3068,7 @@ EXPORT void cgrid_random_index(cgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
   }
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);
+  cuda_remove_block(grid->value, 1);  // TODO
 #endif
 
   if(hx > nx) hx = nx;
@@ -3062,11 +3078,10 @@ EXPORT void cgrid_random_index(cgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
   if(ly < 0) ly = 0;
   if(lz < 0) lz = 0;
 
-  // drand48 is not thread safe.
   for (i = lx; i < hx; i++)
     for (j = ly; j <  hy; j++)
       for (k = lz; k < hz; k++)
-        grid->value[(i * ny + j) * nz + k] += scale * (2.0 * (((REAL) drand48()) - 0.5) + 2.0 * (((REAL) drand48()) - 0.5) * I);
+        grid->value[(i * ny + j) * nz + k] += scale * (grid_random() + I * grid_random());
 }
 
 /*

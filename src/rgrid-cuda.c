@@ -11,7 +11,6 @@
  */
 
 #include "grid.h"
-#include <cufft.h>
 
 extern void *grid_gpu_mem; // Defined in cgrid.c
 

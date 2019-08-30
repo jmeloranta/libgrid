@@ -53,7 +53,7 @@ __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL in
  * wf       = Source for operation (cudaXtDesc *; input).
  * vx       = Destination grid (cudaXtDesc *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
- * cutoff   = Velocity cutoff limi (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -112,7 +112,7 @@ __global__ void grid_cuda_wf_velocity_y_gpu(CUCOMPLEX *wf, CUREAL *vy, CUREAL in
  * wf       = Source for operation (cudaXtDesc *; input).
  * vy       = Destination grid (cudaXtDesc *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
- * cutoff   = Velocity cutoff limi (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
@@ -171,7 +171,7 @@ __global__ void grid_cuda_wf_velocity_z_gpu(CUCOMPLEX *wf, CUREAL *vz, CUREAL in
  * wf       = Source for operation (cudaXtDesc *; input).
  * vz       = Destination grid (cudaXtDesc *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
- * cutoff   = Velocity cutoff limi (CUREAL; input).
+ * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
