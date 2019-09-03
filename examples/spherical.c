@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1);
+  cuda_enable(1, 0, NULL);
 #endif
   
   /* Allocate real grid */

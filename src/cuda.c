@@ -51,7 +51,7 @@ EXPORT int *cuda_gpus() {
 /*
  * Allocate GPUs.
  *
- * ngpus = Number of GPUs to allocate (int).
+ * ngpus = Number of GPUs to allocate (int). If ngpus = 0, attempt to allocate all available GPUs. In this case, gpus variable is not accessed.
  * gpus  = GPU numbers to use (int *).
  *
  * No return value.
@@ -62,11 +62,24 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
 
   int i;
 
-  if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) use_ngpus))) {
-    fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
-    abort();
+  if(!ngpus) {
+    if(cudaGetDeviceCount(&ngpus) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): Cannot get device count.\n");
+      abort();
+    }
+    fprintf(stderr, "libgrid(cuda): Allocating all GPUS (%d).\n", ngpus);
+    if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) use_ngpus))) {
+      fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
+      abort();
+    }
+    for(i = 0; i < ngpus; i++) use_gpus[i] = i;
+  } else {
+    if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) use_ngpus))) {
+      fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
+      abort();
+    }
+    for(i = 0; i < ngpus; i++) use_gpus[i] = gpus[i];
   }
-  for(i = 0; i < ngpus; i++) use_gpus[i] = gpus[i];
   use_ngpus = ngpus;
   fprintf(stderr, "libgrid(cuda): Initialized with %d GPUs.\n", ngpus);
 }
@@ -929,13 +942,15 @@ EXPORT void cuda_free_all_blocks(char sync) {
 /*
  * Enable/disable CUDA.
  *
- * Set val = 0 to disable CUDA or val = 1 to enable CUDA.
+ * val   = 0 to disable CUDA or val = 1 to enable CUDA. 
+ * ngpus = Number of GPUs to allocate (int). If val = 0, gpus array not accessed.
+ * gpus  = GPU numbers to use (int *). If val = 0, not accessed.
  *
  * Disabling active CUDA will flush GPU memory pages to the host memory.
  *
  */
 
-EXPORT void cuda_enable(char val) {
+EXPORT void cuda_enable(char val, int ngpus, int *gpus) {
 
   static char been_here = 0;
   void cuda_gpu_info();
@@ -947,6 +962,7 @@ EXPORT void cuda_enable(char val) {
   enable_cuda = val;
   if(val) {
     fprintf(stderr, "libgrid(cuda): CUDA enabled.\n");
+    cuda_alloc_gpus(ngpus, gpus);
     if(!been_here) {
       cuda_gpu_info();
       been_here = 1;

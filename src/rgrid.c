@@ -2539,6 +2539,29 @@ EXPORT void rgrid_random(rgrid *grid, REAL scale) {
 }
 
 /*
+ * Add random noise to grid (normal distribution).
+ *
+ * grid  = Grid where the noise will be added (rgrid *; input/output).
+ * scale = Scaling for random numbers: zero mean and std dev of "scale" (REAL; input).
+ *
+ */
+
+EXPORT void rgrid_random_normal(rgrid *grid, REAL scale) {
+
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz, nzz = grid->nz2;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_random_normal(grid, scale)) return;
+  cuda_remove_block(grid->value, 1);
+#endif
+
+  for(i = 0; i < nx; i++)
+    for(j = 0; j < ny; j++)
+      for(k = 0; k < nz; k++)
+        grid->value[(i * ny + j) * nzz + k] += scale * grid_random_normal();
+}
+
+/*
  * Add random noise to grid to part of grid.
  *
  * grid  = Grid where the noise will be added (cgrid *; input/output).

@@ -37,12 +37,12 @@ int main(int argc, char **argv) {
   INT i;
   FILE *fp;
   
-  /* Initialize with 16 OpenMP threads */
-  grid_threads_init(16);
+  /* Initialize with all OpenMP threads */
+  grid_threads_init(0);
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1);
+  cuda_enable(1, 0, NULL);
 #endif
   
   printf("KX = " FMT_R " Bohr^-1 KY = " FMT_R " Bohr^-1 KZ = " FMT_R " Bohr^-1.\n", KX, KY, KZ);
