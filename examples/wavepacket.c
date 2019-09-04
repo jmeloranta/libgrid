@@ -106,6 +106,11 @@ int main(int argc, char *argv[]) {
   /* Initialize OpenMP threads */
   grid_threads_init(threads);
   
+  /* If libgrid was compiled with CUDA support, enable CUDA */
+#ifdef USE_CUDA
+  cuda_enable(1, 0, NULL);
+#endif
+
   /* allocate memory (mass = 1.0) */
   gwf = grid_wf_alloc(n, n, n, step, 1.0, WF_PERIODIC_BOUNDARY, 
 #ifdef FOURTH_ORDER_FFT

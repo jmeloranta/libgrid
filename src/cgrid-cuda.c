@@ -67,7 +67,7 @@ EXPORT char cgrid_cuda_fft_convolute(cgrid *dst, cgrid *src1, cgrid *src2) {
 
   if(src1->space == 0 || src2->space == 0) {
     fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
-    exit(1);
+    abort();
   }
 
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
@@ -698,8 +698,8 @@ EXPORT char cgrid_cuda_conjugate(cgrid *dst, cgrid *src) {
 EXPORT char cgrid_cuda_fft_gradient_x(cgrid *src, cgrid *dst) {
 
   if(src->space == 0) {
-    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
-    exit(1);
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_fft_gradient_x).\n");
+    abort();
   }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0)  return -1;
@@ -723,8 +723,8 @@ EXPORT char cgrid_cuda_fft_gradient_x(cgrid *src, cgrid *dst) {
 EXPORT char cgrid_cuda_fft_gradient_y(cgrid *src, cgrid *dst) {
 
   if(src->space == 0) {
-    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
-    exit(1);
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_fft_gradient_y).\n");
+    abort();
   }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) return -1;
@@ -748,8 +748,8 @@ EXPORT char cgrid_cuda_fft_gradient_y(cgrid *src, cgrid *dst) {
 EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 
   if(src->space == 0) {
-    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
-    exit(1);
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_fft_gradient_z).\n");
+    abort();
   }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) return -1;
@@ -773,8 +773,8 @@ EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 EXPORT char cgrid_cuda_fft_laplace(cgrid *src, cgrid *dst) {
 
   if(src->space == 0) {
-    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
-    exit(1);
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_fft_laplace).\n");
+    abort();
   }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) return -1;
@@ -800,8 +800,8 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value
   REAL step = laplace->step, norm = laplace->fft_norm, value2;
 
   if(laplace->space == 0) {
-    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (convolution).\n");
-    exit(1);
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_fft_laplace_expectation_value).\n");
+    abort();
   }
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle, laplace->id, 1) < 0) return -1;

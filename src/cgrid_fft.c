@@ -217,6 +217,9 @@ EXPORT void cgrid_fftw(cgrid *grid) {
   fftwl_execute(grid->plan);
   if(grid->implan) fftwl_execute(grid->implan);
 #endif
+#ifdef USE_CUDA
+  grid->space = 1;
+#endif
 }
 
 /*
@@ -247,5 +250,8 @@ EXPORT void cgrid_fftw_inv(cgrid *grid) {
 #elif defined(QUAD_PREC)
   fftwl_execute(grid->iplan);
   if(grid->iimplan) fftwl_execute(grid->iimplan);
+#endif
+#ifdef USE_CUDA
+  grid->space = 0;
 #endif
 }
