@@ -64,7 +64,7 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
       fprintf(stderr, "libgrid(cuda): Cannot get device count.\n");
       abort();
     }
-    fprintf(stderr, "libgrid(cuda): Allocating all GPUS (%d).\n", ngpus);
+    fprintf(stderr, "libgrid(cuda): Allocating all GPUs (%d).\n", ngpus);
     if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) use_ngpus))) {
       fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
       abort();

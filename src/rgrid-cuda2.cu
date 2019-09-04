@@ -2082,7 +2082,7 @@ extern "C" void rgrid_cuda_fft_gradient_xW(cudaXtDesc *gradient_x, REAL kx0, REA
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(gradient_x->GPUs[i]);
-    rgrid_cuda_fft_gradient_x_gpu<<<blocks2,threads>>>((CUCOMPLEX *) gradient_x->data[i], kx0, step, norm, lx, nx, nny1, nzz, nx / 2);
+    rgrid_cuda_fft_gradient_x_gpu<<<blocks2,threads>>>((CUCOMPLEX *) gradient_x->data[i], kx0, step, norm, lx, nx, nny2, nzz, nx / 2);
   }
 
   cuda_error_check();
