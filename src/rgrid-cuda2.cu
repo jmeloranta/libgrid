@@ -2178,7 +2178,7 @@ __global__ void rgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *gradient, REAL kz0, REA
 extern "C" void rgrid_cuda_fft_gradient_zW(cudaXtDesc *gradient_z, REAL kz0, REAL step, REAL norm, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_RECIPROCAL(gradient_z);
-  REAL lz = M_PI / (((REAL) nz - 1) * step);
+  REAL lz = M_PI / (((REAL) nzz - 1) * step);
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(gradient_z->GPUs[i]);
@@ -2252,14 +2252,14 @@ extern "C" void rgrid_cuda_fft_laplaceW(cudaXtDesc *laplace, CUREAL norm, CUREAL
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(laplace->GPUs[i]);
     rgrid_cuda_fft_laplace_gpu<<<blocks1,threads>>>((CUCOMPLEX *) laplace->data[i], norm, kx0, ky0, kz0, 
-        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nz - 1) * step), step, nx, nny1, nzz, nx / 2, ny / 2, nzz / 2, seg);
+        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny1, nzz, nx / 2, ny / 2, nzz / 2, seg);
     seg += nny1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(laplace->GPUs[i]);
     rgrid_cuda_fft_laplace_gpu<<<blocks2,threads>>>((CUCOMPLEX *) laplace->data[i], norm, kx0, ky0, kz0,
-        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nz - 1) * step), step, nx, nny2, nzz, nx / 2, ny / 2, nzz / 2, seg);
+        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny2, nzz, nx / 2, ny / 2, nzz / 2, seg);
     seg += nny2;
   }
 

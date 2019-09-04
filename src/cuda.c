@@ -20,9 +20,6 @@ static long gpu_memory_hits = 0, gpu_memory_misses = 0;
 static char enable_cuda = 0;
 static size_t total_alloc = 0;
 static int *use_gpus, use_ngpus = 0;
-#ifdef CUDA_DEBUG
-static char cuda_debug_flag = 0;
-#endif
 
 #include "cuda-private.h"
 
@@ -81,7 +78,7 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
     for(i = 0; i < ngpus; i++) use_gpus[i] = gpus[i];
   }
   use_ngpus = ngpus;
-  fprintf(stderr, "libgrid(cuda): Initialized with %d GPUs.\n", ngpus);
+  fprintf(stderr, "libgrid(cuda): Initialized with %d GPU(s).\n", ngpus);
 }
 
 /*
@@ -149,7 +146,7 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
   size_t i, st = 0;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: mem2gpu from host to GPU mem (%s).\n", block->id);
+  fprintf(stderr, "cuda: mem2gpu from host to GPU mem (%s).\n", block->id);
 #endif
 
   if(!block->gpu_info) {
@@ -157,15 +154,25 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
     abort();
   }
 
-  if(block->cufft_handle == -1) { /* Copy without cuttf handle */
-    for(i = 0; block->gpu_info->descriptor->nGPUs; i++) {
-      cudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
-      if(cudaMemcpy(block->gpu_info->descriptor->data[i], block->host_mem + st, block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) return -1;
+  if(use_ngpus == 1 || block->cufft_handle == -1) { /* Copy without cuttf handle */
+    for(i = 0; i < block->gpu_info->descriptor->nGPUs; i++) {
+      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
+        abort();
+      }        
+      if(cudaMemcpy(block->gpu_info->descriptor->data[i], block->host_mem + st, block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
+        abort();
+      }        
       st = block->gpu_info->descriptor->size[i];
     }
   } else {
-    if(cufftXtMemcpy(block->cufft_handle, block->gpu_info, block->host_mem, CUFFT_COPY_HOST_TO_DEVICE) != CUFFT_SUCCESS) return -1;
+    if(cufftXtMemcpy(block->cufft_handle, block->gpu_info, block->host_mem, CUFFT_COPY_HOST_TO_DEVICE) != CUFFT_SUCCESS) {
+      fprintf(stderr, "libgrid(cuda): mem2gpu error in cufftXtMemcpy().\n");
+      abort();
+    }
   }
+  cuda_error_check();
   return 0;
 }
 
@@ -183,7 +190,7 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
   size_t i, st = 0;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: gpu2mem from GPU to host mem (%s).\n", block->id);
+  fprintf(stderr, "cuda: gpu2mem from GPU to host mem (%s).\n", block->id);
 #endif
 
   if(!block->gpu_info) {
@@ -191,15 +198,25 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
     abort();
   }
 
-  if(block->cufft_handle == -1) { /* Copy without cuttf handle */
-    for(i = 0; block->gpu_info->descriptor->nGPUs; i++) {
-      cudaSetDevice(block->gpu_info->descriptor->GPUs[i]);
-      if(cudaMemcpy(block->host_mem + st, block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) return -1;
+  if(use_ngpus == 1 || block->cufft_handle == -1) { /* Copy without cuttf handle */
+    for(i = 0; i < block->gpu_info->descriptor->nGPUs; i++) {
+      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
+        abort();
+      }        
+      if(cudaMemcpy(block->host_mem + st, block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
+        abort();
+      }
       st = block->gpu_info->descriptor->size[i];
     }
   } else {
-    if(cufftXtMemcpy(block->cufft_handle, block->host_mem, block->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != CUFFT_SUCCESS) return -1;
+    if(cufftXtMemcpy(block->cufft_handle, block->host_mem, block->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != CUFFT_SUCCESS) {
+      fprintf(stderr, "libgrid(cuda): gpu2mem error in cufftXtMemcpy().\n");
+      abort();
+    }
   }
+  cuda_error_check();
   return 0;
 }
 
@@ -218,7 +235,7 @@ EXPORT inline int cuda_gpu2gpu(gpu_mem_block *dst, gpu_mem_block *src) {
   size_t i;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: gpu2gpu from GPU (%s) to GPU (%s).\n", src->id, dst->id);
+  fprintf(stderr, "cuda: gpu2gpu from GPU (%s) to GPU (%s).\n", src->id, dst->id);
 #endif
 
   if(!src->gpu_info || !dst->gpu_info) {
@@ -226,14 +243,24 @@ EXPORT inline int cuda_gpu2gpu(gpu_mem_block *dst, gpu_mem_block *src) {
     abort();
   }
 
-  if(src->cufft_handle == -1) { /* Copy without cuttf handle */
-    for(i = 0; dst->gpu_info->descriptor->nGPUs; i++) {
-      cudaSetDevice(dst->gpu_info->descriptor->GPUs[i]);
-      if(cudaMemcpy(dst->gpu_info->descriptor->data[i], dst->gpu_info->descriptor->data[i], src->gpu_info->descriptor->size[i], cudaMemcpyDeviceToDevice) != cudaSuccess) return -1;
+  if(use_ngpus == 1 || src->cufft_handle == -1) { /* Copy without cuttf handle */
+    for(i = 0; i < dst->gpu_info->descriptor->nGPUs; i++) {
+      if(cudaSetDevice(dst->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): gpu2gpu copy error (set device).\n");
+        abort();
+      }        
+      if(cudaMemcpy(dst->gpu_info->descriptor->data[i], src->gpu_info->descriptor->data[i], src->gpu_info->descriptor->size[i], cudaMemcpyDeviceToDevice) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): gpu2gpu copy error.\n");
+        abort();
+      }
     }
   } else {
-    if(cufftXtMemcpy(dst->cufft_handle, dst->gpu_info, src->gpu_info, CUFFT_COPY_DEVICE_TO_HOST) != CUFFT_SUCCESS) return -1;
+    if(cufftXtMemcpy(dst->cufft_handle, dst->gpu_info, src->gpu_info, CUFFT_COPY_DEVICE_TO_DEVICE) != CUFFT_SUCCESS) {
+      fprintf(stderr, "libgrid(cuda): gpu2gpu error in cufftXtMemcpy().\n");
+      abort();
+    }
   }
+  cuda_error_check();
   return 0;
 }
 
@@ -252,17 +279,17 @@ EXPORT gpu_mem_block *cuda_find_block(void *host_mem) {
 
   if(!enable_cuda) return NULL;
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: find block by host mem %lx - ", (unsigned long int) host_mem);
+  fprintf(stderr, "cuda: find block by host mem %lx - ", (unsigned long int) host_mem);
 #endif
   for(ptr = gpu_blocks_head; ptr; ptr = ptr->next)
     if(host_mem == ptr->host_mem) {
 #ifdef CUDA_DEBUG
-      if(cuda_debug_flag) fprintf(stderr, "found.\n");
+      fprintf(stderr, "found.\n");
 #endif
       return ptr;
     }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "not found.\n");
+  fprintf(stderr, "not found.\n");
 #endif
   return NULL;
 }  
@@ -283,20 +310,20 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
   int i;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Remove block %lx with copy %d.\n", (unsigned long int) host_mem, copy);
+  fprintf(stderr, "cuda: Remove block %lx with copy %d.\n", (unsigned long int) host_mem, copy);
 #endif
   for(ptr = gpu_blocks_head, prev = NULL; ptr; prev = ptr, ptr = ptr->next)
     if(host_mem == ptr->host_mem) break;
 
   if(!ptr) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: block not found.\n");
+    fprintf(stderr, "cuda: block not found.\n");
 #endif
     return 0; /* not on GPU */
   }
   if(copy) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing memory of the removed block from GPU to memory.\n");
+    fprintf(stderr, "cuda: Syncing memory of the removed block from GPU to memory.\n");
 #endif
     cuda_gpu2mem(ptr);
   }
@@ -310,11 +337,11 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
   if(ptr->locked) return 0;  // keep it in memory
 #endif
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: removed (%s).\n", ptr->id);
+  fprintf(stderr, "cuda: removed (%s).\n", ptr->id);
 #endif
   for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++)
     total_alloc -= ptr->gpu_info->descriptor->size[i];
-  if(ptr->cufft_handle == -1) {
+  if(use_ngpus == 1 || ptr->cufft_handle == -1) {
     for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++)
       cudaFree(ptr->gpu_info->descriptor->data[i]);
     free(ptr->gpu_info->descriptor);
@@ -342,7 +369,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
 
   int i;
 
-  if(block->cufft_handle == -1) {
+  if(use_ngpus == 1 || block->cufft_handle == -1) {
     /* This is for GPU blocks that are not to be used with cufft */
     if(!(block->gpu_info = (cudaLibXtDesc *) malloc(sizeof(cudaLibXtDesc)))) {
       fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
@@ -373,9 +400,12 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
     block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
     block->gpu_info->libDescriptor = NULL;
   } else {
+    int stat;
     /* cufft capable blocks */
-    if(cufftXtMalloc(block->cufft_handle, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE) != CUFFT_SUCCESS)
+    if((stat = cufftXtMalloc(block->cufft_handle, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE)) != CUFFT_SUCCESS) {
+      printf("stat = %d\n", stat);
       return -1;
+    }
   }
   return 0;
 }
@@ -403,18 +433,18 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
 
   if(!enable_cuda) return NULL;
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Add block %lx (%s) of length %ld with copy %d.\n", (unsigned long int) host_mem, id, length, copy);
+  fprintf(stderr, "cuda: Add block %lx (%s) of length %ld with copy %d.\n", (unsigned long int) host_mem, id, length, copy);
 #endif
   if((ptr = cuda_find_block(host_mem))) { /* Already in GPU memory? */
     cuda_block_hit(ptr);
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Already in GPU memory.\n");
+    fprintf(stderr, "cuda: Already in GPU memory.\n");
 #endif
     return ptr;
   } else cuda_block_miss();
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Not in GPU memory - trying to add.\n");
+  fprintf(stderr, "cuda: Not in GPU memory - trying to add.\n");
 #endif
   if(!(new = (gpu_mem_block *) malloc(sizeof(gpu_mem_block)))) {
     fprintf(stderr, "libgrid(cuda): Out of memory in allocating gpu_mem_block.\n");
@@ -440,12 +470,12 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
       return NULL; /* We ran out of blocks that could be swapped out ! */
     }
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Swap out block host mem: %lx and GPU mem: %lx (%s).\n", (unsigned long int) rptr->host_mem, (unsigned long int) rptr->gpu_mem, rptr->id);
+    fprintf(stderr, "cuda: Swap out block host mem: %lx (%s).\n", (unsigned long int) rptr->host_mem, rptr->id);
 #endif
     cuda_remove_block(rptr->host_mem, 1);
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Succesfully added new block to GPU.\n");
+  fprintf(stderr, "cuda: Succesfully added new block to GPU.\n");
 #endif
   total_alloc += length;
   new->host_mem = host_mem;
@@ -462,7 +492,7 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
   new->id[31] = 0;
   if(copy) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing memory of the new block to GPU.\n");
+    fprintf(stderr, "cuda: Syncing memory of the new block to GPU.\n");
 #endif
     cuda_mem2gpu(new);
   }
@@ -485,16 +515,16 @@ EXPORT int cuda_lock_block(void *host_mem) {
 
   if(!enable_cuda) return -1;
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Lock block request for host mem %lx.\n", (unsigned long int) host_mem);
+  fprintf(stderr, "cuda: Lock block request for host mem %lx.\n", (unsigned long int) host_mem);
 #endif
   if(!(ptr = cuda_find_block(host_mem))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "Block NOT FOUND.\n");
+    fprintf(stderr, "Block NOT FOUND.\n");
 #endif
     return -1;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: GPU mem %lx (%s) locked.\n", (unsigned long int) ptr->gpu_mem, ptr->id);
+  fprintf(stderr, "cuda: Host mem %lx (%s) locked.\n", (unsigned long int) host_mem, ptr->id);
 #endif
   ptr->locked = 1;
   return 0;
@@ -519,16 +549,16 @@ EXPORT int cuda_unlock_block(void *host_mem) {
   return 0;
 #endif
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Unlock block reqest for host mem %lx.\n", (unsigned long int) host_mem);
+  fprintf(stderr, "cuda: Unlock block reqest for host mem %lx.\n", (unsigned long int) host_mem);
 #endif
   if(!(ptr = cuda_find_block(host_mem))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "Block NOT FOUND.\n");
+    fprintf(stderr, "Block NOT FOUND.\n");
 #endif
     return -1;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "GPU mem %lx (%s) unlocked.\n", (unsigned long int) ptr->gpu_mem, ptr->id);
+  fprintf(stderr, "Host mem %lx (%s) unlocked.\n", (unsigned long int) host_mem, ptr->id);
 #endif
   ptr->locked = 0;
   return 0;
@@ -569,13 +599,13 @@ EXPORT char cuda_add_two_blocks(void *host_mem1, size_t length1, cufftHandle cuf
   if(host_mem1 == host_mem2) return cuda_add_block(host_mem1, length1, cufft_handle1, id1, (char) (copy1 + copy2))?0:-1;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Request two blocks with host mems %lx with len %ld (%s) and %lx with len %ld (%s)...\n", (unsigned long int) host_mem1, length1, id1, (unsigned long int) host_mem2, length2, id2);
+  fprintf(stderr, "cuda: Request two blocks with host mems %lx with len %ld (%s) and %lx with len %ld (%s)...\n", (unsigned long int) host_mem1, length1, id1, (unsigned long int) host_mem2, length2, id2);
 #endif
   test = cuda_find_block(host_mem1);
   if(!(block1 = cuda_add_block(host_mem1, length1, cufft_handle1, id1, 0))) {
     /* both need to be in host memory */
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem1 to GPU, making sure host_mem2 is removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem1 to GPU, making sure host_mem2 is removed from GPU.\n");
 #endif
     cuda_remove_block(host_mem2, copy2);  // remove 2 (may or may not be in GPU)
     return -1;
@@ -587,7 +617,7 @@ EXPORT char cuda_add_two_blocks(void *host_mem1, size_t length1, cufftHandle cuf
     block1->locked = l1;
     /* both need to be in host memory */
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem2 to GPU, removing host_mem from GPU1.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem2 to GPU, removing host_mem from GPU1.\n");
 #endif
     if(test) cuda_remove_block(host_mem1, copy1); // was already in GPU but now needs to be synced to host memory when removing
     else cuda_remove_block(host_mem1, 0);
@@ -597,13 +627,13 @@ EXPORT char cuda_add_two_blocks(void *host_mem1, size_t length1, cufftHandle cuf
 
   if(!test && copy1) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
+    fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
 #endif
     cuda_mem2gpu(block1);  // Now that everything is OK, we need to also sync block1 to GPU (as it wasn't there already)
   }
   /* Both blocks now successfully in GPU memory */
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Successful two-block add.\n");
+  fprintf(stderr, "cuda: Successful two-block add.\n");
 #endif
   return 0;  
 }
@@ -649,14 +679,14 @@ EXPORT char cuda_add_three_blocks(void *host_mem1, size_t length1, cufftHandle c
   if(host_mem1 == host_mem3) return cuda_add_two_blocks(host_mem1, length1, cufft_handle1, id1, (char) (copy1 + copy3), host_mem2, length2, cufft_handle2, id2, copy2);
   if(host_mem2 == host_mem3) return cuda_add_two_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, (char) (copy2 + copy3));
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Request three blocks with host mems %lx with len %ld (%s), %lx with len %ld (%s), and %lx with len %ld (%s)...\n", (unsigned long int) host_mem1, length1, id1, (unsigned long int) host_mem2, length2, id2, (unsigned long int) host_mem3, length3, id3);
+  fprintf(stderr, "cuda: Request three blocks with host mems %lx with len %ld (%s), %lx with len %ld (%s), and %lx with len %ld (%s)...\n", (unsigned long int) host_mem1, length1, id1, (unsigned long int) host_mem2, length2, id2, (unsigned long int) host_mem3, length3, id3);
 #endif
   test1 = cuda_find_block(host_mem1);
   test2 = cuda_find_block(host_mem2);
   test3 = cuda_find_block(host_mem3);
   if(!(block1 = cuda_add_block(host_mem1, length1, cufft_handle1, id1, 0))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem1 to GPU, making sure host_mem2 and host_mem3 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem1 to GPU, making sure host_mem2 and host_mem3 are removed from GPU.\n");
 #endif
     if(test2) cuda_remove_block(host_mem2, copy2);
     if(test3) cuda_remove_block(host_mem3, copy3);
@@ -666,7 +696,7 @@ EXPORT char cuda_add_three_blocks(void *host_mem1, size_t length1, cufftHandle c
   block1->locked = 1;
   if(!(block2 = cuda_add_block(host_mem2, length2, cufft_handle2, id2, 0))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem2 to GPU, making sure host_mem1 and host_mem3 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem2 to GPU, making sure host_mem1 and host_mem3 are removed from GPU.\n");
 #endif
     block1->locked = l1;
     if(test1) cuda_remove_block(host_mem1, copy1);   // was already in GPU, need to sync back to host memory
@@ -678,7 +708,7 @@ EXPORT char cuda_add_three_blocks(void *host_mem1, size_t length1, cufftHandle c
   block2->locked = 1;
   if(!(cuda_add_block(host_mem3, length3, cufft_handle3, id3, copy3))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem3 to GPU, making sure host_mem1 and host_mem2 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem3 to GPU, making sure host_mem1 and host_mem2 are removed from GPU.\n");
 #endif
     block1->locked = l1;
     block2->locked = l2;
@@ -692,18 +722,18 @@ EXPORT char cuda_add_three_blocks(void *host_mem1, size_t length1, cufftHandle c
   block2->locked = l2;
   if(!test1 && copy1) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
+    fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
 #endif
     cuda_mem2gpu(block1);  // Now that everything is OK, we need to also sync block1
   }
   if(!test2 && copy2) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem2 to GPU.\n");
+    fprintf(stderr, "cuda: Syncing host_mem2 to GPU.\n");
 #endif
     cuda_mem2gpu(block2);  // Now that everything is OK, we need to also sync block2
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Successful three-block add.\n");
+  fprintf(stderr, "cuda: Successful three-block add.\n");
 #endif
   return 0;  
 }
@@ -757,7 +787,7 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
   if(host_mem2 == host_mem4) return cuda_add_three_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, (char) (copy2 + copy4), host_mem3, length3, cufft_handle3, id3, copy3);
   if(host_mem3 == host_mem4) return cuda_add_three_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, (char) (copy3 + copy4));
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Request four blocks with host mems %lx with len %ld (%s), %lx with len %ld (%s), %lx with len %ld (%s), and %lx with len %ld (%s)...\n", (unsigned long int) host_mem1, length1, id1, (unsigned long int) host_mem2, length2, id2, (unsigned long int) host_mem3, length3, id3, (unsigned long int) host_mem4, length4, id4);
+  fprintf(stderr, "cuda: Request four blocks with host mems %lx with len %ld (%s), %lx with len %ld (%s), %lx with len %ld (%s), and %lx with len %ld (%s)...\n", (unsigned long int) host_mem1, length1, id1, (unsigned long int) host_mem2, length2, id2, (unsigned long int) host_mem3, length3, id3, (unsigned long int) host_mem4, length4, id4);
 #endif
   test1 = cuda_find_block(host_mem1);
   test2 = cuda_find_block(host_mem2);
@@ -765,7 +795,7 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
   test4 = cuda_find_block(host_mem4);
   if(!(block1 = cuda_add_block(host_mem1, length1, cufft_handle1, id1, 0))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem1 to GPU, making sure host_mem2, host_mem3, and host_mem4 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem1 to GPU, making sure host_mem2, host_mem3, and host_mem4 are removed from GPU.\n");
 #endif
     if(test2) cuda_remove_block(host_mem2, copy2);
     if(test3) cuda_remove_block(host_mem3, copy3);
@@ -776,7 +806,7 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
   block1->locked = 1;
   if(!(block2 = cuda_add_block(host_mem2, length2, cufft_handle2, id2, 0))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem2 to GPU, making sure host_mem1, host_mem3, and host_mem4 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem2 to GPU, making sure host_mem1, host_mem3, and host_mem4 are removed from GPU.\n");
 #endif
     block1->locked = l1;
     if(test1) cuda_remove_block(host_mem1, copy1);
@@ -789,7 +819,7 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
   block2->locked = 1;
   if(!(block3 = cuda_add_block(host_mem3, length3, cufft_handle3, id3, 0))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem3 to GPU, making sure host_mem1, host_mem2, and host_mem4 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem3 to GPU, making sure host_mem1, host_mem2, and host_mem4 are removed from GPU.\n");
 #endif
     block1->locked = l1;
     block2->locked = l2;
@@ -804,7 +834,7 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
   block3->locked = 1;
   if(!(cuda_add_block(host_mem4, length4, cufft_handle4, id4, copy4))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Failed to add host_mem4 to GPU, making sure host_mem1, host_mem2, and host_mem3 are removed from GPU.\n");
+    fprintf(stderr, "cuda: Failed to add host_mem4 to GPU, making sure host_mem1, host_mem2, and host_mem3 are removed from GPU.\n");
 #endif
     block1->locked = l1;
     block2->locked = l2;
@@ -822,19 +852,19 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
   block3->locked = l3;
   if(!test1 && copy1) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
+    fprintf(stderr, "cuda: Syncing host_mem1 to GPU.\n");
 #endif
     cuda_mem2gpu(block1);  // Now that everything is OK, we need to also sync block1
   }
   if(!test2 && copy2) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem2 to GPU.\n");
+    fprintf(stderr, "cuda: Syncing host_mem2 to GPU.\n");
 #endif
     cuda_mem2gpu(block2);  // Now that everything is OK, we need to also sync block2
   }
   if(!test3 && copy3) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Syncing host_mem3 to GPU.\n");
+    fprintf(stderr, "cuda: Syncing host_mem3 to GPU.\n");
 #endif
     cuda_mem2gpu(block3);  // Now that everything is OK, we need to also sync block2
   }
@@ -862,17 +892,17 @@ EXPORT int cuda_get_element(void *host_mem, int gpu, size_t index, size_t size, 
   gpu_mem_block *ptr;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Request to fetch element from host mem %lx of size %ld.\n", (unsigned long int) host_mem, size);
+  fprintf(stderr, "cuda: Request to fetch element from host mem %lx of size %ld.\n", (unsigned long int) host_mem, size);
 #endif
   if(!enable_cuda || !(ptr = cuda_find_block(host_mem))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: found in host memory.\n");
+    fprintf(stderr, "cuda: found in host memory.\n");
 #endif
     memcpy(value, &((char *) host_mem)[index * size], size);
     return 0;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: found in GPU memory.\n");
+  fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
   cudaSetDevice(gpu);
   if(cudaMemcpy(value, &((char *) ptr->gpu_info->descriptor->data)[index * size], size, cudaMemcpyDeviceToHost) != cudaSuccess) return -1;
@@ -900,17 +930,17 @@ EXPORT int cuda_set_element(void *host_mem, int gpu, size_t index, size_t size, 
   gpu_mem_block *ptr;
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Request to set element to host mem %lx of size %ld.\n", (unsigned long int) host_mem, size);
+  fprintf(stderr, "cuda: Request to set element to host mem %lx of size %ld.\n", (unsigned long int) host_mem, size);
 #endif
   if(!enable_cuda || !(ptr = cuda_find_block(host_mem))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: found in host memory.\n");
+    fprintf(stderr, "cuda: found in host memory.\n");
 #endif
     memcpy(&((char *) host_mem)[index * size], value, size);  // In host memory
     return 0;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: found in GPU memory.\n");
+  fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
   cudaSetDevice(gpu);
   if(cudaMemcpy(&((char *) ptr->gpu_info->descriptor->data)[index * size], value, size, cudaMemcpyHostToDevice) != cudaSuccess) return -1;
@@ -930,7 +960,7 @@ EXPORT void cuda_free_all_blocks(char sync) {
 
   if(!enable_cuda) return;
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Releasing all GPU memory blocks.\n");
+  fprintf(stderr, "cuda: Releasing all GPU memory blocks.\n");
 #endif
   for(ptr = gpu_blocks_head; ptr; ptr = ptr2) {
     ptr2 = ptr->next;
@@ -956,7 +986,7 @@ EXPORT void cuda_enable(char val, int ngpus, int *gpus) {
   void cuda_gpu_info();
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Enable/disable %d.\n", val);
+  fprintf(stderr, "cuda: Enable/disable %d.\n", val);
 #endif
   if(enable_cuda && val == 0) cuda_free_all_blocks(1);  // disable CUDA; flush GPU memory blocks
   enable_cuda = val;
@@ -980,26 +1010,6 @@ EXPORT void cuda_enable(char val, int ngpus, int *gpus) {
 EXPORT char cuda_status() {
 
   return enable_cuda;
-}
-
-/*
- * Enable/disable CUDA debugging.
- *
- * val: 1 = debug, 0 = no debug (char; input).
- *
- * No return value.
- *
- */
-
-EXPORT void cuda_debug(char val) {
-
-#ifdef CUDA_DEBUG
-  cuda_debug_flag = val;
-  if(val) fprintf(stderr, "cuda: Debugging enabled.\n");
-  else fprintf(stderr, "cuda: Debugging disabled.\n");
-#else
-  fprintf(stderr, "cuda: Debug code not complied in.\n");
-#endif
 }
 
 /*
@@ -1052,14 +1062,18 @@ EXPORT void cuda_statistics(char verbose) {
     for(ptr = gpu_blocks_head; ptr; ptr = ptr->next, n++) {
       fprintf(stderr, "Block number: %ld\n", n);
       fprintf(stderr, "Block ID    : %s\n", ptr->id);
-      fprintf(stderr, "Block mem   : %lx\n", (long unsigned int) ptr->host_mem);
-      fprintf(stderr, "Block gpu   : ");
+      fprintf(stderr, "Host mem    : %lx\n", (long unsigned int) ptr->host_mem);
+      fprintf(stderr, "GPU blocks  : ");
       for(i = 0; i < use_ngpus; i++)
-        printf("%lx ", (long unsigned int) ptr->gpu_info->descriptor->data[i]);
-      printf("\n");
+        fprintf(stderr, "%lx ", (long unsigned int) ptr->gpu_info->descriptor->data[i]);
+      fprintf(stderr, "\n");
       total_size = 0;
-      for(i = 0; i < use_ngpus; i++)
+      fprintf(stderr, "GPU sizes   : ");
+      for(i = 0; i < use_ngpus; i++) {
+        fprintf(stderr, "%lu ", ptr->gpu_info->descriptor->size[i]);
         total_size += ptr->gpu_info->descriptor->size[i];
+      }
+      fprintf(stderr, "\n");
       fprintf(stderr, "Block size  : %ld MB (%ld bytes)\n", total_size / (1024 * 1024), total_size);
       fprintf(stderr, "Created     : %s", ctime(&(ptr->created)));
       fprintf(stderr, "Last used   : %s", ctime(&(ptr->last_used)));
@@ -1085,14 +1099,14 @@ EXPORT cudaXtDesc *cuda_block_address(void *host_mem) {
 
   if(!enable_cuda) return NULL;
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Request GPU address for host mem %lx.\n", (unsigned long int) host_mem);
+  fprintf(stderr, "cuda: Request GPU address for host mem %lx.\n", (unsigned long int) host_mem);
 #endif
   if(!(ptr = cuda_find_block(host_mem))) {
     fprintf(stderr, "libgrid(cuda): warning - host_mem %lx not found.\n", (long unsigned int) host_mem);
     return NULL;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Block found with GPU address %lx.\n", (unsigned long int) ptr->gpu_mem);
+  fprintf(stderr, "cuda: Block found on GPU with host address %lx.\n", (unsigned long int) host_mem);
 #endif
   return ptr->gpu_info->descriptor;
 }
@@ -1124,17 +1138,17 @@ EXPORT int cuda_fft_policy(void *host_mem, size_t length, cufftHandle cufft_hand
     abort();
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: FFT policy check for host mem %lx.\n", (unsigned long int) host_mem);
+  fprintf(stderr, "cuda: FFT policy check for host mem %lx (%s).\n", (unsigned long int) host_mem, id);
 #endif
   /* Always do FFT on GPU if possible */
   if(!(ptr = cuda_add_block(host_mem, length, cufft_handle, id, 1))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory.\n");
+    fprintf(stderr, "cuda: Check result = In host memory.\n");
 #endif
     return -1;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
   cuda_block_hit(ptr);
   return 0;
@@ -1166,19 +1180,19 @@ EXPORT int cuda_one_block_policy(void *host_mem, size_t length, cufftHandle cuff
 
   if(!enable_cuda) return -1;
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: one block policy check for host mem %lx.\n", (unsigned long int) host_mem);
+  fprintf(stderr, "cuda: one block policy check for host mem %lx (%s).\n", (unsigned long int) host_mem, id);
 #endif
   if(length < cuda_memory())
     return cuda_add_block(host_mem, length, cufft_handle, id, copy)?0:-1; /* but if there is enough mem free, just do it */
   /* If grid not already on GPU, use host memory */
   if(!(ptr = cuda_find_block(host_mem))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory.\n");
+    fprintf(stderr, "cuda: Check result = In host memory.\n");
 #endif
     return -1;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
   cuda_block_hit(ptr);  // add_block was not used, have to hit manually
   return 0;
@@ -1218,7 +1232,7 @@ EXPORT int cuda_two_block_policy(void *host_mem1, size_t length1, cufftHandle cu
   if(!enable_cuda) return -1;
   if(host_mem1 == host_mem2) return cuda_one_block_policy(host_mem1, length1, cufft_handle1, id1, (char) (copy1 + copy2));
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: two blocks policy check for host mem1 %lx and host mem2 %lx.\n", (unsigned long int) host_mem1, (unsigned long int) host_mem2);
+  fprintf(stderr, "cuda: two blocks policy check for host mem1 %lx (%s) and host mem2 %lx (%s).\n", (unsigned long int) host_mem1, id1, (unsigned long int) host_mem2, id2);
 #endif
   if(length1 + length2 < cuda_memory())
     return cuda_add_two_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2);
@@ -1229,13 +1243,13 @@ EXPORT int cuda_two_block_policy(void *host_mem1, size_t length1, cufftHandle cu
   /* If one of the grids is on GPU, use GPU. */
   if(!a && !b) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory.\n");
+    fprintf(stderr, "cuda: Check result = In host memory.\n");
 #endif
     return -1;
   }
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
   return cuda_add_two_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2);
 }
@@ -1281,7 +1295,7 @@ EXPORT int cuda_three_block_policy(void *host_mem1, size_t length1, cufftHandle 
   if(host_mem1 == host_mem3) return cuda_two_block_policy(host_mem1, length1, cufft_handle1, id1, (char) (copy1 + copy3), host_mem2, length2, cufft_handle2, id2, copy2);
   if(host_mem2 == host_mem3) return cuda_two_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, (char) (copy2 + copy3));
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: three blocks policy check for host mem1 %lx, host mem2 %lx, and host mem3 %lx.\n", (unsigned long int) host_mem1, (unsigned long int) host_mem2, (unsigned long int) host_mem3);
+  fprintf(stderr, "cuda: three blocks policy check for host mem1 %lx (%s), host mem2 %lx (%s), and host mem3 %lx (%s).\n", (unsigned long int) host_mem1, id1, (unsigned long int) host_mem2, id2, (unsigned long int) host_mem3, id3);
 #endif
   if(length1 + length2 + length3 < cuda_memory())
     return cuda_add_three_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, copy3);
@@ -1293,7 +1307,7 @@ EXPORT int cuda_three_block_policy(void *host_mem1, size_t length1, cufftHandle 
   /* At least two grids must be on GPU already before we use it */
   if((!a && !b) || (!a && !c) || (!b && !c)) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory.\n");
+    fprintf(stderr, "cuda: Check result = In host memory.\n");
 #endif
     if(a) cuda_remove_block(host_mem1, copy1);
     if(b) cuda_remove_block(host_mem2, copy2);
@@ -1302,7 +1316,7 @@ EXPORT int cuda_three_block_policy(void *host_mem1, size_t length1, cufftHandle 
   }
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
   return cuda_add_three_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, copy3);
 }
@@ -1356,7 +1370,7 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, cufftHandle c
   if(host_mem2 == host_mem4) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, (char) (copy2 + copy4), host_mem3, length3, cufft_handle3, id3, copy3);
   if(host_mem3 == host_mem4) return cuda_three_block_policy(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, (char) (copy3 + copy4));
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: four blocks policy check for host mem1 %lx, host mem2 %lx, host mem3 %lx, and host mem4 %lx.\n", (unsigned long int) host_mem1, (unsigned long int) host_mem2, (unsigned long int) host_mem3, (unsigned long int) host_mem4);
+  fprintf(stderr, "cuda: four blocks policy check for host mem1 %lx (%s), host mem2 %lx (%s), host mem3 %lx (%s), and host mem4 %lx (%s).\n", (unsigned long int) host_mem1, id1, (unsigned long int) host_mem2, id2, (unsigned long int) host_mem3, id3, (unsigned long int) host_mem4, id4);
 #endif
   if(length1 + length2 + length3 + length4 < cuda_memory())
     return cuda_add_four_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, copy3, host_mem4, length4, cufft_handle4, id4, copy4);
@@ -1369,7 +1383,7 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, cufftHandle c
   /* At least two grids must be on GPU already before we use it */
   if((!a && !b) || (!a && !c) || (!b && !c) || (!d && !a) || (!d && !b) || (!d && !c)) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory.\n");
+    fprintf(stderr, "cuda: Check result = In host memory.\n");
 #endif
     if(a) cuda_remove_block(host_mem1, copy1);
     if(b) cuda_remove_block(host_mem2, copy2);
@@ -1379,7 +1393,7 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, cufftHandle c
   }
 
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
   return cuda_add_four_blocks(host_mem1, length1, cufft_handle1, id1, copy1, host_mem2, length2, cufft_handle2, id2, copy2, host_mem3, length3, cufft_handle3, id3, copy3, host_mem4, length4, cufft_handle4, id4, copy4);
 }
@@ -1418,7 +1432,7 @@ EXPORT int cuda_copy_policy(void *host_mem1, size_t length1, cufftHandle cufft_h
   /* mem1 = dest, mem2 = source */
   if(host_mem1 == host_mem2) return 0;  // src and dest the same??
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: copy policy check for host dst host_mem %lx and src host mem %lx.\n", (unsigned long int) host_mem1, (unsigned long int) host_mem2);
+  fprintf(stderr, "cuda: copy policy check for host dst host_mem %lx (%s) and src host mem %lx (%s).\n", (unsigned long int) host_mem1, id1, (unsigned long int) host_mem2, id2);
 #endif
   if(length1 + length2 < cuda_memory())
     return cuda_add_two_blocks(host_mem1, length1, cufft_handle1, id1, 0, host_mem2, length2, cufft_handle2, id2, 1);
@@ -1426,7 +1440,7 @@ EXPORT int cuda_copy_policy(void *host_mem1, size_t length1, cufftHandle cufft_h
   /* Proceed with GPU is the source is already on GPU */
   if(!(ptr = cuda_find_block(host_mem2))) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory (host mem2).\n");
+    fprintf(stderr, "cuda: Check result = In host memory (host mem2).\n");
 #endif
     cuda_remove_block(host_mem1, 0);  // would have been overwritten anyway
     return -1;
@@ -1435,14 +1449,14 @@ EXPORT int cuda_copy_policy(void *host_mem1, size_t length1, cufftHandle cufft_h
   ptr->locked = 1;
   if(cuda_add_block(host_mem1, length1, cufft_handle1, id1, 0) == NULL) {
 #ifdef CUDA_DEBUG
-    if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In host memory (host mem1).\n");
+    fprintf(stderr, "cuda: Check result = In host memory (host mem1).\n");
 #endif
     ptr->locked = l;
     cuda_remove_block(host_mem2, 1);
     return -1;
   }
 #ifdef CUDA_DEBUG
-  if(cuda_debug_flag) fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
 #endif
   ptr->locked = l;
   cuda_block_hit(ptr);

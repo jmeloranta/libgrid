@@ -130,8 +130,8 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   
   grid->plan = grid->iplan = NULL;  // No need to allocate these yet
 #ifdef USE_CUDA  
-  grid->cufft_handle_r2c = rgrid_cufft_alloc_r2c(grid);
-  grid->cufft_handle_c2r = rgrid_cufft_alloc_c2r(grid);
+  rgrid_cufft_alloc_r2c(grid);
+  rgrid_cufft_alloc_c2r(grid);
 #endif
   
   if (grid->value_outside == RGRID_NEUMANN_BOUNDARY)
@@ -201,8 +201,8 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
     return NULL;
   }
 #ifdef USE_CUDA
-  grid->cufft_handle_r2c = rgrid_cufft_alloc_r2c(ngrid);
-  grid->cufft_handle_c2r = rgrid_cufft_alloc_c2r(ngrid);
+  rgrid_cufft_alloc_r2c(ngrid);
+  rgrid_cufft_alloc_c2r(ngrid);
 #endif
   ngrid->plan = ngrid->iplan = NULL;
 
@@ -2605,7 +2605,7 @@ EXPORT void rgrid_random_index(rgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
 }
 
 /*
- * Solve Poisson equation: Laplace f = u subject to periodic boundaries
+ * Solve Poisson equation: Laplace f = u subject to periodic boundaries (in Fourier space)
  * Uses finite difference for Laplacian (7 point) and FFT.
  *
  * grid = On entry function u specified over grid (input) 
@@ -2630,7 +2630,6 @@ EXPORT void rgrid_poisson(rgrid *grid) {
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_poisson(grid)) return;
 #endif
-  rgrid_fftw(grid);
   /* the folllowing is in Fourier space -> k = 0, nz */
   nz = grid->nz2 / 2; // nz2 = 2 * (nz/2 + 1)
   ilx = 2.0 * M_PI / ((REAL) nx);
@@ -2651,7 +2650,6 @@ EXPORT void rgrid_poisson(rgrid *grid) {
       }
     }
   }
-  rgrid_fftw_inv(grid);
 }
 
 /*
@@ -2942,6 +2940,7 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
  * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
  * The incompressible part is then w = v - u.
  *
+ * fd = 0 = use finite difference, 1 = FFT (char; input).
  * vx = X component of the vector field to be decomposed (rgrid *; input).
  * vy = Y component of the vector field to be decomposed (rgrid *; input).
  * vz = Z component of the vector field to be decomposed (rgrid *; input).
@@ -2956,14 +2955,27 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
  *
  */
 
-EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, rgrid *uz, rgrid *wx, rgrid *wy, rgrid *wz) {
+EXPORT void rgrid_hodge(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, rgrid *uz, rgrid *wx, rgrid *wy, rgrid *wz) {
 
-  rgrid_div(wx, vx, vy, vz);
-  rgrid_poisson(wx);
-  rgrid_fd_gradient(wx, ux, uy, uz);
-  rgrid_difference(wx, vx, ux);
-  rgrid_difference(wy, vy, uy);
-  rgrid_difference(wz, vz, uz);
+  if(fd == 1) { /* FFT */
+    rgrid_div(wx, vx, vy, vz);
+    rgrid_fft(wx);
+    rgrid_poisson(wx);
+    rgrid_fft_gradient(wx, ux, uy, uz);
+    rgrid_inverse_fft(ux);
+    rgrid_inverse_fft(uy);
+    rgrid_inverse_fft(uz);
+    rgrid_difference(wx, vx, ux);
+    rgrid_difference(wy, vy, uy);
+    rgrid_difference(wz, vz, uz);
+  } else { /* FD */
+    rgrid_div(wx, vx, vy, vz);
+    rgrid_poisson(wx);
+    rgrid_fd_gradient(wx, ux, uy, uz);
+    rgrid_difference(wx, vx, ux);
+    rgrid_difference(wy, vy, uy);
+    rgrid_difference(wz, vz, uz);
+  }
 }
 
 /*
@@ -2978,6 +2990,7 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
  *
  * This is special version of rgrid_hodge() such that it only computes the compressible part.
  *
+ * fd = 0 = use finite difference, 1 = FFT (char; input).
  * vx        = X component of the vector field to be decomposed (rgrid *; input). Output: X component of compressible part.
  * vy        = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of compressible part.
  * vz        = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of compressible part.
@@ -2987,11 +3000,21 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
  *
  */
 
-EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) {
+EXPORT void rgrid_hodge_comp(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) {
 
-  rgrid_div(workspace, vx, vy, vz);
-  rgrid_poisson(workspace);
-  rgrid_fd_gradient(workspace, vx, vy, vz);
+  if(fd == 1) { /* FFT */
+    rgrid_div(workspace, vx, vy, vz);
+    rgrid_fft(workspace);
+    rgrid_poisson(workspace);
+    rgrid_fft_gradient(workspace, vx, vy, vz);
+    rgrid_inverse_fft(vx);
+    rgrid_inverse_fft(vy);
+    rgrid_inverse_fft(vz);
+  } else { /* FD */
+    rgrid_div(workspace, vx, vy, vz);
+    rgrid_poisson(workspace);
+    rgrid_fd_gradient(workspace, vx, vy, vz);
+  }
 }
 
 /*
@@ -3006,6 +3029,7 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
  *
  * This is special version of rgrid_hodge() such that it only computes the incompressible part.
  *
+ * fd         = 0 = use finite difference, 1 = FFT (char; input).
  * vx         = X component of the vector field to be decomposed (rgrid *; input). Output: X component of incompressible part.
  * vy         = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of incompressible part.
  * vz         = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of incompressible part.
@@ -3016,16 +3040,31 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
  *
  */
 
-EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
+EXPORT void rgrid_hodge_incomp(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
 
-  rgrid_div(workspace, vx, vy, vz);
-  rgrid_poisson(workspace);
-  rgrid_fd_gradient_x(workspace, workspace2);
-  rgrid_difference(vx, vx, workspace2);
-  rgrid_fd_gradient_y(workspace, workspace2);
-  rgrid_difference(vy, vy, workspace2);
-  rgrid_fd_gradient_z(workspace, workspace2);
-  rgrid_difference(vz, vz, workspace2);
+  if(fd == 1) { /* FFT */
+    rgrid_div(workspace, vx, vy, vz);
+    rgrid_fft(workspace);
+    rgrid_poisson(workspace);
+    rgrid_fft_gradient_x(workspace, workspace2);
+    rgrid_inverse_fft(workspace2);
+    rgrid_difference(vx, vx, workspace2);
+    rgrid_fft_gradient_y(workspace, workspace2);
+    rgrid_inverse_fft(workspace2);
+    rgrid_difference(vy, vy, workspace2);
+    rgrid_fft_gradient_z(workspace, workspace2);
+    rgrid_inverse_fft(workspace2);
+    rgrid_difference(vz, vz, workspace2);
+  } else { /* FD */
+    rgrid_div(workspace, vx, vy, vz);
+    rgrid_poisson(workspace);
+    rgrid_fd_gradient_x(workspace, workspace2);
+    rgrid_difference(vx, vx, workspace2);
+    rgrid_fd_gradient_y(workspace, workspace2);
+    rgrid_difference(vy, vy, workspace2);
+    rgrid_fd_gradient_z(workspace, workspace2);
+    rgrid_difference(vz, vz, workspace2);
+  }
 }
 
 /*

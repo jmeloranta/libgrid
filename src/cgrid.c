@@ -128,7 +128,7 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   
   grid->plan = grid->iplan = grid->implan = grid->iimplan = NULL; // No need to set these up yet
 #ifdef USE_CUDA
-  grid->cufft_handle = cgrid_cufft_alloc(grid); // We have to allocate these for cuda.c to work
+  cgrid_cufft_alloc(grid); // We have to allocate these for cuda.c to work
   grid->space = 0; // Start with data in real space
 #endif
   
@@ -183,7 +183,7 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
     return NULL;
   }
 #ifdef USE_CUDA
-  ngrid->cufft_handle = cgrid_cufft_alloc(ngrid); // We have to allocate these for cuda.c to work
+  cgrid_cufft_alloc(ngrid); // We have to allocate these for cuda.c to work
 #endif
   ngrid->plan = ngrid->iplan = ngrid->implan = ngrid->iimplan = NULL;
   return ngrid;
@@ -623,6 +623,7 @@ EXPORT void cgrid_copy(cgrid *copy, cgrid *grid) {
   copy->kz0 = grid->kz0;
 
 #ifdef USE_CUDA
+  copy->space = grid->space;
   if(cuda_status() && !cgrid_cuda_copy(copy, grid)) return;
 #endif
   

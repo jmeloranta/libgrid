@@ -692,6 +692,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
  * binstep    = Step length in k-space in atomic units (REAL; input).
  * nbins      = Number of bins to use (INT; input).
+ * fd         = 0 = use finite difference, 1 = FFT (char; input).
  * workspace1 = Workspace 1 (rgrid *; input/output).
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
@@ -702,7 +703,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  *
  */
 
-EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
+EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, char fd, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
 
   INT i;
 
@@ -718,7 +719,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
   rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
 
-  rgrid_hodge_incomp(workspace2, workspace3, workspace4, workspace1, workspace5);
+  rgrid_hodge_incomp(fd, workspace2, workspace3, workspace4, workspace1, workspace5);
 
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
@@ -742,6 +743,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
  * binstep    = Step length in k-space in atomic units (REAL; input).
  * nbins      = Number of bins to use (INT; input).
+ * fd         = 0 = use finite difference, 1 = FFT (char; input).
  * workspace1 = Workspace 1 (rgrid *; input/output).
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
@@ -751,7 +753,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
  *
  */
 
-EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
+EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, char fd, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
 
   INT i;
 
@@ -767,7 +769,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
   grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
   rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
 
-  rgrid_hodge_comp(workspace2, workspace3, workspace4, workspace1);
+  rgrid_hodge_comp(fd, workspace2, workspace3, workspace4, workspace1);
 
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
