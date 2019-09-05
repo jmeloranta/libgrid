@@ -1046,15 +1046,15 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
- * value    = Result (CUCOMPLEX *; output).
+ * value    = Result (CUREAL *; output).
  * space    = Real or Fourier space? (char; input).
  *
  */
 
-extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc *grid, INT nx, INT ny, INT nz, CUCOMPLEX *value, char space) {
+extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc *grid, INT nx, INT ny, INT nz, CUREAL *value, char space) {
 
   SETUP_VARIABLES(grid);
-  CUCOMPLEX tmp;
+  CUREAL tmp;
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
@@ -1081,12 +1081,12 @@ extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc *grid, INT nx, INT ny,
   }
 
   // Reduce over GPUs
-  *value = CUMAKE(0.0,0.0);
+  *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, grid->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
-    value->x += tmp.x;  /// + overloaded to device function - work around!
-    value->y += tmp.y;
+    cuda_get_element(grid_gpu_mem, grid->GPUs[i], 0, sizeof(CUREAL), &tmp);  // get on the real part
+    *value += tmp;
   }
+
   cuda_error_check();
 }
 

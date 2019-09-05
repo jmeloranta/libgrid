@@ -455,7 +455,7 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 }
 
 /* 
- * Integrate over the grid squared (int grid^2).
+ * Integrate over the grid squared (int |grid|^2).
  *
  * grid  = grid for integration (cgrid *; input).
  * value = value of the integral (REAL *; output).
@@ -468,7 +468,7 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value, grid->space);
+  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUREAL *) value, grid->space);
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
