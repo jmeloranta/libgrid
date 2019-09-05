@@ -1,7 +1,5 @@
 /*
- * Example: Solve Poisson equation.
- *
- * Compare input.? with check.?
+ * Example: Integrate over gaussian.
  *
  */
 
@@ -15,7 +13,7 @@
 #define NZ 256
 #define STEP 0.2
 
-/* Right hand side function for Poisson equation (Gaussian) */
+/* Equation to be integrated */
 REAL gaussian(void *arg, REAL x, REAL y, REAL z) {
 
   REAL inv_width = 0.2;
@@ -43,23 +41,7 @@ int main(int argc, char **argv) {
   /* Map the right hand side to the grid */
   rgrid_map(grid, gaussian, NULL);
 
-  /* Write right hand side grid */
-  rgrid_write_grid("input", grid);
-
-  /* Solve the Poisson equation (result written over the right hand side in grid) */
-  rgrid_fft(grid);
-  rgrid_poisson(grid);   // include normalization
-  rgrid_inverse_fft(grid);
-
-  /* Write output file (solution) */
-  rgrid_write_grid("output", grid);
-
-  /* Check by taking Laplacian (should be equal to input) & write */
-  rgrid_fft(grid);
-  rgrid_fft_laplace(grid, grid);
-  rgrid_inverse_fft(grid);
-
-  rgrid_write_grid("check", grid);
+  printf("Integral = " FMT_R "\n", rgrid_integral(grid));
 
   return 0;
 }

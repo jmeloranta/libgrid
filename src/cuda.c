@@ -905,7 +905,10 @@ EXPORT int cuda_get_element(void *host_mem, int gpu, size_t index, size_t size, 
   fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
   cudaSetDevice(gpu);
-  if(cudaMemcpy(value, &((char *) ptr->gpu_info->descriptor->data)[index * size], size, cudaMemcpyDeviceToHost) != cudaSuccess) return -1;
+  if(cudaMemcpy(value, &((char *) ptr->gpu_info->descriptor->data[gpu])[index * size], size, cudaMemcpyDeviceToHost) != cudaSuccess) {
+    fprintf(stderr, "libgrid(cuda): read failed in cuda_get_element().\n");
+    abort();
+  }
   return 0;
 }
 
@@ -943,7 +946,7 @@ EXPORT int cuda_set_element(void *host_mem, int gpu, size_t index, size_t size, 
   fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
   cudaSetDevice(gpu);
-  if(cudaMemcpy(&((char *) ptr->gpu_info->descriptor->data)[index * size], value, size, cudaMemcpyHostToDevice) != cudaSuccess) return -1;
+  if(cudaMemcpy(&((char *) ptr->gpu_info->descriptor->data[gpu])[index * size], value, size, cudaMemcpyHostToDevice) != cudaSuccess) return -1;
   return 0;
 }
 

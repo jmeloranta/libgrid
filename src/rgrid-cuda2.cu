@@ -878,6 +878,7 @@ extern "C" void rgrid_cuda_integralW(cudaXtDesc *grid, INT nx, INT ny, INT nz, C
     cuda_get_element(grid_gpu_mem, grid->GPUs[i], 0, sizeof(CUREAL), &tmp);
     *value = *value + tmp;
   }
+
   cuda_error_check();
 }
 
