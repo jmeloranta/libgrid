@@ -26,9 +26,11 @@ EXPORT char grid_cuda_wf_propagate_kinetic_fft(wf *gwf, REAL complex time_mass) 
 
   t.x = CREAL(time_mass);
   t.y = CIMAG(time_mass);
+
   cgrid_cufft_fft(grid);
   grid_cuda_wf_propagate_kinetic_fftW(cuda_block_address(grid->value), grid->fft_norm, grid->kx0, grid->ky0, grid->kz0, grid->step, t, grid->nx, grid->ny, grid->nz);
   cgrid_cufft_fft_inv(grid);
+
   return 0;
 }
 
@@ -48,8 +50,10 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time_mass)
 
   t.x = CREAL(time_mass);
   t.y = CIMAG(time_mass);
+
   cgrid_cufft_fft(grid);
   grid_cuda_wf_propagate_kinetic_cfftW(cuda_block_address(grid->value), grid->fft_norm, grid->kx0, grid->ky0, grid->kz0, grid->step, t, grid->nx, grid->ny, grid->nz);
   cgrid_cufft_fft_inv(grid);
+
   return 0;
 }

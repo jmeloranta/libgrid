@@ -27,11 +27,8 @@ cudaXtDesc *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
 EXPORT void cgrid_cuda_init(size_t len) {
 
   static size_t prev_len = 0;
-  int *gpus;
 
   if(!cuda_status()) return;  // TODO: must be called somehow if cuda is activated later
-  gpus = cuda_gpus();
-  cudaSetDevice(gpus[0]);
   if(prev_len < len) {
     if(grid_gpu_mem) {
       cuda_unlock_block(grid_gpu_mem);

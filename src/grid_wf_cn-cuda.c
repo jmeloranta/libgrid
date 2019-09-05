@@ -40,6 +40,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex tstep, cgr
      return -1;
 
   grid_cuda_wf_propagate_kinetic_cn_xW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, gwf->mass, grid->step, grid->kx0, grid->omega, grid->y0, cuda_block_address(workspace->value), cuda_block_address(workspace2->value), cuda_block_address(workspace3->value), lx, hx, ly, hy, lz, hz);
+
   return 0;
 }
 
@@ -107,5 +108,6 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex tstep, cgr
     return -1;
 
   grid_cuda_wf_propagate_kinetic_cn_zW(grid->nx, grid->ny, grid->nz, ts, cuda_block_address(grid->value), gwf->boundary, gwf->mass, grid->step, grid->kz0, cuda_block_address(workspace->value), cuda_block_address(workspace2->value), cuda_block_address(workspace3->value), lx, hx, ly, hy, lz, hz);
+
   return 0;
 }
