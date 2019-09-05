@@ -1554,7 +1554,8 @@ EXPORT REAL complex cgrid_integral(cgrid *grid) {
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /*
@@ -1574,7 +1575,7 @@ EXPORT REAL complex cgrid_integral(cgrid *grid) {
 
 EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl, REAL yu, REAL zl, REAL zu) {
 
-  INT iu, il, i, ju, jl, j, ku, kl, k, nx = grid->nx, ny = grid->ny;
+  INT iu, il, i, ju, jl, j, ku, kl, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
   REAL complex sum;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0;
   REAL step = grid->step;
@@ -1598,7 +1599,8 @@ EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl
 	sum += cgrid_value_at_index(grid, i, j, k);
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
  
 /* 
@@ -1627,7 +1629,8 @@ EXPORT REAL cgrid_integral_of_square(cgrid *grid) {
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /*
@@ -1656,7 +1659,8 @@ EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gri
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /*
@@ -1687,7 +1691,8 @@ EXPORT REAL complex cgrid_grid_expectation_value(cgrid *grida, cgrid *gridb) {
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
  
 /*
@@ -1728,7 +1733,8 @@ EXPORT REAL complex cgrid_grid_expectation_value_func(void *arg, REAL complex (*
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /* 
@@ -1767,7 +1773,8 @@ EXPORT REAL complex cgrid_weighted_integral(cgrid *grid, REAL complex (*weight)(
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /* 
@@ -1807,7 +1814,8 @@ EXPORT REAL cgrid_weighted_integral_of_square(cgrid *grid, REAL (*weight)(void *
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /* 
@@ -2640,7 +2648,9 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   /* int (delta FFT[f(x)] )^2 dk => delta^2 / N delta */
 
   norm = grid->fft_norm;
-  norm = step * step * step * grid->fft_norm;
+  if(nx != 1) norm *= step;
+  if(ny != 1) norm *= step;
+  if(nz != 1) norm *= step;
   
   if(FFT_BOUNDARY_TEST(grid->value_outside)) {
     lx = M_PI / (((REAL) nx) * step);
@@ -3086,7 +3096,7 @@ EXPORT void cgrid_random_index(cgrid *grid, REAL scale, INT lx, INT hx, INT ly, 
 }
 
 /*
- * Solve Poisson equation: Laplace f = u subject to periodic boundary condition.
+ * Solve Poisson equation: Laplace f = u subject to periodic boundary condition. Grid in Fourier space.
  * Uses finite difference for Laplacian (7 point) and FFT. Num. Recip. Sect. 19.4.
  *
  * grid = On entry function u specified over grid (input) 
@@ -3111,7 +3121,6 @@ EXPORT void cgrid_poisson(cgrid *grid) {
 #ifdef USE_CUDA
   if(cuda_status() && !cgrid_cuda_poisson(grid)) return;  
 #endif
-  cgrid_fftw(grid);
 #pragma omp parallel for firstprivate(nx, ny, nz, value, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
   for(i = 0; i < nx; i++) {
     kx = COS(ilx * ((REAL) i));
@@ -3127,7 +3136,6 @@ EXPORT void cgrid_poisson(cgrid *grid) {
       }
     }
   }
-  cgrid_fftw_inv(grid);
 }
 
 /*

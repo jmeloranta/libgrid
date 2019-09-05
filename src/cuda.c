@@ -1399,7 +1399,7 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, cufftHandle c
 }
 
 /*
- * CUDA memory copy policy.
+ * CUDA memory copy policy. Copy host_mem2 to host_mem1.
  *
  * host_mem1     = Destination host memory block (void *; input).
  * length1       = Destination host memory block length (size_t; input).

@@ -347,7 +347,7 @@ EXPORT char rgrid_cuda_integral(rgrid *grid, REAL *value) {
 
   if(grid->nx != 1) *value *= grid->step;
   if(grid->ny != 1) *value *= grid->step;
-  *value *= grid->step;
+  if(grid->nz != 1) *value *= grid->step;
 
   return 0;
 }
@@ -374,7 +374,7 @@ EXPORT char rgrid_cuda_integral_region(rgrid *grid, INT il, INT iu, INT jl, INT 
 
   if(grid->nx != 1) *value *= grid->step;
   if(grid->ny != 1) *value *= grid->step;
-  *value *= grid->step;
+  if(grid->nz != 1) *value *= grid->step;
 
   return 0;
 }
@@ -395,7 +395,7 @@ EXPORT char rgrid_cuda_integral_of_square(rgrid *grid, REAL *value) {
 
   if(grid->nx != 1) *value *= grid->step;
   if(grid->ny != 1) *value *= grid->step;
-  *value *= grid->step;
+  if(grid->nz != 1) *value *= grid->step;
 
   return 0;
 }
@@ -418,7 +418,7 @@ EXPORT char rgrid_cuda_integral_of_product(rgrid *grida, rgrid *gridb, REAL *val
 
   if(grida->nx != 1) *value *= grida->step;
   if(grida->ny != 1) *value *= grida->step;
-  *value *= grida->step;
+  if(grida->nz != 1) *value *= grida->step;
 
   return 0;
 }
@@ -442,7 +442,7 @@ EXPORT char rgrid_cuda_grid_expectation_value(rgrid *grida, rgrid *gridb, REAL *
 
   if(grida->nx != 1) *value *= grida->step;
   if(grida->ny != 1) *value *= grida->step;
-  *value *= grida->step;
+  if(grida->nz != 1) *value *= grida->step;
 
   return 0;
 }
@@ -817,7 +817,8 @@ EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value
   cuda_get_element(grid_gpu_mem, 0, 0, sizeof(REAL), value);
   if(laplace->nx != 1) *value *= step;
   if(laplace->ny != 1) *value *= step;
-  *value *= step * norm;
+  if(laplace->nz != 1) *value *= step;
+  *value *= norm;
 
   return 0;
 }

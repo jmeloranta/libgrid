@@ -30,7 +30,6 @@ extern void *grid_gpu_mem;            /* host memory holder for the block used f
 extern cudaXtDesc *grid_gpu_mem_addr; /* the corresponding GPU memory addresses */
 extern "C" void cuda_error_check();
 
-
 /*
  * Fourier space convolution device code.
  *
@@ -307,12 +306,12 @@ extern "C" void cgrid_cuda_differenceW(cudaXtDesc *dst, cudaXtDesc *src1, cudaXt
 
   SETUP_VARIABLES(dst);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_difference_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, nny1, nz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_difference_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, nny2, nz);
   }
@@ -354,12 +353,12 @@ extern "C" void cgrid_cuda_productW(cudaXtDesc *dst, cudaXtDesc *src1, cudaXtDes
 
   SETUP_VARIABLES(dst);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, nny1, nz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, nny2, nz);
   }
@@ -640,12 +639,12 @@ extern "C" void cgrid_cuda_add_and_multiplyW(cudaXtDesc *dst, CUCOMPLEX ca, CUCO
 
   SETUP_VARIABLES(dst);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_add_and_multiply_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], ca, cm, nnx1, nny1, nz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_add_and_multiply_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], ca, cm, nnx2, nny2, nz);
   }
@@ -1723,7 +1722,7 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
  * nz         = # of points along z (INT; input).
- * space    = Real or Fourier space? (char; input). Can only be 1!
+ * space      = Real or Fourier space? (char; input). Can only be 1!
  *
  */
 
@@ -2014,7 +2013,7 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(cudaXtDesc *dst, CUREA
   int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
@@ -2027,7 +2026,7 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(cudaXtDesc *dst, CUREA
 
   cuda_error_check();
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();

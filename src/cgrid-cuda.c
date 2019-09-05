@@ -34,10 +34,8 @@ EXPORT void cgrid_cuda_init(size_t len) {
   cudaSetDevice(gpus[0]);
   if(prev_len < len) {
     if(grid_gpu_mem) {
-      if(prev_len) {
-        cuda_unlock_block(grid_gpu_mem);
-        cuda_remove_block(grid_gpu_mem, 0);
-      }
+      cuda_unlock_block(grid_gpu_mem);
+      cuda_remove_block(grid_gpu_mem, 0);
       cudaFreeHost(grid_gpu_mem);    
     }
     prev_len = len;
@@ -422,7 +420,7 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
-  *value *= step;
+  if(grid->nz != 1) *value *= step;
 
   return 0;
 }
@@ -451,7 +449,7 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
-  *value *= step;
+  if(grid->nz != 1) *value *= step;
 
   return 0;
 }
@@ -474,7 +472,7 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
-  *value *= step;
+  if(grid->nz != 1) *value *= step;
 
   return 0;
 }
@@ -498,7 +496,7 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 
   if(gridb->nx != 1) *value *= step;
   if(gridb->ny != 1) *value *= step;
-  *value *= step;
+  if(gridb->nz != 1) *value *= step;
 
   return 0;
 }
@@ -522,7 +520,7 @@ EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL c
 
   if(gridb->nx != 1) *value *= step;
   if(gridb->ny != 1) *value *= step;
-  *value *= step;
+  if(gridb->nz != 1) *value *= step;
 
   return 0;
 }
@@ -763,7 +761,7 @@ EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 }
 
 /*
- * Calculate second derivative of a grid (in Fourier space).
+ * Calculate second derivative (laplacian) of a grid (in Fourier space).
  *
  * src   = source grid (cgrid *; input).
  * dst   = destination grid (cgrid *; output).
@@ -811,7 +809,8 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value
 
   if(laplace->nx != 1) *value *= step;
   if(laplace->ny != 1) *value *= step;
-  *value *= step * norm;
+  if(laplace->nz != 1) *value *= step;
+  *value *= norm;
 
   return 0;
 }
@@ -876,11 +875,14 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
 
 EXPORT char cgrid_cuda_poisson(cgrid *grid) {
 
+  if(grid->space == 0) {
+    fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_poisson).\n");
+    abort();
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cufft_fft(grid);
   cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz, grid->space);
-  cgrid_cufft_fft_inv(grid);
 
   return 0;
 }
