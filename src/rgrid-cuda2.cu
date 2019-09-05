@@ -166,7 +166,7 @@ extern "C" void rgrid_cuda_abs_powerW(cudaXtDesc *dst, cudaXtDesc *src, CUREAL e
     rgrid_cuda_abs_power_gpu<<<blocks1,threads>>>((CUREAL *) dst->data[i], (CUREAL *) src->data[i], exponent, nnx1, ny, nz, nzz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     rgrid_cuda_abs_power_gpu<<<blocks2,threads>>>((CUREAL *) dst->data[i], (CUREAL *) src->data[i], exponent, nnx2, ny, nz, nzz);
   }
@@ -235,7 +235,7 @@ __global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *dst, CUREAL c, INT nx, IN
 }
 
 /*
- * Multiply (complex) grid by a constant (in FFT space).
+ * Multiply (complex) grid by a constant (in Fourier space).
  *
  * st       = Grid to be operated on (cudaXtDesc *; input/output).
  * c        = Multiplying constant (CUREAL; input).
@@ -938,7 +938,8 @@ extern "C" void rgrid_cuda_integral_regionW(cudaXtDesc *grid, INT il, INT iu, IN
 
   SETUP_VARIABLES_REAL(grid);
   CUREAL tmp;
-  INT seg = 0, s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
+  INT seg = 0, s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z;
+  INT b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
   if(il < 0) il = 0;  
@@ -1122,7 +1123,8 @@ extern "C" void rgrid_cuda_integral_of_productW(cudaXtDesc *grid1, cudaXtDesc *g
     rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
     // Blocks, Threads, dynamic memory size
-    rgrid_cuda_integral_of_product_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], nnx1, ny, nz, nzz);
+    rgrid_cuda_integral_of_product_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], 
+                                                                             (CUREAL *) grid_gpu_mem_addr->data[i], nnx1, ny, nz, nzz);
     cuda_error_check();
     rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
@@ -1133,7 +1135,8 @@ extern "C" void rgrid_cuda_integral_of_productW(cudaXtDesc *grid1, cudaXtDesc *g
     rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();
     // Blocks, Threads, dynamic memory size
-    rgrid_cuda_integral_of_product_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], nnx2, ny, nz, nzz);
+    rgrid_cuda_integral_of_product_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], 
+                                                                             (CUREAL *) grid_gpu_mem_addr->data[i], nnx2, ny, nz, nzz);
     cuda_error_check();
     rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();
@@ -1205,7 +1208,8 @@ extern "C" void rgrid_cuda_grid_expectation_valueW(cudaXtDesc *grid1, cudaXtDesc
     rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
     // Blocks, Threads, dynamic memory size
-    rgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], nnx1, ny, nz, nzz);
+    rgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], 
+                                                                                (CUREAL *) grid_gpu_mem_addr->data[i], nnx1, ny, nz, nzz);
     cuda_error_check();
     rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
@@ -1216,7 +1220,8 @@ extern "C" void rgrid_cuda_grid_expectation_valueW(cudaXtDesc *grid1, cudaXtDesc
     rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();
     // Blocks, Threads, dynamic memory size
-    rgrid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], nnx2, ny, nz, nzz);
+    rgrid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUREAL *) grid1->data[i], (CUREAL *) grid2->data[i], 
+                                                                                (CUREAL *) grid_gpu_mem_addr->data[i], nnx2, ny, nz, nzz);
     cuda_error_check();
     rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();
@@ -1723,13 +1728,13 @@ extern "C" void grid_cuda_minW(cudaXtDesc *grid, INT nx, INT ny, INT nz, CUREAL 
   CUREAL tmp;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(grid->GPUs[i]);
     rgrid_cuda_min_gpu<<<1,1>>>((CUREAL *) grid->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], nnx1, ny, nz, nzz);
   }
   cuda_error_check();
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     rgrid_cuda_min_gpu<<<1,1>>>((CUREAL *) grid->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], nnx2, ny, nz, nzz);
   }
@@ -1806,7 +1811,8 @@ extern "C" void rgrid_cuda_abs_rotW(cudaXtDesc *rot, cudaXtDesc *fx, cudaXtDesc 
   }
 
   cudaSetDevice(rot->GPUs[0]);
-  rgrid_cuda_abs_rot_gpu<<<blocks,threads>>>((CUREAL *) rot->data[0], (CUREAL *) fx->data[0], (CUREAL *) fy->data[0], (CUREAL *) fz->data[0], inv_delta, bc, nx, ny, nz, nzz);
+  rgrid_cuda_abs_rot_gpu<<<blocks,threads>>>((CUREAL *) rot->data[0], (CUREAL *) fx->data[0], (CUREAL *) fy->data[0], (CUREAL *) fz->data[0], 
+                                             inv_delta, bc, nx, ny, nz, nzz);
   cuda_error_check();
 }
 
@@ -1996,7 +2002,7 @@ __global__ void rgrid_cuda_poisson_gpu(CUCOMPLEX *grid, CUREAL norm, CUREAL step
   kx = COS(ilx * (CUREAL) i);
   ky = COS(ily * (CUREAL) jj);
   kz = COS(ilz * (CUREAL) k);
-  if(i || j || k)
+  if(i || jj || k)
     grid[idx] = grid[idx] * norm * step2 / (2.0 * (kx + ky + kz - 3.0));
   else
     grid[idx] = CUMAKE(0.0,0.0);
@@ -2200,7 +2206,7 @@ extern "C" void rgrid_cuda_fft_gradient_zW(cudaXtDesc *gradient_z, REAL kz0, REA
  *
  */
 
-__global__ void rgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2, INT seg) {  /* Exectutes at GPU */
+__global__ void rgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2, INT seg, INT nyy) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg;
   CUREAL kx, ky, kz;
@@ -2216,7 +2222,7 @@ __global__ void rgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0
   if(jj < ny2) 
     ky = ((REAL) jj) * ly - ky0;
   else
-    ky = -((REAL) (ny - jj)) * ly - ky0;
+    ky = -((REAL) (nyy - jj)) * ly - ky0;
   if(k < nz2) 
     kz = ((REAL) k) * lz - kz0;
   else
@@ -2252,14 +2258,14 @@ extern "C" void rgrid_cuda_fft_laplaceW(cudaXtDesc *laplace, CUREAL norm, CUREAL
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(laplace->GPUs[i]);
     rgrid_cuda_fft_laplace_gpu<<<blocks1,threads>>>((CUCOMPLEX *) laplace->data[i], norm, kx0, ky0, kz0, 
-        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny1, nzz, nx / 2, ny / 2, nzz / 2, seg);
+        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny1, nzz, nx / 2, ny / 2, nzz / 2, seg, ny);
     seg += nny1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(laplace->GPUs[i]);
     rgrid_cuda_fft_laplace_gpu<<<blocks2,threads>>>((CUCOMPLEX *) laplace->data[i], norm, kx0, ky0, kz0,
-        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny2, nzz, nx / 2, ny / 2, nzz / 2, seg);
+        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny2, nzz, nx / 2, ny / 2, nzz / 2, seg, ny);
     seg += nny2;
   }
 
@@ -2277,7 +2283,7 @@ extern "C" void rgrid_cuda_fft_laplaceW(cudaXtDesc *laplace, CUREAL norm, CUREAL
  *
  */
 
-__global__ void rgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUREAL *blocks, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2, INT seg) {
+__global__ void rgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUREAL *blocks, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2, INT seg, INT nyy) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, jj = j + seg;
   INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
@@ -2301,7 +2307,7 @@ __global__ void rgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUREA
   if(jj < ny2) 
     ky = ((REAL) jj) * ly - ky0;
   else
-    ky = -((REAL) (ny - jj)) * ly - ky0;
+    ky = -((REAL) (nyy - jj)) * ly - ky0;
   if(k < nz2) 
     kz = ((REAL) k) * lz - kz0;
   else
@@ -2352,7 +2358,7 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(cudaXtDesc *laplace, C
     // Blocks, Threads, dynamic memory size
     rgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) laplace->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], 
                                kx0, ky0, kz0, 2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step),
-                               step, nx, nny1, nzz, nx / 2, ny / 2, nzz / 2, seg);
+                               step, nx, nny1, nzz, nx / 2, ny / 2, nzz / 2, seg, ny);
     cuda_error_check();
     rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
     cuda_error_check();
@@ -2366,7 +2372,7 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(cudaXtDesc *laplace, C
     // Blocks, Threads, dynamic memory size
     rgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) laplace->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], 
                                kx0, ky0, kz0, 2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step),
-                               step, nx, nny2, nzz, nx / 2, ny / 2, nzz / 2, seg);
+                               step, nx, nny2, nzz, nx / 2, ny / 2, nzz / 2, seg, ny);
     cuda_error_check();
     rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
     cuda_error_check();

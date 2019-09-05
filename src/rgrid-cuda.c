@@ -22,18 +22,18 @@ EXPORT void rgrid_cuda_init(size_t len) {
 /*
  * Convolute two grids (in Fourier space).
  *
- * gridc = Destination (rgrid *; output).
- * grida = Source 1 (rgrid *; input).
- * gridb = Source 2 (rgrid *; input).
+ * dst  = Destination (rgrid *; output).
+ * src1 = Source 1 (rgrid *; input).
+ * src2 = Source 2 (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+EXPORT char rgrid_cuda_fft_convolute(rgrid *dst, rgrid *src1, rgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_c2r, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_c2r, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle_c2r, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_fft_convoluteW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->fft_norm2, grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->fft_norm2, src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
@@ -41,18 +41,18 @@ EXPORT char rgrid_cuda_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 /* 
  * Rise a grid to given power.
  *
- * gridb    = destination grid (rgrid *; output).
- * grida    = source grid (rgrid *; input).
+ * dst    = destination grid (rgrid *; output).
+ * src    = source grid (rgrid *; input).
  * exponent = exponent to be used (REAL; input).
  *
  */
 
-EXPORT char rgrid_cuda_power(rgrid *gridb, rgrid *grida, REAL exponent) {
+EXPORT char rgrid_cuda_power(rgrid *dst, rgrid *src, REAL exponent) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 0) < 0)
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
 
-  rgrid_cuda_powerW(cuda_block_address(gridb->value), cuda_block_address(grida->value), exponent, grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_powerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, src->nx, src->ny, src->nz);
 
   return 0;
 }
@@ -60,18 +60,18 @@ EXPORT char rgrid_cuda_power(rgrid *gridb, rgrid *grida, REAL exponent) {
 /* 
  * Rise a |grid| to given power.
  *
- * gridb    = destination grid (rgrid *; output).
- * grida    = source grid (rgrid *; input).
+ * dst      = destination grid (rgrid *; output).
+ * src      = source grid (rgrid *; input).
  * exponent = exponent to be used (REAL; input).
  *
  */
 
-EXPORT char rgrid_cuda_abs_power(rgrid *gridb, rgrid *grida, REAL exponent) {
+EXPORT char rgrid_cuda_abs_power(rgrid *dst, rgrid *src, REAL exponent) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 0) < 0)
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
 
-  rgrid_cuda_abs_powerW(cuda_block_address(gridb->value), cuda_block_address(grida->value), exponent, grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_abs_powerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, src->nx, src->ny, src->nz);
 
   return 0;
 }
@@ -111,97 +111,97 @@ EXPORT char rgrid_cuda_multiply_fft(rgrid *grid, REAL c) {
 }
 
 /*
- * Add two grids: gridc = grida + gridb
+ * Add two grids: dst = src1 + src2
  *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st of the grids to be added (rgrid *; input).
- * gridb = 2nd of the grids to be added (rgrid *; input).
+ * dst  = destination grid (rgrid *; output).
+ * src1 = 1st of the grids to be added (rgrid *; input).
+ * src2 = 2nd of the grids to be added (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_sum(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+EXPORT char rgrid_cuda_sum(rgrid *dst, rgrid *src1, rgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_sumW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_sumW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
 
 /*
- * Subtract two grids: gridc = grida - gridb
+ * Subtract two grids: dst = src1 - src2
  *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st of the grids to be added (rgrid *; input).
- * gridb = 2nd of the grids to be added (rgrid *; input).
+ * dst  = destination grid (rgrid *; output).
+ * src1 = 1st of the grids to be added (rgrid *; input).
+ * src2 = 2nd of the grids to be added (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_difference(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+EXPORT char rgrid_cuda_difference(rgrid *dst, rgrid *src1, rgrid *src2) {
   
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_differenceW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
-
-  return 0;
-}
-
-/* 
- * Calculate product of two grids: gridc = grida * gridb
- *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- *
- */
-
-EXPORT char rgrid_cuda_product(rgrid *gridc, rgrid *grida, rgrid *gridb) {
-
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
-
-  rgrid_cuda_productW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_differenceW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
 
 /* 
- * Divide two grids: gridc = grida / gridb
+ * Calculate product of two grids: dst = src1 * src2
  *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
+ * dst   = destination grid (rgrid *; output).
+ * src1  = 1st source grid (rgrid *; input).
+ * src2  = 2nd source grid (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_division(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+EXPORT char rgrid_cuda_product(rgrid *dst, rgrid *src1, rgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_divisionW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
 
 /* 
- * "Safely" divide two grids: gridc = grida / (gridb + eps)
+ * Divide two grids: dst = src1 / src2
  *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- * eps   = Epsilon (REAL).
+ * dst  = destination grid (rgrid *; output).
+ * src1 = 1st source grid (rgrid *; input).
+ * src2 = 2nd source grid (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_division_eps(rgrid *gridc, rgrid *grida, rgrid *gridb, REAL eps) {
+EXPORT char rgrid_cuda_division(rgrid *dst, rgrid *src1, rgrid *src2) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, 
-                             gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_division_epsW(cuda_block_address(gridc->value), cuda_block_address(grida->value), cuda_block_address(gridb->value), eps, grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_divisionW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
+
+  return 0;
+}
+
+/* 
+ * "Safely" divide two grids: dst = src1 / (src2 + eps)
+ *
+ * dst  = destination grid (rgrid *; output).
+ * src1 = 1st source grid (rgrid *; input).
+ * src2 = 2nd source grid (rgrid *; input).
+ * eps  = Epsilon (REAL).
+ *
+ */
+
+EXPORT char rgrid_cuda_division_eps(rgrid *dst, rgrid *src1, rgrid *src2, REAL eps) {
+
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
+
+  rgrid_cuda_division_epsW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), eps, src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
@@ -260,40 +260,41 @@ EXPORT char rgrid_cuda_add_and_multiply(rgrid *grid, REAL ca, REAL cm) {
 }
 
 /* 
- * Add scaled grid (multiply/add): gridc = gridc + d * grida
+ * Add scaled grid (multiply/add): dst = dst + d * src
  *
- * gridc = destination grid for the operation (rgrid *; input/output).
- * d     = multiplier for the operation (REAL; input).
- * grida = source grid for the operation (rgrid *; input).
+ * dst = destination grid for the operation (rgrid *; input/output).
+ * d   = multiplier for the operation (REAL; input).
+ * src = source grid for the operation (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_add_scaled(rgrid *gridc, REAL d, rgrid *grida) {
+EXPORT char rgrid_cuda_add_scaled(rgrid *dst, REAL d, rgrid *src) {
 
-  if(cuda_two_block_policy(gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 1, grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1) < 0)
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0)
     return -1;
 
-  rgrid_cuda_add_scaledW(cuda_block_address(gridc->value), d, cuda_block_address(grida->value), grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_add_scaledW(cuda_block_address(dst->value), d, cuda_block_address(src->value), src->nx, src->ny, src->nz);
 
   return 0;
 }
 
 /*
- * Perform the following operation: gridc = gridc + d * grida * gridb.
+ * Perform the following operation: dst = dst + d * src1 * src2.
  *
- * gridc = destination grid (rgrid *; input/output).
- * d     = constant multiplier (REAL; input).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
+ * dst  = destination grid (rgrid *; input/output).
+ * d    = constant multiplier (REAL; input).
+ * src1 = 1st source grid (rgrid *; input).
+ * src2 = 2nd source grid (rgrid *; input).
  *
  */
 
-EXPORT char rgrid_cuda_add_scaled_product(rgrid *gridc, REAL d, rgrid *grida, rgrid *gridb) {
+EXPORT char rgrid_cuda_add_scaled_product(rgrid *dst, REAL d, rgrid *src1, rgrid *src2) {
 
-  if(cuda_three_block_policy(gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 1, grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, 
-                             gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1) < 0) return -1;
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, 
+                             src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0) return -1;
 
-  rgrid_cuda_add_scaled_productW(cuda_block_address(gridc->value), d, cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_add_scaled_productW(cuda_block_address(dst->value), d, cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
@@ -301,16 +302,18 @@ EXPORT char rgrid_cuda_add_scaled_product(rgrid *gridc, REAL d, rgrid *grida, rg
 /*
  * Copy two areas in GPU. Source grid is on GPU.
  *
- * copy = Copy of grid (rgrid *; output).
- * grid = Grid to be copied (rgrid *; input).
+ * dst = Copy of grid (rgrid *; output).
+ * src = Grid to be copied (rgrid *; input).
  * 
  */
 
-EXPORT char rgrid_cuda_copy(rgrid *copy, rgrid *grid) {
+EXPORT char rgrid_cuda_copy(rgrid *dst, rgrid *src) {
 
-  if(cuda_copy_policy(copy->value, copy->grid_len, copy->cufft_handle_r2c, copy->id, grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id) < 0) return -1;
+  if(cuda_copy_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, src->value, src->grid_len, src->cufft_handle_r2c, src->id) < 0) 
+    return -1;
 
-  cuda_gpu2gpu(cuda_find_block(copy->value), cuda_find_block(grid->value));
+  cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
+
   return 0;
 }
 
@@ -401,48 +404,48 @@ EXPORT char rgrid_cuda_integral_of_square(rgrid *grid, REAL *value) {
 }
 
 /*
- * Calculate overlap between two grids (int grida gridb).
+ * Calculate overlap between two grids (int src1 src2).
  *
- * grida = first grid for integration (rgrid *; input).
- * gridb = second grid for integration (rgrid *; input).
+ * src1  = first grid for integration (rgrid *; input).
+ * src2  = second grid for integration (rgrid *; input).
  * value = integral value (REAL *; output).
  *
  */
 
-EXPORT char rgrid_cuda_integral_of_product(rgrid *grida, rgrid *gridb, REAL *value) {
+EXPORT char rgrid_cuda_integral_of_product(rgrid *src1, rgrid *src2, REAL *value) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1) < 0) 
+  if(cuda_two_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1) < 0) 
     return -1;
 
-  rgrid_cuda_integral_of_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz, value);
+  rgrid_cuda_integral_of_productW(cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz, value);
 
-  if(grida->nx != 1) *value *= grida->step;
-  if(grida->ny != 1) *value *= grida->step;
-  if(grida->nz != 1) *value *= grida->step;
+  if(src1->nx != 1) *value *= src1->step;
+  if(src1->ny != 1) *value *= src1->step;
+  if(src1->nz != 1) *value *= src1->step;
 
   return 0;
 }
 
 /*
  * Calculate the expectation value of a grid over a grid.
- * (int gridb grida gridb = int grida gridb^2).
+ * (int src2 src1 src2 = int src1 src2^2).
  *
- * grida = first grid for integration (rgrid *; input).
- * gridb = second grid for integration (rgrid *; input).
+ * src1  = first grid for integration (rgrid *; input).
+ * src2  = second grid for integration (rgrid *; input).
  * value = integral value (REAL *; output).
  *
  */
 
-EXPORT char rgrid_cuda_grid_expectation_value(rgrid *grida, rgrid *gridb, REAL *value) {
+EXPORT char rgrid_cuda_grid_expectation_value(rgrid *src1, rgrid *src2, REAL *value) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1) < 0)
+  if(cuda_two_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1) < 0)
     return -1;
 
-  rgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), grida->nx, grida->ny, grida->nz, value);
+  rgrid_cuda_grid_expectation_valueW(cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz, value);
 
-  if(grida->nx != 1) *value *= grida->step;
-  if(grida->ny != 1) *value *= grida->step;
-  if(grida->nz != 1) *value *= grida->step;
+  if(src1->nx != 1) *value *= src1->step;
+  if(src1->ny != 1) *value *= src1->step;
+  if(src1->nz != 1) *value *= src1->step;
 
   return 0;
 }
@@ -450,152 +453,153 @@ EXPORT char rgrid_cuda_grid_expectation_value(rgrid *grida, rgrid *gridb, REAL *
 /* 
  * Differentiate a grid with respect to x (central difference).
  *
- * grid     = source for gradient (rgrid *; input).
- * gradient = destination for gradient (rgrid *; output).
- * inv_delta= 1 / (2 * step) (REAL; input).
- * bc       = boundary condition (char; input).
+ * src       = source for gradient (rgrid *; input).
+ * dst       = destination for gradient (rgrid *; output).
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_x(rgrid *grid, rgrid *gradient, REAL inv_delta, char bc) {
+EXPORT char rgrid_cuda_fd_gradient_x(rgrid *src, rgrid *dst, REAL inv_delta, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, gradient->value, gradient->grid_len, gradient->cufft_handle_r2c, gradient->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_gradient_xW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_gradient_xW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta, bc, src->nx, src->ny, src->nz);
+
   return 0;
 }
 
 /* 
  * Differentiate a grid with respect to y (central difference).
  *
- * grid     = source for gradient (rgrid *; input).
- * gradient = destination for gradient (rgrid *; output).
- * inv_delta= 1 / (2 * step) (REAL; input).
- * bc       = boundary condition (char; input).
+ * src       = source for gradient (rgrid *; input).
+ * dst       = destination for gradient (rgrid *; output).
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_y(rgrid *grid, rgrid *gradient, REAL inv_delta, char bc) {
+EXPORT char rgrid_cuda_fd_gradient_y(rgrid *src, rgrid *dst, REAL inv_delta, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, gradient->value, gradient->grid_len, gradient->cufft_handle_r2c, gradient->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_gradient_yW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_gradient_yW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
 /* 
  * Differentiate a grid with respect to z (central difference).
  * 
- * grid     = source for gradient (rgrid *; input).
- * gradient = destination for gradient (rgrid *; output).
- * inv_delta= 1 / (2 * step) (REAL; input).
- * bc       = boundary condition (char; input).
+ * src       = source for gradient (rgrid *; input).
+ * dst       = destination for gradient (rgrid *; output).
+ * inv_delta = 1 / (2 * step) (REAL; input).
+ * bc        = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_z(rgrid *grid, rgrid *gradient, REAL inv_delta, char bc) {
+EXPORT char rgrid_cuda_fd_gradient_z(rgrid *src, rgrid *dst, REAL inv_delta, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, gradient->value, gradient->grid_len, gradient->cufft_handle_r2c, gradient->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_gradient_zW(cuda_block_address(grid->value), cuda_block_address(gradient->value), inv_delta, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_gradient_zW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
 /* 
  * Laplace of a grid (central difference).
  *
- * grid      = source for gradient (rgrid *; input).
- * laplace   = destination for gradient (rgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc       = boundary condition (char; input).
+ * src        = source for gradient (rgrid *; input).
+ * dst        = destination for gradient (rgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace(rgrid *grid, rgrid *laplace, REAL inv_delta2, char bc) {
+EXPORT char rgrid_cuda_fd_laplace(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, laplace->value, laplace->grid_len, laplace->cufft_handle_r2c, laplace->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplaceW(cuda_block_address(grid->value), cuda_block_address(laplace->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_laplaceW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
 /*
  * Calculate vector laplacian of the grid (x component). This is the second derivative with respect to x.
  *
- * grid      = source for gradient (rgrid *; input).
- * laplacex  = destination for gradient (rgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc       = boundary condition (char; input).
+ * src        = source for gradient (rgrid *; input).
+ * dst        = destination for gradient (rgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace_x(rgrid *grid, rgrid *laplacex, REAL inv_delta2, char bc) {
+EXPORT char rgrid_cuda_fd_laplace_x(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, laplacex->value, laplacex->grid_len, laplacex->cufft_handle_r2c, laplacex->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplace_xW(cuda_block_address(grid->value), cuda_block_address(laplacex->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_laplace_xW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
 /*
  * Calculate vector laplacian of the grid (y component). This is the second derivative with respect to y.
  *
- * grid      = source for gradient (rgrid *; input).
- * laplacey  = destination for gradient (rgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc       = boundary condition (char; input).
+ * src        = source for gradient (rgrid *; input).
+ * dst        = destination for gradient (rgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace_y(rgrid *grid, rgrid *laplacey, REAL inv_delta2, char bc) {
+EXPORT char rgrid_cuda_fd_laplace_y(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, laplacey->value, laplacey->grid_len, laplacey->cufft_handle_r2c, laplacey->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplace_yW(cuda_block_address(grid->value), cuda_block_address(laplacey->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_laplace_yW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
 /*
  * Calculate vector laplacian of the grid (z component). This is the second derivative with respect to z.
  *
- * grid      = source for gradient (rgrid *; input).
- * laplacez  = destination for gradient (rgrid *; output).
- * inv_delta2= 1 / (step * step) (REAL; input).
- * bc        = boundary condition (char; input).
+ * src        = source for gradient (rgrid *; input).
+ * dst        = destination for gradient (rgrid *; output).
+ * inv_delta2 = 1 / (step * step) (REAL; input).
+ * bc         = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_laplace_z(rgrid *grid, rgrid *laplacez, REAL inv_delta2, char bc) {
+EXPORT char rgrid_cuda_fd_laplace_z(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, laplacez->value, laplacez->grid_len, laplacez->cufft_handle_r2c, laplacez->id, 0) < 0) 
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
-  rgrid_cuda_fd_laplace_zW(cuda_block_address(grid->value), cuda_block_address(laplacez->value), inv_delta2, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_laplace_zW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_delta2, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
 /*
  * Calculate dot product of the gradient of the grid.
  *
- * grid           = source for gradient (rgrid *; input).
- * grad_dot_grad  = destination for gradient (rgrid *; output).
- * inv2_delta2    = 1 / (2.0 * step * 2.0 * step) (REAL; input).
- * bc             = boundary condition (char; input).
+ * src           = source for gradient (rgrid *; input).
+ * dst           = destination for gradient (rgrid *; output).
+ * inv2_delta2   = 1 / (2.0 * step * 2.0 * step) (REAL; input).
+ * bc            = boundary condition (char; input).
  *
  */
 
-EXPORT char rgrid_cuda_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad, REAL inv_2delta2, char bc) {
+EXPORT char rgrid_cuda_fd_gradient_dot_gradient(rgrid *src, rgrid *dst, REAL inv_2delta2, char bc) {
 
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1, grad_dot_grad->value, grad_dot_grad->grid_len, 
-                           grad_dot_grad->cufft_handle_r2c, grad_dot_grad->id, 0) < 0) return -1;
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
+    return -1;
 
-  rgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(grid->value), cuda_block_address(grad_dot_grad->value), inv_2delta2, bc, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fd_gradient_dot_gradientW(cuda_block_address(src->value), cuda_block_address(dst->value), inv_2delta2, bc, src->nx, src->ny, src->nz);
   return 0;
 }
 
@@ -657,18 +661,18 @@ EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL
 /* 
  * Rise a grid to given integer power.
  *
- * gridb    = destination grid (rgrid *; output).
- * grida    = source grid (rgrid *; input).
+ * dst      = destination grid (rgrid *; output).
+ * src      = source grid (rgrid *; input).
  * exponent = exponent to be used (INT; input).
  *
  */
 
-EXPORT char rgrid_cuda_ipower(rgrid *gridb, rgrid *grida, INT exponent) {
+EXPORT char rgrid_cuda_ipower(rgrid *dst, rgrid *src, INT exponent) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 0) < 0)
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
 
-  rgrid_cuda_ipowerW(cuda_block_address(gridb->value), cuda_block_address(grida->value), exponent, grida->nx, grida->ny, grida->nz);
+  rgrid_cuda_ipowerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, src->nx, src->ny, src->nz);
 
   return 0;
 }
@@ -676,7 +680,7 @@ EXPORT char rgrid_cuda_ipower(rgrid *gridb, rgrid *grida, INT exponent) {
 /*
  * Set a value to given grid based on upper/lower limit thresholds of another grid (possibly the same).
  *
- * dest = destination grid (rgrid *; input/output).
+ * dst  = destination grid (rgrid *; input/output).
  * src  = source grid for evaluating the thresholds (rgrid *; input). May be equal to dest.
  * ul   = upper limit threshold for the operation (REAL; input).
  * ll   = lower limit threshold for the operation (REAL; input).
@@ -685,11 +689,12 @@ EXPORT char rgrid_cuda_ipower(rgrid *gridb, rgrid *grida, INT exponent) {
  *
  */
 
-EXPORT char rgrid_cuda_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REAL uval, REAL lval) {
+EXPORT char rgrid_cuda_threshold_clear(rgrid *dst, rgrid *src, REAL ul, REAL ll, REAL uval, REAL lval) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle_r2c, dest->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) return -1;
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0)
+    return -1;
 
-  rgrid_cuda_threshold_clearW(cuda_block_address(dest->value), cuda_block_address(src->value), ul, ll, uval, lval, dest->nx, dest->ny, dest->nz);
+  rgrid_cuda_threshold_clearW(cuda_block_address(dst->value), cuda_block_address(src->value), ul, ll, uval, lval, src->nx, src->ny, src->nz);
 
   return 0;
 }
@@ -785,8 +790,7 @@ EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
 /*
  * Calculate second derivative of a grid (in Fourier space).
  *
- * grid    = source grid (rgrid *; input).
- * laplace = destination grid (rgrid *; output).
+ * laplace = grid for the operation (rgrid *; output).
  *
  */
 
@@ -795,6 +799,7 @@ EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle_c2r, laplace->id, 1) < 0) return -1;
 
   rgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), laplace->fft_norm, laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, laplace->nx, laplace->ny, laplace->nz);
+
   return 0;
 }
 
@@ -815,6 +820,7 @@ EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value
   rgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->kx0, laplace->ky0, laplace->kz0, laplace->step, laplace->nx, laplace->ny, laplace->nz, (CUREAL *) value);
 
   cuda_get_element(grid_gpu_mem, 0, 0, sizeof(REAL), value);
+
   if(laplace->nx != 1) *value *= step;
   if(laplace->ny != 1) *value *= step;
   if(laplace->nz != 1) *value *= step;
