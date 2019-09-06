@@ -6,6 +6,8 @@ CUDA = $(shell ./cuda-detect.sh)
 ifeq ($(CUDA),yes)
 CUDA_CC = $(shell ./get_cc.sh)
 endif
+BRANCH = $(shell git branch -l | cut -c3-)
+REV = $(shell git rev-parse $(BRANCH))
 
 include ../make.conf
 
@@ -15,7 +17,7 @@ ifeq ($(CUDA),yes)
 	echo $(CUDA_CC) > cuda.arch
 endif
 	echo $(CUDA) > cuda.status
-	echo "#define VERSION \""`git rev-parse master`"\"" > git-version.h
+	echo "#define VERSION \""$(BRANCH)-$(REV)"\"" > git-version.h
 	make libgrid.a
 
 SRC = cgrid.c cgrid_fft.c rgrid.c rgrid_fft.c ngrid.c grid_wf.c grid_wf_fft.c grid_wf_diag.c grid_wf_cn.c cgrid_bc.c \

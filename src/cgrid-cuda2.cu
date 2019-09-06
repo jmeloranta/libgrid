@@ -30,7 +30,6 @@ extern void *grid_gpu_mem;            /* host memory holder for the block used f
 extern cudaXtDesc *grid_gpu_mem_addr; /* the corresponding GPU memory addresses */
 extern "C" void cuda_error_check();
 
-
 /*
  * Fourier space convolution device code.
  *
@@ -307,12 +306,12 @@ extern "C" void cgrid_cuda_differenceW(cudaXtDesc *dst, cudaXtDesc *src1, cudaXt
 
   SETUP_VARIABLES(dst);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_difference_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, nny1, nz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_difference_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, nny2, nz);
   }
@@ -354,15 +353,16 @@ extern "C" void cgrid_cuda_productW(cudaXtDesc *dst, cudaXtDesc *src1, cudaXtDes
 
   SETUP_VARIABLES(dst);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx1, nny1, nz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) src1->data[i], (CUCOMPLEX *) src2->data[i], nnx2, nny2, nz);
   }
+
   cuda_error_check();
 }
 
@@ -640,12 +640,12 @@ extern "C" void cgrid_cuda_add_and_multiplyW(cudaXtDesc *dst, CUCOMPLEX ca, CUCO
 
   SETUP_VARIABLES(dst);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_add_and_multiply_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], ca, cm, nnx1, nny1, nz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_add_and_multiply_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], ca, cm, nnx2, nny2, nz);
   }
@@ -881,8 +881,6 @@ extern "C" void cgrid_cuda_integralW(cudaXtDesc *grid, INT nx, INT ny, INT nz, C
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);  // reduce over blocks
   }
 
-  cuda_error_check();
-
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
@@ -890,8 +888,6 @@ extern "C" void cgrid_cuda_integralW(cudaXtDesc *grid, INT nx, INT ny, INT nz, C
     cgrid_cuda_integral_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
   }
-
-  cuda_error_check();
 
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
@@ -983,8 +979,6 @@ extern "C" void cgrid_cuda_integral_regionW(cudaXtDesc *grid, INT il, INT iu, IN
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
   }
 
-  cuda_error_check();
-
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
@@ -994,8 +988,6 @@ extern "C" void cgrid_cuda_integral_regionW(cudaXtDesc *grid, INT il, INT iu, IN
     segy += dsegy2;
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
   }
-
-  cuda_error_check();
 
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
@@ -1047,15 +1039,15 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
- * value    = Result (CUCOMPLEX *; output).
+ * value    = Result (CUREAL *; output).
  * space    = Real or Fourier space? (char; input).
  *
  */
 
-extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc *grid, INT nx, INT ny, INT nz, CUCOMPLEX *value, char space) {
+extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc *grid, INT nx, INT ny, INT nz, CUREAL *value, char space) {
 
   SETUP_VARIABLES(grid);
-  CUCOMPLEX tmp;
+  CUREAL tmp;
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
@@ -1082,12 +1074,12 @@ extern "C" void cgrid_cuda_integral_of_squareW(cudaXtDesc *grid, INT nx, INT ny,
   }
 
   // Reduce over GPUs
-  *value = CUMAKE(0.0,0.0);
+  *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, grid->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
-    value->x += tmp.x;  /// + overloaded to device function - work around!
-    value->y += tmp.y;
+    cuda_get_element(grid_gpu_mem, grid->GPUs[i], 0, sizeof(CUREAL), &tmp);  // get on the real part
+    *value += tmp;
   }
+
   cuda_error_check();
 }
 
@@ -1147,23 +1139,17 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(cudaXtDesc *grid, cuda
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(grid->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_conjugate_product_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) src->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_conjugate_product_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) src->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
   }
 
   // Reduce over GPUs
@@ -1173,6 +1159,7 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(cudaXtDesc *grid, cuda
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }
+
   cuda_error_check();
 }
 
@@ -1232,23 +1219,17 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(cudaXtDesc *grida, cudaXtDesc
   for(i = 0; i < ngpu1; i++) { // Full sets
     cudaSetDevice(grida->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
   }
 
   for(i = ngpu1; i < ngpu2; i++) { // Partial sets
     cudaSetDevice(grida->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) grida->data[i], (CUCOMPLEX *) gridb->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
   }
 
   // Reduce over GPUs
@@ -1258,6 +1239,7 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(cudaXtDesc *grida, cudaXtDesc
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }
+
   cuda_error_check();
 }
 
@@ -1723,7 +1705,7 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
  * nz         = # of points along z (INT; input).
- * space    = Real or Fourier space? (char; input). Can only be 1!
+ * space      = Real or Fourier space? (char; input). Can only be 1!
  *
  */
 
@@ -2014,10 +1996,9 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(cudaXtDesc *dst, CUREA
   int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], kx0, ky0, kz0, step, nnx1, nny1, nz, nx2, ny2, nz2, segy, ny);
     segx += dsegx1;
@@ -2027,18 +2008,15 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(cudaXtDesc *dst, CUREA
 
   cuda_error_check();
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(dst->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) dst->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], kx0, ky0, kz0, step, nnx2, nny2, nz, nx2, ny2, nz2, segy, ny);
     segx += dsegx2;
     segy += dsegy2;
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
   }
-
-  cuda_error_check();
 
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
@@ -2089,8 +2067,6 @@ extern "C" void cgrid_cuda_zero_reW(cudaXtDesc *grid, INT nx, INT ny, INT nz, ch
     cgrid_cuda_zero_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], nnx1, nny1, nz);
   }
 
-  cuda_error_check();
-
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     cgrid_cuda_zero_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) grid->data[i], nnx2, nny2, nz);
@@ -2136,8 +2112,6 @@ extern "C" void cgrid_cuda_zero_imW(cudaXtDesc *grid, INT nx, INT ny, INT nz, ch
     cudaSetDevice(grid->GPUs[i]);
     cgrid_cuda_zero_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], nnx1, nny1, nz);
   }
-
-  cuda_error_check();
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);

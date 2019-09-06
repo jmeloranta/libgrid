@@ -1,7 +1,7 @@
 
 include ../make.conf
 
-all: fft spherical poisson wavepacket gradient decomp veloc random
+all: fft cfft spherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson
 
 decomp: decomp.o
 	$(CC) $(CFLAGS) -o decomp decomp.o $(LDFLAGS)
@@ -9,11 +9,17 @@ decomp: decomp.o
 fft: fft.o
 	$(CC) $(CFLAGS) -o fft fft.o $(LDFLAGS)
 
+cfft: cfft.o
+	$(CC) $(CFLAGS) -o cfft cfft.o $(LDFLAGS)
+
 spherical: spherical.o
 	$(CC) $(CFLAGS) -o spherical spherical.o $(LDFLAGS)
 
 poisson: poisson.o
 	$(CC) $(CFLAGS) -o poisson poisson.o $(LDFLAGS)
+
+cpoisson: cpoisson.o
+	$(CC) $(CFLAGS) -o cpoisson cpoisson.o $(LDFLAGS)
 
 wavepacket: wavepacket.o
 	$(CC) $(CFLAGS) -o wavepacket wavepacket.o $(LDFLAGS)
@@ -27,9 +33,16 @@ veloc: veloc.o
 random: random.o
 	$(CC) $(CFLAGS) -o random random.o $(LDFLAGS)
 
+integrate: integrate.o
+	$(CC) $(CFLAGS) -o integrate integrate.o $(LDFLAGS)
+
+cintegrate: cintegrate.o
+	$(CC) $(CFLAGS) -o cintegrate cintegrate.o $(LDFLAGS)
+
 clean:
 	-rm fft fft.o spherical spherical.o poisson poisson.o *~ *.x *.y *.z *.grd *.dat
 	-rm wavepacket.o wavepacket gradient.o gradient comp.dat incomp.dat decomp decomp.o
-	-rm veloc veloc.o random random.o v{x,y,z}-fd.* v{x,y,z}-fft.*
+	-rm veloc veloc.o random random.o v{x,y,z}-fd.* v{x,y,z}-fft.* integrate integrate.o
+	-rm cfft cfft.o cintegrate cintegrate.o cpoisson cpoisson.o
 
 

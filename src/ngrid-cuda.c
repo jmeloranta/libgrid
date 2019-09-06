@@ -16,118 +16,122 @@
 /*
  * Copy a real grid to a complex grid (to real part).
  *
- * dest   = Destination grid (cgrid *; output).
- * source = Source grid (rgrid *; input).
+ * dst   = Destination grid (cgrid *; output).
+ * src   = Source grid (rgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_real_to_complex_re(cgrid *dest, rgrid *source) {
+EXPORT char grid_cuda_real_to_complex_re(cgrid *dst, rgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_real_to_complex_reW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_real_to_complex_reW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
+
   return 0;
 }
 
 /*
  * Copy a real grid to a complex grid (to imaginary part).
  *
- * dest   = Destination grid (cgrid *; output).
- * source = Source grid (rgrid *; input).
+ * dst   = Destination grid (cgrid *; output).
+ * src   = Source grid (rgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_real_to_complex_im(cgrid *dest, rgrid *source) {
+EXPORT char grid_cuda_real_to_complex_im(cgrid *dst, rgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 0, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_real_to_complex_imW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_real_to_complex_imW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
+
   return 0;
 }
 
 /*
  * Add a real grid to a complex grid (to real part).
  *
- * dest   = Destination grid (cgrid *; output).
- * source = Source grid (rgrid *; input).
+ * dst   = Destination grid (cgrid *; output).
+ * src   = Source grid (rgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_add_real_to_complex_re(cgrid *dest, rgrid *source) {
+EXPORT char grid_cuda_add_real_to_complex_re(cgrid *dst, rgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_add_real_to_complex_reW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_add_real_to_complex_reW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
+
   return 0;
 }
 
 /*
  * Add a real grid to a complex grid (to imag part).
  *
- * dest   = Destination grid (cgrid *; output).
- * source = Source grid (rgrid *; input).
+ * dst   = Destination grid (cgrid *; output).
+ * src   = Source grid (rgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dest, rgrid *source) {
+EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dst, rgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_add_real_to_complex_imW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_add_real_to_complex_imW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
+
   return 0;
 }
 
 /*
  * Product of a real grid with a complex grid.
  *
- * dest   = Destination grid (cgrid *; output).
- * source = Source grid (rgrid *; input).
+ * dst   = Destination grid (cgrid *; output).
+ * src   = Source grid (rgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_product_complex_with_real(cgrid *dest, rgrid *source) {
+EXPORT char grid_cuda_product_complex_with_real(cgrid *dst, rgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle, dest->id, 1, source->value, source->grid_len, source->cufft_handle_r2c, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_product_complex_with_realW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_product_complex_with_realW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
   return 0;
 }
 
 /*
  * Copy imaginary part of a complex grid to a real grid.
  *
- * dest   = Destination grid (rgrid *; output).
- * source = Source grid (cgrid *; input).
+ * dst   = Destination grid (rgrid *; output).
+ * src   = Source grid (cgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_complex_im_to_real(rgrid *dest, cgrid *source) {
+EXPORT char grid_cuda_complex_im_to_real(rgrid *dst, cgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle_r2c, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_complex_im_to_realW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_complex_im_to_realW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
   return 0;
 }
 
 /*
  * Copy real part of a complex grid to a real grid.
  *
- * dest   = Destination grid (rgrid *; output).
- * source = Source grid (cgrid *; input).
+ * dst   = Destination grid (rgrid *; output).
+ * src   = Source grid (cgrid *; input).
  *
  */
 
-EXPORT char grid_cuda_complex_re_to_real(rgrid *dest, cgrid *source) {
+EXPORT char grid_cuda_complex_re_to_real(rgrid *dst, cgrid *src) {
 
-  if(cuda_two_block_policy(dest->value, dest->grid_len, dest->cufft_handle_r2c, dest->id, 0, source->value, source->grid_len, source->cufft_handle, source->id, 1) < 0) 
+  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
-  grid_cuda_complex_re_to_realW(cuda_block_address(dest->value), cuda_block_address(source->value), dest->nx, dest->ny, dest->nz);
+  grid_cuda_complex_re_to_realW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
   return 0;
 }

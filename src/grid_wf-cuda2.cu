@@ -11,6 +11,7 @@
 #include <cuda/cufftXt.h>
 #include "cuda-math.h"
 #include "grid_wf-cuda.h"
+#include "cuda-vars.h"
 
 extern void *grid_gpu_mem;
 extern cudaXtDesc *grid_gpu_mem_addr;
@@ -84,55 +85,47 @@ __global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *dst, CUCOMPLEX 
 extern "C" void grid_cuda_wf_propagate_potentialW(cudaXtDesc *grid, cudaXtDesc *pot, CUCOMPLEX time_step, char add_abs, CUCOMPLEX amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
   CUCOMPLEX c;
-  INT i, ngpu2 = grid->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1;
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  INT space = 0;
+  SETUP_VARIABLES(grid);  
 
   c.x =  time_step.y / HBAR;
   c.y = -time_step.x / HBAR;
 
-  for(i = 0; i < ngpu1; i++) { // Full sets 
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(grid->GPUs[i]);
     if(lz) {
       if(add_abs)
         grid_cuda_wf_propagate_potential_gpu3<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, amp, rho0, cons, 
-           lx, hx, ly, hy, lz, hz, nnx1, ny, nz);
+           lx, hx, ly, hy, lz, hz, nnx1, nny1, nz);
       else
         grid_cuda_wf_propagate_potential_gpu2<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, cons, 
-           lx, hx, ly, hy, lz, hz, nnx1, ny, nz);
+           lx, hx, ly, hy, lz, hz, nnx1, nny1, nz);
     } else
-        grid_cuda_wf_propagate_potential_gpu1<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, cons, nnx1, ny, nz);
+        grid_cuda_wf_propagate_potential_gpu1<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, cons, nnx1, nny1, nz);
   }
-  cuda_error_check();
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     if(lz) {
       if(add_abs) 
         grid_cuda_wf_propagate_potential_gpu3<<<blocks2,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, amp, rho0, cons, 
-           lx, hx, ly, hy, lz, hz, nnx2, ny, nz);
+           lx, hx, ly, hy, lz, hz, nnx2, nny1, nz);
       else
         grid_cuda_wf_propagate_potential_gpu2<<<blocks2,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, cons, 
-           lx, hx, ly, hy, lz, hz, nnx2, ny, nz);
+           lx, hx, ly, hy, lz, hz, nnx2, nny2, nz);
     } else
-        grid_cuda_wf_propagate_potential_gpu1<<<blocks2,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, cons, nnx2, ny, nz);
+        grid_cuda_wf_propagate_potential_gpu1<<<blocks2,threads>>>((CUCOMPLEX *) grid->data[i], (CUCOMPLEX *) pot->data[i], c, cons, nnx2, nny2, nz);
   }
+
   cuda_error_check();
 }
-
-/********************************************************************************************************************/
 
 /*
  * Density
  *
  */
 
-__global__ void grid_cuda_wf_density_gpu(CUCOMPLEX *grid, CUREAL *dens, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_wf_density_gpu(CUCOMPLEX *grid, CUREAL *dens, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
 
@@ -157,21 +150,14 @@ __global__ void grid_cuda_wf_density_gpu(CUCOMPLEX *grid, CUREAL *dens, INT nx, 
 
 extern "C" void grid_cuda_wf_densityW(cudaXtDesc *grid, cudaXtDesc *dens, INT nx, INT ny, INT nz) {
 
-  INT i, ngpu2 = grid->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES_REAL(grid);  
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(grid->GPUs[i]);
     grid_cuda_wf_density_gpu<<<blocks1,threads>>>((CUCOMPLEX *) grid->data[i], (CUREAL *) dens->data[i], nnx1, ny, nz, nzz);
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(grid->GPUs[i]);
     grid_cuda_wf_density_gpu<<<blocks2,threads>>>((CUCOMPLEX *) grid->data[i], (CUREAL *) dens->data[i], nnx2, ny, nz, nzz);
   }
@@ -179,14 +165,12 @@ extern "C" void grid_cuda_wf_densityW(cudaXtDesc *grid, cudaXtDesc *dens, INT nx
   cuda_error_check();
 }
 
-/********************************************************************************************************************/
-
 /*
  * Add complex absorbing potential.
  *
  */
 
-__global__ void grid_cuda_wf_absorb_potential_gpu(CUCOMPLEX *gwf, CUCOMPLEX *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz, INT seg) {  /* Exectutes at GPU */
+__global__ void grid_cuda_wf_absorb_potential_gpu(CUCOMPLEX *gwf, CUCOMPLEX *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz, INT seg) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, ii = i + seg;
   REAL g, sq;
@@ -221,25 +205,21 @@ __global__ void grid_cuda_wf_absorb_potential_gpu(CUCOMPLEX *gwf, CUCOMPLEX *pot
 
 extern "C" void grid_cuda_wf_absorb_potentialW(cudaXtDesc *gwf, cudaXtDesc *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
-  INT i, ngpu2 = gwf->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, seg = 0;
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Full set of indices
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nnx1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
-  dim3 blocks2((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,   // Partial set
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  INT space = 0, segx = 0, segy = 0;
+  SETUP_VARIABLES_SEG(gwf);
 
-  for(i = 0; i < ngpu1; i++) { // Full sets
+  for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(gwf->GPUs[i]);
-    grid_cuda_wf_absorb_potential_gpu<<<blocks1,threads>>>((CUCOMPLEX *) gwf->data[i], (CUCOMPLEX *) pot->data[i], amp, rho0, lx, hx, ly, hy, lz, hz, nnx1, ny, nz, seg);
-    seg += nnx1;
+    grid_cuda_wf_absorb_potential_gpu<<<blocks1,threads>>>((CUCOMPLEX *) gwf->data[i], (CUCOMPLEX *) pot->data[i], amp, rho0, lx, hx, ly, hy, lz, hz, nnx1, nny1, nz, segx);
+    segx += dsegx1;
+    segy += dsegy1;
   }
 
-  for(i = ngpu1; i < ngpu2; i++) { // Partial sets
+  for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(gwf->GPUs[i]);
-    grid_cuda_wf_absorb_potential_gpu<<<blocks2,threads>>>((CUCOMPLEX *) gwf->data[i], (CUCOMPLEX *) pot->data[i], amp, rho0, lx, hx, ly, hy, lz, hz, nnx2, ny, nz, seg);
-    seg += nnx2;
+    grid_cuda_wf_absorb_potential_gpu<<<blocks2,threads>>>((CUCOMPLEX *) gwf->data[i], (CUCOMPLEX *) pot->data[i], amp, rho0, lx, hx, ly, hy, lz, hz, nnx2, nny2, nz, segx);
+    segx += dsegx2;
+    segy += dsegy2;
   }
 
   cuda_error_check();

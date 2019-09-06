@@ -151,6 +151,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
     abort();
   }
+
   cudaSetDevice(gwf->GPUs[0]);
 
   /*
@@ -166,6 +167,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
 
   grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, (CUCOMPLEX *) gwf->data[0], bc, (CUCOMPLEX *) wrk->data[0], (CUCOMPLEX *) wrk2->data[0], (CUCOMPLEX *) wrk3->data[0], 
        c, c2, c3, step, y0, tstep, lx, hx, ly, hy, lz, hz);
+
   cuda_error_check();
 }
 
@@ -302,6 +304,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
     abort();
   }
+
   cudaSetDevice(gwf->GPUs[0]);
 
   /*
@@ -318,6 +321,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
 
   grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, (CUCOMPLEX *) gwf->data[0], bc, (CUCOMPLEX *) wrk->data[0], (CUCOMPLEX *) wrk2->data[0], (CUCOMPLEX *) wrk3->data[0],
          c, c2, c3, step, x0, tstep, lx, hx, ly, hy, lz, hz);
+
   cuda_error_check();
 }
 
@@ -450,6 +454,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
     abort();
   }
+
   cudaSetDevice(gwf->GPUs[0]);
 
   /*
@@ -464,5 +469,6 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
 
   grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, (CUCOMPLEX *) gwf->data[0], bc, (CUCOMPLEX *) wrk->data[0], (CUCOMPLEX *) wrk2->data[0], (CUCOMPLEX *) wrk3->data[0],
          c, c2, step, tstep, lx, hx, ly, hy, lz, hz);
+
   cuda_error_check();
 }

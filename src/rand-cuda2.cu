@@ -64,8 +64,8 @@ extern "C" void grid_cuda_random_seedW(INT states, INT seed) {
   for(i = 0; i < cuda_ngpus(); i++) {
     cudaSetDevice(gpus[i]);
     grid_cuda_random_seed_gpu<<<blocks,threads>>>(st, states, seed);
-    cuda_error_check();
   }
+  cuda_error_check();
 }
 
 /*

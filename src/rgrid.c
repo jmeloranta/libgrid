@@ -1481,7 +1481,8 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
   
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /*
@@ -1501,7 +1502,7 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
 
 EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL yu, REAL zl, REAL zu) {
 
-  INT iu, il, i, ju, jl, j, ku, kl, k, nx = grid->nx, ny = grid->ny;
+  INT iu, il, i, ju, jl, j, ku, kl, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
   REAL x0 = grid->x0, y0 = grid->y0, z0 = grid->z0, sum;
   REAL step = grid->step;
   
@@ -1525,7 +1526,8 @@ EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL y
   
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
  
 /* 
@@ -1557,7 +1559,8 @@ EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /*
@@ -1589,7 +1592,8 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /*
@@ -1623,7 +1627,8 @@ EXPORT REAL rgrid_grid_expectation_value(rgrid *grida, rgrid *gridb) {
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
  
 /*
@@ -1662,7 +1667,8 @@ EXPORT REAL rgrid_grid_expectation_value_func(void *arg, REAL (*func)(void *arg,
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /* 
@@ -1699,7 +1705,8 @@ EXPORT REAL rgrid_weighted_integral(rgrid *grid, REAL (*weight)(void *farg, REAL
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /* 
@@ -1738,7 +1745,8 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
-  return sum * step;
+  if(nz != 1) sum *= step;
+  return sum;
 }
 
 /* 
@@ -3545,7 +3553,9 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
   nxy = nx * ny;
   step = grid->step;
   norm = grid->fft_norm;  
-  norm *= step * step * step;
+  if(nx != 1) norm *= step;
+  if(ny != 1) norm *= step;
+  if(nz != 1) norm *= step;
 
   lx = 2.0 * M_PI / (((REAL) nx) * step);
   ly = 2.0 * M_PI / (((REAL) ny) * step);
