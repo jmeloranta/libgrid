@@ -143,7 +143,9 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
     grid->value[i] = 0.0;
 
   grid->flag = 0;
+#ifdef USE_CUDA
   grid->host_lock = 0;
+#endif
 
   return grid;
 }

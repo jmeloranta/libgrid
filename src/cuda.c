@@ -58,7 +58,7 @@ EXPORT inline void cuda_error_check() {
  *
  */
 
-EXPORT void cufft_error_check(cufftResult value) {
+EXPORT void cufft_error_check(int value) {  /* Should be cufftResult enum but this would fail on CPU-only systems */
 
   switch(value) {
   case CUFFT_SUCCESS:
