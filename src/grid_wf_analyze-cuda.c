@@ -87,7 +87,7 @@ EXPORT char grid_cuda_wf_fft_velocity_setup(wf *gwf, rgrid *veloc, REAL c) {
 
   cgrid *grid = gwf->grid;
 
-  if(grid->host_lock || vx->host_lock) {
+  if(grid->host_lock || veloc->host_lock) {
     cuda_remove_block(grid->value, 1);
     cuda_remove_block(veloc->value, 0);
     return -1;

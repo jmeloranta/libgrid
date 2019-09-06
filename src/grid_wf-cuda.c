@@ -92,8 +92,8 @@ EXPORT char grid_cuda_wf_absorb_potential(wf *gwf, cgrid *pot_grid, REAL amp, RE
 
   cgrid *gwf_grid = gwf->grid;
 
-  if(grid->host_lock || pot_grid->host_lock) {
-    cuda_remove_block(grid->value, 1);
+  if(gwf_grid->host_lock || pot_grid->host_lock) {
+    cuda_remove_block(gwf_grid->value, 1);
     cuda_remove_block(pot_grid->value, 0);
     return -1;
   }

@@ -839,7 +839,7 @@ EXPORT REAL rgrid_cuda_min(rgrid *grid, REAL *value) {
 
 EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL inv_delta, char bc) {
 
-  if(rot->host_lock || fx->host_lock || fy->host_lock || fz->host->lock) {
+  if(rot->host_lock || fx->host_lock || fy->host_lock || fz->host_lock) {
     cuda_remove_block(fx->value, 1);
     cuda_remove_block(fy->value, 1);
     cuda_remove_block(fz->value, 1);
