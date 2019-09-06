@@ -23,6 +23,12 @@
 
 EXPORT char grid_cuda_real_to_complex_re(cgrid *dst, rgrid *src) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
@@ -40,6 +46,12 @@ EXPORT char grid_cuda_real_to_complex_re(cgrid *dst, rgrid *src) {
  */
 
 EXPORT char grid_cuda_real_to_complex_im(cgrid *dst, rgrid *src) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
@@ -59,6 +71,12 @@ EXPORT char grid_cuda_real_to_complex_im(cgrid *dst, rgrid *src) {
 
 EXPORT char grid_cuda_add_real_to_complex_re(cgrid *dst, rgrid *src) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
@@ -76,6 +94,12 @@ EXPORT char grid_cuda_add_real_to_complex_re(cgrid *dst, rgrid *src) {
  */
 
 EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dst, rgrid *src) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
@@ -95,6 +119,12 @@ EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dst, rgrid *src) {
 
 EXPORT char grid_cuda_product_complex_with_real(cgrid *dst, rgrid *src) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0) 
     return -1;
 
@@ -112,6 +142,12 @@ EXPORT char grid_cuda_product_complex_with_real(cgrid *dst, rgrid *src) {
 
 EXPORT char grid_cuda_complex_im_to_real(rgrid *dst, cgrid *src) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;
 
@@ -128,6 +164,12 @@ EXPORT char grid_cuda_complex_im_to_real(rgrid *dst, cgrid *src) {
  */
 
 EXPORT char grid_cuda_complex_re_to_real(rgrid *dst, cgrid *src) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) 
     return -1;

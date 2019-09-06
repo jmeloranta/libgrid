@@ -86,6 +86,12 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
   cufftResult status;
   gpu_mem_block *block;
 
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(grid->cufft_handle_r2c == -1) {
     fprintf(stderr, "libgrid(cuda): cufft not initialized.\n");
     abort();
@@ -146,6 +152,12 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
 
   cufftResult status;
   gpu_mem_block *block;
+
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(grid->cufft_handle_c2r == -1) {
     fprintf(stderr, "libgrid(cuda): cufft not initialized.\n");

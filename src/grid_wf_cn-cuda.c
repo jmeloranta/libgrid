@@ -22,6 +22,14 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex tstep, cgr
   INT lx, hx, ly, hy, lz, hz;
   CUCOMPLEX ts;
   
+  if(grid->host_lock || workspace->host_lock || workspace2->host_lock || workspace3->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(workspace->value, 0);
+    cuda_remove_block(workspace2->value, 0);
+    cuda_remove_block(workspace3->value, 0);
+    return -1;
+  }
+
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
   } else {
@@ -56,6 +64,14 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex tstep, cgr
   INT lx, hx, ly, hy, lz, hz;
   CUCOMPLEX ts;
    
+  if(grid->host_lock || workspace->host_lock || workspace2->host_lock || workspace3->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(workspace->value, 0);
+    cuda_remove_block(workspace2->value, 0);
+    cuda_remove_block(workspace3->value, 0);
+    return -1;
+  }
+
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
   } else {
@@ -90,6 +106,14 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex tstep, cgr
   INT lx, hx, ly, hy, lz, hz;
   CUCOMPLEX ts;
   
+  if(grid->host_lock || workspace->host_lock || workspace2->host_lock || workspace3->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(workspace->value, 0);
+    cuda_remove_block(workspace2->value, 0);
+    cuda_remove_block(workspace3->value, 0);
+    return -1;
+  }
+
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
   } else {

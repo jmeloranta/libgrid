@@ -30,6 +30,13 @@ EXPORT void rgrid_cuda_init(size_t len) {
 
 EXPORT char rgrid_cuda_fft_convolute(rgrid *dst, rgrid *src1, rgrid *src2) {
 
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
 
@@ -48,6 +55,12 @@ EXPORT char rgrid_cuda_fft_convolute(rgrid *dst, rgrid *src1, rgrid *src2) {
  */
 
 EXPORT char rgrid_cuda_power(rgrid *dst, rgrid *src, REAL exponent) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
@@ -68,6 +81,12 @@ EXPORT char rgrid_cuda_power(rgrid *dst, rgrid *src, REAL exponent) {
 
 EXPORT char rgrid_cuda_abs_power(rgrid *dst, rgrid *src, REAL exponent) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
 
@@ -86,6 +105,11 @@ EXPORT char rgrid_cuda_abs_power(rgrid *dst, rgrid *src, REAL exponent) {
 
 EXPORT char rgrid_cuda_multiply(rgrid *grid, REAL c) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_multiplyW(cuda_block_address(grid->value), c, grid->nx, grid->ny, grid->nz);
@@ -102,6 +126,11 @@ EXPORT char rgrid_cuda_multiply(rgrid *grid, REAL c) {
  */
 
 EXPORT char rgrid_cuda_multiply_fft(rgrid *grid, REAL c) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_c2r, grid->id, 1) < 0) return -1;
 
@@ -120,6 +149,13 @@ EXPORT char rgrid_cuda_multiply_fft(rgrid *grid, REAL c) {
  */
 
 EXPORT char rgrid_cuda_sum(rgrid *dst, rgrid *src1, rgrid *src2) {
+
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
@@ -140,6 +176,13 @@ EXPORT char rgrid_cuda_sum(rgrid *dst, rgrid *src1, rgrid *src2) {
 
 EXPORT char rgrid_cuda_difference(rgrid *dst, rgrid *src1, rgrid *src2) {
   
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
@@ -159,6 +202,13 @@ EXPORT char rgrid_cuda_difference(rgrid *dst, rgrid *src1, rgrid *src2) {
 
 EXPORT char rgrid_cuda_product(rgrid *dst, rgrid *src1, rgrid *src2) {
 
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
@@ -177,6 +227,13 @@ EXPORT char rgrid_cuda_product(rgrid *dst, rgrid *src1, rgrid *src2) {
  */
 
 EXPORT char rgrid_cuda_division(rgrid *dst, rgrid *src1, rgrid *src2) {
+
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
@@ -198,6 +255,13 @@ EXPORT char rgrid_cuda_division(rgrid *dst, rgrid *src1, rgrid *src2) {
 
 EXPORT char rgrid_cuda_division_eps(rgrid *dst, rgrid *src1, rgrid *src2, REAL eps) {
 
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
@@ -215,6 +279,11 @@ EXPORT char rgrid_cuda_division_eps(rgrid *dst, rgrid *src1, rgrid *src2, REAL e
  */
 
 EXPORT char rgrid_cuda_add(rgrid *grid, REAL c) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
@@ -234,6 +303,11 @@ EXPORT char rgrid_cuda_add(rgrid *grid, REAL c) {
 
 EXPORT char rgrid_cuda_multiply_and_add(rgrid *grid, REAL cm, REAL ca) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_multiply_and_addW(cuda_block_address(grid->value), cm, ca, grid->nx, grid->ny, grid->nz);
@@ -252,6 +326,11 @@ EXPORT char rgrid_cuda_multiply_and_add(rgrid *grid, REAL cm, REAL ca) {
 
 EXPORT char rgrid_cuda_add_and_multiply(rgrid *grid, REAL ca, REAL cm) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_add_and_multiplyW(cuda_block_address(grid->value), ca, cm, grid->nx, grid->ny, grid->nz);
@@ -269,6 +348,12 @@ EXPORT char rgrid_cuda_add_and_multiply(rgrid *grid, REAL ca, REAL cm) {
  */
 
 EXPORT char rgrid_cuda_add_scaled(rgrid *dst, REAL d, rgrid *src) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0)
     return -1;
@@ -290,6 +375,13 @@ EXPORT char rgrid_cuda_add_scaled(rgrid *dst, REAL d, rgrid *src) {
 
 EXPORT char rgrid_cuda_add_scaled_product(rgrid *dst, REAL d, rgrid *src1, rgrid *src2) {
 
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, 
                              src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0) return -1;
@@ -309,6 +401,12 @@ EXPORT char rgrid_cuda_add_scaled_product(rgrid *dst, REAL d, rgrid *src1, rgrid
 
 EXPORT char rgrid_cuda_copy(rgrid *dst, rgrid *src) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_copy_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, src->value, src->grid_len, src->cufft_handle_r2c, src->id) < 0) 
     return -1;
 
@@ -327,6 +425,11 @@ EXPORT char rgrid_cuda_copy(rgrid *dst, rgrid *src) {
 
 EXPORT char rgrid_cuda_constant(rgrid *grid, REAL c) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 0) < 0) return -1;
 
   rgrid_cuda_constantW(cuda_block_address(grid->value), c, grid->nx, grid->ny, grid->nz);
@@ -343,6 +446,11 @@ EXPORT char rgrid_cuda_constant(rgrid *grid, REAL c) {
  */
 
 EXPORT char rgrid_cuda_integral(rgrid *grid, REAL *value) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
@@ -371,6 +479,11 @@ EXPORT char rgrid_cuda_integral(rgrid *grid, REAL *value) {
 
 EXPORT char rgrid_cuda_integral_region(rgrid *grid, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, REAL *value) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, value);
@@ -391,6 +504,11 @@ EXPORT char rgrid_cuda_integral_region(rgrid *grid, INT il, INT iu, INT jl, INT 
  */
 
 EXPORT char rgrid_cuda_integral_of_square(rgrid *grid, REAL *value) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
@@ -413,6 +531,12 @@ EXPORT char rgrid_cuda_integral_of_square(rgrid *grid, REAL *value) {
  */
 
 EXPORT char rgrid_cuda_integral_of_product(rgrid *src1, rgrid *src2, REAL *value) {
+
+  if(src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1) < 0) 
     return -1;
@@ -438,6 +562,12 @@ EXPORT char rgrid_cuda_integral_of_product(rgrid *src1, rgrid *src2, REAL *value
 
 EXPORT char rgrid_cuda_grid_expectation_value(rgrid *src1, rgrid *src2, REAL *value) {
 
+  if(src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1) < 0)
     return -1;
 
@@ -462,6 +592,12 @@ EXPORT char rgrid_cuda_grid_expectation_value(rgrid *src1, rgrid *src2, REAL *va
 
 EXPORT char rgrid_cuda_fd_gradient_x(rgrid *src, rgrid *dst, REAL inv_delta, char bc) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
@@ -482,6 +618,12 @@ EXPORT char rgrid_cuda_fd_gradient_x(rgrid *src, rgrid *dst, REAL inv_delta, cha
 
 EXPORT char rgrid_cuda_fd_gradient_y(rgrid *src, rgrid *dst, REAL inv_delta, char bc) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
@@ -500,6 +642,12 @@ EXPORT char rgrid_cuda_fd_gradient_y(rgrid *src, rgrid *dst, REAL inv_delta, cha
  */
 
 EXPORT char rgrid_cuda_fd_gradient_z(rgrid *src, rgrid *dst, REAL inv_delta, char bc) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
@@ -520,6 +668,12 @@ EXPORT char rgrid_cuda_fd_gradient_z(rgrid *src, rgrid *dst, REAL inv_delta, cha
 
 EXPORT char rgrid_cuda_fd_laplace(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
@@ -538,6 +692,12 @@ EXPORT char rgrid_cuda_fd_laplace(rgrid *src, rgrid *dst, REAL inv_delta2, char 
  */
 
 EXPORT char rgrid_cuda_fd_laplace_x(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
@@ -558,6 +718,12 @@ EXPORT char rgrid_cuda_fd_laplace_x(rgrid *src, rgrid *dst, REAL inv_delta2, cha
 
 EXPORT char rgrid_cuda_fd_laplace_y(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
 
@@ -576,6 +742,12 @@ EXPORT char rgrid_cuda_fd_laplace_y(rgrid *src, rgrid *dst, REAL inv_delta2, cha
  */
 
 EXPORT char rgrid_cuda_fd_laplace_z(rgrid *src, rgrid *dst, REAL inv_delta2, char bc) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
@@ -596,6 +768,12 @@ EXPORT char rgrid_cuda_fd_laplace_z(rgrid *src, rgrid *dst, REAL inv_delta2, cha
 
 EXPORT char rgrid_cuda_fd_gradient_dot_gradient(rgrid *src, rgrid *dst, REAL inv_2delta2, char bc) {
 
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
 
@@ -613,6 +791,11 @@ EXPORT char rgrid_cuda_fd_gradient_dot_gradient(rgrid *src, rgrid *dst, REAL inv
 
 EXPORT REAL rgrid_cuda_max(rgrid *grid, REAL *value) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   grid_cuda_maxW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
@@ -629,6 +812,11 @@ EXPORT REAL rgrid_cuda_max(rgrid *grid, REAL *value) {
  */
 
 EXPORT REAL rgrid_cuda_min(rgrid *grid, REAL *value) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
@@ -651,6 +839,14 @@ EXPORT REAL rgrid_cuda_min(rgrid *grid, REAL *value) {
 
 EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL inv_delta, char bc) {
 
+  if(rot->host_lock || fx->host_lock || fy->host_lock || fz->host->lock) {
+    cuda_remove_block(fx->value, 1);
+    cuda_remove_block(fy->value, 1);
+    cuda_remove_block(fz->value, 1);
+    cuda_remove_block(rot->value, 0);
+    return -1;
+  }
+
   if(cuda_four_block_policy(rot->value, rot->grid_len, rot->cufft_handle_r2c, rot->id, 0, fx->value, fx->grid_len, fx->cufft_handle_r2c, fx->id, 1,
                             fy->value, fy->grid_len, fy->cufft_handle_r2c, fy->id, 1, fz->value, fz->grid_len, fz->cufft_handle_r2c, fz->id, 1) < 0) return -1;
 
@@ -668,6 +864,12 @@ EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL
  */
 
 EXPORT char rgrid_cuda_ipower(rgrid *dst, rgrid *src, INT exponent) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
@@ -690,6 +892,12 @@ EXPORT char rgrid_cuda_ipower(rgrid *dst, rgrid *src, INT exponent) {
  */
 
 EXPORT char rgrid_cuda_threshold_clear(rgrid *dst, rgrid *src, REAL ul, REAL ll, REAL uval, REAL lval) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0)
     return -1;
@@ -714,7 +922,13 @@ EXPORT char rgrid_cuda_threshold_clear(rgrid *dst, rgrid *src, REAL ul, REAL ll,
 
 EXPORT char rgrid_cuda_zero_index(rgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(hx > grid->nx || lx < 0 || hy > grid->ny || ly < 0 || hz > grid->nz || lz < 0) return 0; // not part of the grid
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
@@ -732,6 +946,11 @@ EXPORT char rgrid_cuda_zero_index(rgrid *grid, INT lx, INT hx, INT ly, INT hy, I
 
 EXPORT char rgrid_cuda_poisson(rgrid *grid) {
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_c2r, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
@@ -747,6 +966,11 @@ EXPORT char rgrid_cuda_poisson(rgrid *grid) {
  */
 
 EXPORT char rgrid_cuda_fft_gradient_x(rgrid *gradient_x) {
+
+  if(gradient_x->host_lock) {
+    cuda_remove_block(gradient_x->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(gradient_x->value, gradient_x->grid_len, gradient_x->cufft_handle_c2r, gradient_x->id, 1) < 0) return -1;
 
@@ -764,6 +988,11 @@ EXPORT char rgrid_cuda_fft_gradient_x(rgrid *gradient_x) {
 
 EXPORT char rgrid_cuda_fft_gradient_y(rgrid *gradient_y) {
 
+  if(gradient_y->host_lock) {
+    cuda_remove_block(gradient_y->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(gradient_y->value, gradient_y->grid_len, gradient_y->cufft_handle_c2r, gradient_y->id, 1) < 0) return -1;
 
   rgrid_cuda_fft_gradient_yW(cuda_block_address(gradient_y->value), gradient_y->ky0, gradient_y->step, gradient_y->fft_norm, gradient_y->nx, gradient_y->ny, gradient_y->nz);
@@ -780,6 +1009,11 @@ EXPORT char rgrid_cuda_fft_gradient_y(rgrid *gradient_y) {
 
 EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
 
+  if(gradient_z->host_lock) {
+    cuda_remove_block(gradient_z->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(gradient_z->value, gradient_z->grid_len, gradient_z->cufft_handle_c2r, gradient_z->id, 1) < 0) return -1;
 
   rgrid_cuda_fft_gradient_zW(cuda_block_address(gradient_z->value), gradient_z->kz0, gradient_z->step, gradient_z->fft_norm, gradient_z->nx, gradient_z->ny, gradient_z->nz);
@@ -795,6 +1029,11 @@ EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
  */
 
 EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
+
+  if(laplace->host_lock) {
+    cuda_remove_block(laplace->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle_c2r, laplace->id, 1) < 0) return -1;
 
@@ -814,6 +1053,11 @@ EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
 EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value) {
 
   REAL step = laplace->step, norm = laplace->fft_norm;
+
+  if(laplace->host_lock) {
+    cuda_remove_block(laplace->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle_c2r, laplace->id, 1) < 0) return -1;
 

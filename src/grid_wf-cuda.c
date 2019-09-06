@@ -26,6 +26,12 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
   char add_abs = 0;
   CUREAL rho0;
 
+  if(grid->host_lock || pot->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(pot->value, 1);
+    return -1;
+  }
+
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
     amp.x = amp.y = 0.0;
@@ -63,6 +69,12 @@ EXPORT char grid_cuda_wf_density(wf *gwf, rgrid *density) {
 
   cgrid *grid = gwf->grid;
 
+  if(grid->host_lock || density->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(density->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, density->value, density->grid_len, density->cufft_handle_r2c, density->id, 0) < 0)
     return -1;
 
@@ -79,6 +91,12 @@ EXPORT char grid_cuda_wf_density(wf *gwf, rgrid *density) {
 EXPORT char grid_cuda_wf_absorb_potential(wf *gwf, cgrid *pot_grid, REAL amp, REAL rho0) {
 
   cgrid *gwf_grid = gwf->grid;
+
+  if(grid->host_lock || pot_grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(pot_grid->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(gwf_grid->value, gwf_grid->grid_len, gwf->grid->cufft_handle, gwf_grid->id, 1, pot_grid->value, pot_grid->grid_len, pot_grid->cufft_handle, pot_grid->id, 1) < 0)
     return -1;

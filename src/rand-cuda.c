@@ -71,6 +71,11 @@ EXPORT INT rgrid_cuda_random_uniform(rgrid *grid, REAL scale) {
 
   INT states;
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   states = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
@@ -93,6 +98,11 @@ EXPORT INT rgrid_cuda_random_uniform(rgrid *grid, REAL scale) {
 EXPORT INT rgrid_cuda_random_normal(rgrid *grid, REAL scale) {
 
   INT states;
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
@@ -117,6 +127,11 @@ EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL scale) {
 
   INT states;
 
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
   states = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
@@ -139,6 +154,11 @@ EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL scale) {
 EXPORT INT cgrid_cuda_random_normal(cgrid *grid, REAL scale) {
 
   INT states;
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 

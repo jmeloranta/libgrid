@@ -39,10 +39,11 @@ typedef struct cgrid_struct { /* complex grid data type */
 #ifdef USE_CUDA
   cufftHandle cufft_handle;  /* CUFFT plan handle */
   char space;                /* 0 = Real space (partitioning along x over GPUs) or 1 = Fourier space (partitioning along y over GPUs) */
+  char host_lock;            /* 0 = may move to GPU memory; 1 = locked in host memory */
 #endif
   REAL fft_norm;
   REAL fft_norm2;
-  char flag;
+  char flag;                 /* claim/release interface flag */
 } cgrid;
 
 typedef struct rgrid_struct { /* real grid data type */
@@ -66,10 +67,11 @@ typedef struct rgrid_struct { /* real grid data type */
 #ifdef USE_CUDA
   cufftHandle cufft_handle_r2c;   /* CUFFT R2C plan handle */  // TODO: Add cufft_handle_current which is either r2c or c2r depending what was done
   cufftHandle cufft_handle_c2r;   /* CUFFT C2R plan handle */
+  char host_lock;                 /* 0 = may move to GPU memory; 1 = locked in host memory */
 #endif
   REAL fft_norm;
   REAL fft_norm2;
-  char flag;
+  char flag;                      /* claim/release interface flag */
 } rgrid;
 
 typedef struct wf_struct { /* wavefunction */

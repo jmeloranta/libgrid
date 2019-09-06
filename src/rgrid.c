@@ -160,6 +160,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
     grid->value[i] = 0.0;
 
   grid->flag = 0;
+  grid->host_lock = 0;
 
   return grid;
 }
@@ -3649,4 +3650,34 @@ EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REA
       value[ijnz + k] *= (*func)(farg, kx, ky, kz);
     }
   }
+}
+
+/*
+ * Lock grid into host memory. This does nothing on pure CPU-based systems.
+ * On GPU-based systems it forces a given grid to stay in host memory.
+ *
+ * grid = grid to be host-locked (rgrid *; input).
+ * 
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_host_lock(rgrid *grid) {
+
+  grid->host_lock = 1;
+}
+
+/*
+ * Unlock grid. This does nothing on pure CPU-based systems.
+ * On GPU-based systems it allows again the grid to move to GPU.
+ *
+ * grid = grid to be host-locked (rgrid *; input).
+ * 
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_host_unlock(rgrid *grid) {
+
+  grid->host_lock = 0;
 }

@@ -18,6 +18,12 @@ EXPORT char grid_cuda_wf_velocity_x(wf *gwf, rgrid *vx, REAL inv_delta, REAL cut
 
   cgrid *grid = gwf->grid;
 
+  if(grid->host_lock || vx->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(vx->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, vx->value, vx->grid_len, vx->cufft_handle_r2c, vx->id, 0) < 0)
     return -1;
 
@@ -34,6 +40,12 @@ EXPORT char grid_cuda_wf_velocity_x(wf *gwf, rgrid *vx, REAL inv_delta, REAL cut
 EXPORT char grid_cuda_wf_velocity_y(wf *gwf, rgrid *vy, REAL inv_delta, REAL cutoff) {
 
   cgrid *grid = gwf->grid;
+
+  if(grid->host_lock || vy->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(vy->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, vy->value, vy->grid_len, vy->cufft_handle_r2c, vy->id, 0) < 0)
     return -1;
@@ -52,6 +64,12 @@ EXPORT char grid_cuda_wf_velocity_z(wf *gwf, rgrid *vz, REAL inv_delta, REAL cut
 
   cgrid *grid = gwf->grid;
 
+  if(grid->host_lock || vz->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(vz->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, vz->value, vz->grid_len, vz->cufft_handle_r2c, vz->id, 0) < 0)
     return -1;
 
@@ -68,6 +86,12 @@ EXPORT char grid_cuda_wf_velocity_z(wf *gwf, rgrid *vz, REAL inv_delta, REAL cut
 EXPORT char grid_cuda_wf_fft_velocity_setup(wf *gwf, rgrid *veloc, REAL c) {
 
   cgrid *grid = gwf->grid;
+
+  if(grid->host_lock || vx->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(veloc->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, veloc->value, veloc->grid_len, veloc->cufft_handle_r2c, veloc->id, 0) < 0)
     return -1;
@@ -86,6 +110,12 @@ EXPORT char grid_cuda_wf_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_del
 
   cgrid *grid = gwf->grid;
 
+  if(grid->host_lock || flux_x->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(flux_x->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_x->value, flux_x->grid_len, flux_x->cufft_handle_r2c, flux_x->id, 0) < 0)
     return -1;
 
@@ -102,6 +132,18 @@ EXPORT char grid_cuda_wf_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_del
 EXPORT char grid_cuda_wf_probability_flux_y(wf *gwf, rgrid *flux_y, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
+
+  if(grid->host_lock || flux_y->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(flux_y->value, 0);
+    return -1;
+  }
+
+  if(grid->host_lock || flux_y->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(flux_y->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_y->value, flux_y->grid_len, flux_y->cufft_handle_r2c, flux_y->id, 0) < 0)
     return -1;
@@ -120,6 +162,12 @@ EXPORT char grid_cuda_wf_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_del
 
   cgrid *grid = gwf->grid;
 
+  if(grid->host_lock || flux_z->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(flux_z->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_z->value, flux_z->grid_len, flux_z->cufft_handle_r2c, flux_z->id, 0) < 0) 
     return -1;
 
@@ -136,6 +184,12 @@ EXPORT char grid_cuda_wf_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_del
 EXPORT char grid_cuda_wf_lx(wf *gwf, rgrid *workspace, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
+
+  if(grid->host_lock || workspace->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(workspace->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, workspace->value, workspace->grid_len, workspace->cufft_handle_r2c, workspace->id, 0) < 0)
     return -1;
@@ -154,6 +208,12 @@ EXPORT char grid_cuda_wf_ly(wf *gwf, rgrid *workspace, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
+  if(grid->host_lock || workspace->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(workspace->value, 0);
+    return -1;
+  }
+
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, workspace->value, workspace->grid_len, workspace->cufft_handle_r2c, workspace->id, 0) < 0)
     return -1;
 
@@ -170,6 +230,12 @@ EXPORT char grid_cuda_wf_ly(wf *gwf, rgrid *workspace, REAL inv_delta) {
 EXPORT char grid_cuda_wf_lz(wf *gwf, rgrid *workspace, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
+
+  if(grid->host_lock || workspace->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    cuda_remove_block(workspace->value, 0);
+    return -1;
+  }
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, workspace->value, workspace->grid_len, workspace->cufft_handle_r2c, workspace->id, 0) < 0)
     return -1;
