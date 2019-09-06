@@ -220,6 +220,10 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
 
 EXPORT void rgrid_claim(rgrid *grid) {
 
+  if(!grid) {
+    fprintf(stderr, "libgrid: Attempting to claim a non-existent grid.\n");
+    abort();
+  }
   if(grid->flag) {
     fprintf(stderr, "libgrid: Attempting to claim grid twice.\n");
     abort();
