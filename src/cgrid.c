@@ -3475,7 +3475,9 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
 
 EXPORT void cgrid_host_lock(cgrid *grid) {
 
+#ifdef USE_CUDA
   grid->host_lock = 1;
+#endif
 }
 
 /*
@@ -3490,5 +3492,7 @@ EXPORT void cgrid_host_lock(cgrid *grid) {
 
 EXPORT void cgrid_host_unlock(cgrid *grid) {
 
+#ifdef USE_CUDA
   grid->host_lock = 0;
+#endif
 }
