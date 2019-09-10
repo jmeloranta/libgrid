@@ -6,7 +6,7 @@ CUDA = $(shell ./cuda-detect.sh)
 ifeq ($(CUDA),yes)
 CUDA_CC = $(shell ./get_cc.sh)
 endif
-BRANCH = $(shell git branch -l | cut -c3-)
+BRANCH = $(shell git branch -l | fgrep \* | cut -c3-)
 REV = $(shell git rev-parse $(BRANCH))
 
 include ../make.conf
