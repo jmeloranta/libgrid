@@ -258,10 +258,9 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
   if(k < lz) t += ((REAL) (lz - k)) / (REAL) lz;
   else if(k > hz) t += ((REAL) (k - hz)) / (REAL) lz;
 
-  t *= 2.0 / 3.0;  // new
-  if(t > 1.0) return 1.0;  // new
-  return t; // new
-//  return t / 3.0;  // old
+  t *= 2.0 / 3.0;  // average of the three directions and 2x to saturate to full imag time at half point
+  if(t > 1.0) return 1.0; // Maximum is one
+  return t;
 }
 
 /*
