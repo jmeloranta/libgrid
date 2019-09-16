@@ -2271,8 +2271,9 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
     INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
     gpu = i / nnx1;
     if(gpu >= ngpu1) {
-      idx = i % (ngpu1 * nnx1);
+      idx = i - ngpu1 * nnx1;
       gpu = idx / nnx2 + ngpu1;
+      idx = idx % nnx2;
     } else idx = i % nnx1;
     cuda_get_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz2 + k), sizeof(REAL), (void *) &value);
     return value;
@@ -2308,14 +2309,14 @@ EXPORT inline void rgrid_value_to_index(rgrid *grid, INT i, INT j, INT k, REAL v
       idx = i % (ngpu1 * nnx1);
       gpu = idx / nnx2 + ngpu1;
     } else idx = i % nnx1;
-    cuda_set_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL), (void *) &value);
+    cuda_set_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz2 + k), sizeof(REAL), (void *) &value);
   } else
 #endif
   grid->value[(i * grid->ny + j) * grid->nz2 + k] = value;
 }
 
 /*
- * Access grid point in Fourier space at given index (follows boundary condition).
+ * Access grid point in Fourier space at given index (returns zere outside the grid).
  *
  * grid = grid to be accessed (rgrid *; input).
  * i    = index along x (INT; input).
@@ -2331,13 +2332,23 @@ EXPORT inline void rgrid_value_to_index(rgrid *grid, INT i, INT j, INT k, REAL v
 EXPORT inline REAL complex rgrid_cvalue_at_index(rgrid *grid, INT i, INT j, INT k) {
 
   REAL complex *val;
-  INT nzz = grid->nz / 2 + 1;
+  INT nzz = grid->nz2 / 2;
 
-  if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= nzz)
-    return 0.0;
+  if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= nzz) return 0.0;
 
 #ifdef USE_CUDA
-  cuda_remove_block(grid->value, 1);
+  REAL complex value;
+  if(cuda_find_block(grid->value)) {
+    INT ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1 = ny % ngpu2, nny2 = ny / ngpu2, nny1 = nny2 + 1, gpu, idx;
+    gpu = j / nny1;
+    if(gpu >= ngpu1) {
+      idx = j - ngpu1 * nny1;
+      gpu = idx / nny2 + ngpu1;
+      idx = idx % nny2;
+    } else idx = j % nny1;
+    cuda_get_element(grid->value, (int) gpu, (size_t) ((i * ny + idx) * nzz + k), sizeof(REAL complex), (void *) &value);
+    return value;
+  } else
 #endif
   val = (REAL complex *) grid->value;
   return val[(i * grid->ny + j) * nzz + k];

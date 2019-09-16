@@ -2756,8 +2756,9 @@ EXPORT inline REAL complex cgrid_value_at_index(cgrid *grid, INT i, INT j, INT k
     INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
     gpu = i / nnx1;
     if(gpu >= ngpu1) {
-      idx = i % (ngpu1 * nnx1);
+      idx = i - (ngpu1 * nnx1);
       gpu = idx / nnx2 + ngpu1;
+      idx = idx % nnx2;
     } else idx = i % nnx1;
     cuda_get_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL complex), (void *) &value);
     return value;

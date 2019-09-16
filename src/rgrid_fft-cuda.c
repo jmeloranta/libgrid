@@ -16,58 +16,20 @@
 
 EXPORT void rgrid_cufft_alloc_r2c(rgrid *grid) {
 
-  cufftResult status;
-  size_t len[MAX_CUDA_DESCRIPTOR_GPUS];
-  int *gpus = cuda_gpus(), ngpus = cuda_ngpus();
-
-  if((status = cufftCreate(&(grid->cufft_handle_r2c))) != CUFFT_SUCCESS) {
-    fprintf(stderr, "libgrid(cuda): Error creating r2c plan.\n");
-    cufft_error_check(status);
-    return;
-  }
-  if(ngpus > 1) {
-    if((status = cufftXtSetGPUs(grid->cufft_handle_r2c, ngpus, gpus)) != CUFFT_SUCCESS) {
-      fprintf(stderr, "libgrid(cuda): Error allocating GPUs in r2c.\n");
-      cufft_error_check(status);
-      return;
-    }    
-  }
- #ifdef SINGLE_PREC
-  if((status = cufftMakePlan3d(grid->cufft_handle_r2c, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_R2C, len)) != CUFFT_SUCCESS) {
-#else /* double */
-  if((status = cufftMakePlan3d(grid->cufft_handle_r2c, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_D2Z, len)) != CUFFT_SUCCESS) {
+#ifdef SINGLE_PREC
+  grid_cufft_make_plan(&(grid->cufft_handle_r2c), CUFFT_R2C, grid->nx, grid->ny, grid->nz);
+#else
+  grid_cufft_make_plan(&(grid->cufft_handle_r2c), CUFFT_D2Z, grid->nx, grid->ny, grid->nz);
 #endif
-    fprintf(stderr, "libgrid(cuda): Error in forward r2c plan.\n");
-    cufft_error_check(status);
-    return;
-  }
 }
 
 EXPORT void rgrid_cufft_alloc_c2r(rgrid *grid) {
 
-  cufftResult status;
-  size_t len[MAX_CUDA_DESCRIPTOR_GPUS];
-  int *gpus = cuda_gpus(), ngpus = cuda_ngpus();
-
-  if((status = cufftCreate(&(grid->cufft_handle_c2r))) != CUFFT_SUCCESS) {
-    fprintf(stderr, "libgrid(cuda): Error creating c2r plan.\n");
-    cufft_error_check(status);
-  }
-  if(ngpus > 1) {
-    if((status = cufftXtSetGPUs(grid->cufft_handle_c2r, ngpus, gpus)) != CUFFT_SUCCESS) {
-      fprintf(stderr, "libgrid(cuda): Error allocating GPUs in c2r.\n");
-      cufft_error_check(status);
-    }    
-  }
 #ifdef SINGLE_PREC
-  if((status = cufftMakePlan3d(grid->cufft_handle_c2r, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_C2R, len)) != CUFFT_SUCCESS) {
+  grid_cufft_make_plan(&(grid->cufft_handle_c2r), CUFFT_C2R, grid->nx, grid->ny, grid->nz);
 #else
-  if((status = cufftMakePlan3d(grid->cufft_handle_c2r, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_Z2D, len)) != CUFFT_SUCCESS) {
+  grid_cufft_make_plan(&(grid->cufft_handle_c2r), CUFFT_Z2D, grid->nx, grid->ny, grid->nz);
 #endif
-    fprintf(stderr, "libgrid(cuda): Error in backward rplan: ");
-    cufft_error_check(status);
-    abort();
-  }
 }
 
 /*
@@ -85,7 +47,6 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
   
   cufftResult status;
   gpu_mem_block *block;
-
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -107,14 +68,16 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     if((status = cufftExecR2C(grid->cufft_handle_r2c, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0])) != CUFFT_SUCCESS) {
-    fprintf(stderr, "libgrid(cuda): Error in FFT (forward): ");
-    cufft_error_check(status);
-    return -1;
+      fprintf(stderr, "libgrid(cuda): Error in FFT (forward): ");
+      cufft_error_check(status);
+      return -1;
+    }
   } else {
     if((status = cufftXtExecDescriptorR2C(grid->cufft_handle_r2c, block->gpu_info, block->gpu_info)) != CUFFT_SUCCESS) {
-    fprintf(stderr, "libgrid(cuda): Error in FFT (forward): ");
-    error_check(status);
-    return -1;
+      fprintf(stderr, "libgrid(cuda): Error in FFT (forward): ");
+      error_check(status);
+      return -1;
+    }
   }
 #else
   if(cuda_ngpus() == 1) {
@@ -124,7 +87,7 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
       return -1;
     }
   } else {
-      if((status = cufftXtExecDescriptorD2Z(grid->cufft_handle_r2c, block->gpu_info, block->gpu_info)) != CUFFT_SUCCESS) {
+    if((status = cufftXtExecDescriptorD2Z(grid->cufft_handle_r2c, block->gpu_info, block->gpu_info)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error in FFT (forward): ");
       cufft_error_check(status);
       return -1;
@@ -152,7 +115,6 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
 
   cufftResult status;
   gpu_mem_block *block;
-
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);

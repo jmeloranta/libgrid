@@ -20,33 +20,11 @@
 
 EXPORT void cgrid_cufft_alloc(cgrid *grid) {
 
-  cufftResult status;
-  size_t len[MAX_CUDA_DESCRIPTOR_GPUS];
-  int *gpus = cuda_gpus(), ngpus = cuda_ngpus();
-
-  if((status = cufftCreate(&(grid->cufft_handle))) != CUFFT_SUCCESS) {
-    fprintf(stderr, "libgrid(cuda): Error creating c2c plan.\n");
-    cufft_error_check(status);
-    return;
-  }
-  if(ngpus > 1) {
-    if((status = cufftXtSetGPUs(grid->cufft_handle, ngpus, gpus)) != CUFFT_SUCCESS) {
-      fprintf(stderr, "libgrid(cuda): Error allocating GPUs in c2c.\n");
-      cufft_error_check(status);
-      return;
-    }
-  }
 #ifdef SINGLE_PREC
-  if((status = cufftMakePlan3d(grid->cufft_handle, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_C2C, len)) != CUFFT_SUCCESS) {
-#else /* double */
-  if((status = cufftMakePlan3d(grid->cufft_handle, (int) grid->nx, (int) grid->ny, (int) grid->nz, CUFFT_Z2Z, len)) != CUFFT_SUCCESS) {
+  grid_cufft_make_plan(&(grid->cufft_handle), CUFFT_C2C, grid->nx, grid->ny, grid->nz);
+#else
+  grid_cufft_make_plan(&(grid->cufft_handle), CUFFT_Z2Z, grid->nx, grid->ny, grid->nz);
 #endif
-    fprintf(stderr, "libgrid(CUDA): Error in forward cplan: ");
-    cufft_error_check(status);
-    return;
-  }
-
-  cuda_error_check(status);
 }
 
 /*
