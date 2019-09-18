@@ -1002,7 +1002,8 @@ EXPORT char cgrid_cuda_fft_laplace(cgrid *src, cgrid *dst) {
 
 EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value) {
 
-  REAL step = laplace->step, norm = laplace->fft_norm, value2;
+  REAL step = laplace->step, norm = laplace->fft_norm;
+  REAL complex value2;
 
   if(laplace->space == 0) {
     fprintf(stderr, "libgrid(CUDA): Data not in Fourier space (cgrid_cuda_fft_laplace_expectation_value).\n");
