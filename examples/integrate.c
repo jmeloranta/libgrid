@@ -26,7 +26,7 @@ REAL gaussian(void *arg, REAL x, REAL y, REAL z) {
   REAL norm = 0.5 * M_2_SQRTPI * inv_width;
 
   norm = norm * norm * norm;
-  return norm * exp(-(x * x + y * y + z * z) * inv_width * inv_width);
+  return norm * EXP(-(x * x + y * y + z * z) * inv_width * inv_width);
 }
 
 int main(int argc, char **argv) {

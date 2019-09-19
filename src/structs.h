@@ -38,7 +38,6 @@ typedef struct cgrid_struct { /* complex grid data type */
 #endif
 #ifdef USE_CUDA
   cufftHandle cufft_handle;  /* CUFFT plan handle */
-  char space;                /* 0 = Real space (partitioning along x over GPUs) or 1 = Fourier space (partitioning along y over GPUs) */
   char host_lock;            /* 0 = may move to GPU memory; 1 = locked in host memory */
 #endif
   REAL fft_norm;

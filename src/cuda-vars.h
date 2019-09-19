@@ -4,10 +4,10 @@
  */
 
 /* The setup for separating between real and fourier space indexing (space: 0 = real, 1 = reciprocal) */
-#define SETUP_VARIABLES(X) INT i, ngpu2 = X->nGPUs, ngpu1, nnx1, nnx2, nny1, nny2;\
+#define SETUP_VARIABLES(X) INT i, ngpu2 = X->gpu_info->descriptor->nGPUs, ngpu1, nnx1, nnx2, nny1, nny2;\
                         dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK); \
                         dim3 blocks1, blocks2; \
-                        if(space == 0) { \
+                        if(X->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) { \
                           ngpu1 = nx % ngpu2; \
                           nnx2 = nx / ngpu2; \
                           nnx1 = nnx2 + 1; \
@@ -31,10 +31,10 @@
 
 /* Same as above but includes tracking of indices (for routines that need to access grid indices) */
 /* dseg{x,y}{1,2} are the increments for segments such that semgent + index = absolute index */
-#define SETUP_VARIABLES_SEG(X) INT i, ngpu2 = X->nGPUs, ngpu1, nnx1, nnx2, nny1, nny2, dsegx1, dsegx2, dsegy1, dsegy2;\
+#define SETUP_VARIABLES_SEG(X) INT i, ngpu2 = X->gpu_info->descriptor->nGPUs, ngpu1, nnx1, nnx2, nny1, nny2, dsegx1, dsegx2, dsegy1, dsegy2;\
                         dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK); \
                         dim3 blocks1, blocks2; \
-                        if(space == 0) { \
+                        if(X->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) { \
                           ngpu1 = nx % ngpu2; \
                           nnx2 = nx / ngpu2; \
                           nnx1 = nnx2 + 1; \
@@ -64,7 +64,7 @@
                           dsegy2 = nny2; \
                         }
 /* Setup variables for the real case (real space) */
-#define SETUP_VARIABLES_REAL(X)  INT i, ngpu2 = X->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1); \
+#define SETUP_VARIABLES_REAL(X)  INT i, ngpu2 = X->gpu_info->descriptor->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1); \
                                  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK); \
                                  dim3 blocks1((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK, \
                                               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK, \
@@ -74,7 +74,7 @@
                                               (nnx2 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
 
 /* Setup variables for the real case (reciprocal space) */
-#define SETUP_VARIABLES_RECIPROCAL(X) INT i, ngpu2 = X->nGPUs, ngpu1 = ny % ngpu2, nny2 = ny / ngpu2, nny1 = nny2 + 1, nzz = nz / 2 + 1; \
+#define SETUP_VARIABLES_RECIPROCAL(X) INT i, ngpu2 = X->gpu_info->descriptor->nGPUs, ngpu1 = ny % ngpu2, nny2 = ny / ngpu2, nny1 = nny2 + 1, nzz = nz / 2 + 1; \
                                       dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK); \
                                       dim3 blocks1((nzz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK, \
                                                    (nny1 + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK, \

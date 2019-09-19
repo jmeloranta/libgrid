@@ -47,8 +47,8 @@ __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL in
 /*
  * Velocity x (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * vx       = Destination grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * vx       = Destination grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
@@ -58,20 +58,21 @@ __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL in
  *
  */
 
-extern "C" void grid_cuda_wf_velocity_xW(cudaXtDesc *gwf, cudaXtDesc *vx, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
+extern "C" void grid_cuda_wf_velocity_xW(gpu_mem_block *gwf, gpu_mem_block *vx, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VX = vx->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_velocity_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) vx->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_velocity_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VX->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
   cuda_error_check();
 }
@@ -105,8 +106,8 @@ __global__ void grid_cuda_wf_velocity_y_gpu(CUCOMPLEX *wf, CUREAL *vy, CUREAL in
 /*
  * Velocity y (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * vy       = Destination grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * vy       = Destination grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
@@ -116,20 +117,21 @@ __global__ void grid_cuda_wf_velocity_y_gpu(CUCOMPLEX *wf, CUREAL *vy, CUREAL in
  *
  */
 
-extern "C" void grid_cuda_wf_velocity_yW(cudaXtDesc *gwf, cudaXtDesc *vy, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
+extern "C" void grid_cuda_wf_velocity_yW(gpu_mem_block *gwf, gpu_mem_block *vy, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VY = vy->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_velocity_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) vy->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_velocity_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VY->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
   cuda_error_check();
 }
@@ -163,8 +165,8 @@ __global__ void grid_cuda_wf_velocity_z_gpu(CUCOMPLEX *wf, CUREAL *vz, CUREAL in
 /*
  * Velocity z (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * vz       = Destination grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * vz       = Destination grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
@@ -174,20 +176,21 @@ __global__ void grid_cuda_wf_velocity_z_gpu(CUCOMPLEX *wf, CUREAL *vz, CUREAL in
  *
  */
 
-extern "C" void grid_cuda_wf_velocity_zW(cudaXtDesc *gwf, cudaXtDesc *vz, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
+extern "C" void grid_cuda_wf_velocity_zW(gpu_mem_block *gwf, gpu_mem_block *vz, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VZ = vz->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_velocity_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) vz->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_velocity_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VZ->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
   cuda_error_check();
 }
@@ -211,8 +214,8 @@ __global__ void grid_cuda_wf_fft_velocity_setup_gpu(CUCOMPLEX *wf, CUREAL *veloc
 /*
  * Velocity grid setup (for FFT)
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * veloc    = Destination grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * veloc    = Destination grid (gpu_mem_block *; output).
  * c        = hbar / (2 * mass) (CUREAL; input).
  * cutoff   = Velocity cutoff limit (CUREAL; input).
  * nx       = # of points along x (INT).
@@ -224,19 +227,19 @@ __global__ void grid_cuda_wf_fft_velocity_setup_gpu(CUCOMPLEX *wf, CUREAL *veloc
  *
  */
 
-extern "C" void grid_cuda_wf_fft_velocity_setupW(cudaXtDesc *gwf, cudaXtDesc *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
+extern "C" void grid_cuda_wf_fft_velocity_setupW(gpu_mem_block *gwf, gpu_mem_block *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT space = 0;
   SETUP_VARIABLES(gwf);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VELOC = veloc->gpu_info->descriptor;
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(gwf->GPUs[i]);
-    grid_cuda_wf_fft_velocity_setup_gpu<<<blocks1,threads>>>((CUCOMPLEX *) gwf->data[i], (CUREAL *) veloc->data[i], c, nnx1, ny, nz, nzz);
+    cudaSetDevice(GWF->GPUs[i]);
+    grid_cuda_wf_fft_velocity_setup_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GWF->data[i], (CUREAL *) VELOC->data[i], c, nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(gwf->GPUs[i]);
-    grid_cuda_wf_fft_velocity_setup_gpu<<<blocks2,threads>>>((CUCOMPLEX *) gwf->data[i], (CUREAL *) veloc->data[i], c, nnx2, ny, nz, nzz);
+    cudaSetDevice(GWF->GPUs[i]);
+    grid_cuda_wf_fft_velocity_setup_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GWF->data[i], (CUREAL *) VELOC->data[i], c, nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -268,8 +271,8 @@ __global__ void grid_cuda_wf_probability_flux_x_gpu(CUCOMPLEX *wf, CUREAL *flux,
 /*
  * Flux x (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * flux     = Destination grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * flux     = Destination grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
@@ -278,20 +281,21 @@ __global__ void grid_cuda_wf_probability_flux_x_gpu(CUCOMPLEX *wf, CUREAL *flux,
  *
  */
 
-extern "C" void grid_cuda_wf_probability_flux_xW(cudaXtDesc *gwf, cudaXtDesc *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
+extern "C" void grid_cuda_wf_probability_flux_xW(gpu_mem_block *gwf, gpu_mem_block *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *FLUX = flux->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_probability_flux_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) flux->data[0], inv_delta, nx, ny, nz, nz2);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_probability_flux_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
   cuda_error_check();
 }
@@ -322,8 +326,8 @@ __global__ void grid_cuda_wf_probability_flux_y_gpu(CUCOMPLEX *wf, CUREAL *flux,
 /*
  * Flux y (finite difference).
  *
- * wf       = Source/destination grid for operation (cudaXtDesc *; input).
- * flux     = Flux grid (cudaXtDesc *; output).
+ * wf       = Source/destination grid for operation (gpu_mem_block *; input).
+ * flux     = Flux grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
@@ -332,20 +336,21 @@ __global__ void grid_cuda_wf_probability_flux_y_gpu(CUCOMPLEX *wf, CUREAL *flux,
  *
  */
 
-extern "C" void grid_cuda_wf_probability_flux_yW(cudaXtDesc *gwf, cudaXtDesc *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
+extern "C" void grid_cuda_wf_probability_flux_yW(gpu_mem_block *gwf, gpu_mem_block *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *FLUX = flux->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_probability_flux_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) flux->data[0], inv_delta, nx, ny, nz, nz2);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_probability_flux_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
   cuda_error_check();
 }
@@ -376,8 +381,8 @@ __global__ void grid_cuda_wf_probability_flux_z_gpu(CUCOMPLEX *wf, CUREAL *flux,
 /*
  * Flux z (finite difference).
  *
- * wf       = Source/destination grid for operation (cudaXtDesc *; input).
- * flux     = Flux grid (cudaXtDesc *; output).
+ * wf       = Source/destination grid for operation (gpu_mem_block *; input).
+ * flux     = Flux grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
@@ -386,20 +391,21 @@ __global__ void grid_cuda_wf_probability_flux_z_gpu(CUCOMPLEX *wf, CUREAL *flux,
  *
  */
 
-extern "C" void grid_cuda_wf_probability_flux_zW(cudaXtDesc *gwf, cudaXtDesc *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
+extern "C" void grid_cuda_wf_probability_flux_zW(gpu_mem_block *gwf, gpu_mem_block *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *FLUX = flux->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_probability_flux_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) flux->data[0], inv_delta, nx, ny, nz, nz2);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_probability_flux_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
   cuda_error_check();
 }
@@ -444,8 +450,8 @@ __global__ void grid_cuda_wf_lx_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
 /*
  * L_x (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * workspace= Workspace grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * workspace= Workspace grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
@@ -457,20 +463,21 @@ __global__ void grid_cuda_wf_lx_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
  *
  */
 
-extern "C" void grid_cuda_wf_lxW(cudaXtDesc *gwf, cudaXtDesc *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL y0, CUREAL z0, CUREAL step) {
+extern "C" void grid_cuda_wf_lxW(gpu_mem_block *gwf, gpu_mem_block *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL y0, CUREAL z0, CUREAL step) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WORKSPACE = workspace->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_lx_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) workspace->data[0], inv_delta, nx, ny, nz, nzz, ny/2, nz/2, y0, z0, step);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_lx_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, ny/2, nz/2, y0, z0, step);
 
   cuda_error_check();
 }
@@ -515,8 +522,8 @@ __global__ void grid_cuda_wf_ly_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
 /*
  * L_y (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * workspace= Workspace grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * workspace= Workspace grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
@@ -528,20 +535,21 @@ __global__ void grid_cuda_wf_ly_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
  *
  */
 
-extern "C" void grid_cuda_wf_lyW(cudaXtDesc *gwf, cudaXtDesc *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL x0, CUREAL z0, CUREAL step) {
+extern "C" void grid_cuda_wf_lyW(gpu_mem_block *gwf, gpu_mem_block *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL x0, CUREAL z0, CUREAL step) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WORKSPACE = workspace->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_ly_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) workspace->data[0], inv_delta, nx, ny, nz, nzz, nx/2, nz/2, x0, z0, step);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_ly_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, nx/2, nz/2, x0, z0, step);
 
   cuda_error_check();
 }
@@ -586,8 +594,8 @@ __global__ void grid_cuda_wf_lz_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
 /*
  * L_z (finite difference).
  *
- * wf       = Source for operation (cudaXtDesc *; input).
- * workspace=  Workspace grid (cudaXtDesc *; output).
+ * wf       = Source for operation (gpu_mem_block *; input).
+ * workspace=  Workspace grid (gpu_mem_block *; output).
  * inv_delta= hbar / (2 * mass * step) (CUREAL; input).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
@@ -599,20 +607,21 @@ __global__ void grid_cuda_wf_lz_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
  *
  */
 
-extern "C" void grid_cuda_wf_lzW(cudaXtDesc *gwf, cudaXtDesc *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL x0, CUREAL y0, CUREAL step) {
+extern "C" void grid_cuda_wf_lzW(gpu_mem_block *gwf, gpu_mem_block *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL x0, CUREAL y0, CUREAL step) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WORKSPACE = workspace->gpu_info->descriptor;
 
-  if(gwf->nGPUs > 1) {
+  if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
   }
 
-  cudaSetDevice(gwf->GPUs[0]);
-  grid_cuda_wf_lz_gpu<<<blocks,threads>>>((CUCOMPLEX *) gwf->data[0], (CUREAL *) workspace->data[0], inv_delta, nx, ny, nz, nzz, nx/2, ny/2, x0, y0, step);
+  cudaSetDevice(GWF->GPUs[0]);
+  grid_cuda_wf_lz_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, nx/2, ny/2, x0, y0, step);
 
   cuda_error_check();
 }

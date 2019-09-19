@@ -59,6 +59,7 @@ EXPORT int cgrid_cufft_fft(cgrid *grid) {
     fprintf(stderr, "libgrid(cuda): Block not on GPU (c2c).\n");
     abort();
   }
+
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
@@ -92,7 +93,6 @@ EXPORT int cgrid_cufft_fft(cgrid *grid) {
 #endif
 
   cuda_error_check();
-  grid->space = 1; // Data is now in Fourier space
 
   return 0;
 }
@@ -129,6 +129,7 @@ EXPORT int cgrid_cufft_fft_inv(cgrid *grid) {
     fprintf(stderr, "libgrid(cuda): Block not on GPU (c2c).\n");
     abort();
   }
+
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
@@ -162,7 +163,6 @@ EXPORT int cgrid_cufft_fft_inv(cgrid *grid) {
 #endif
 
   cuda_error_check();
-  grid->space = 0; // Data is now in real space
 
   return 0;
 }

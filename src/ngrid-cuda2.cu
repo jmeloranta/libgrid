@@ -15,6 +15,7 @@
 #include "cuda-math.h"
 #include "cgrid_bc-cuda.h"
 #include "cuda-vars.h"
+#include "cuda.h"
 
 extern void *grid_gpu_mem;
 extern cudaXtDesc *grid_gpu_mem_addr;
@@ -42,28 +43,28 @@ __global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *dst, CUREAL *src, IN
 /*
  * Real to complex_re
  *
- * dst     = Destination for operation (cudaXtDesc *; output).
- * src     = Source for operation (cudaXtDesc *; input).
+ * dst     = Destination for operation (gpu_mem_block *; output).
+ * src     = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_real_to_complex_reW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -91,28 +92,28 @@ __global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src, IN
 /*
  * Real to complex_im
  *
- * dst     = Destination for operation (cudaXtDesc *; output).
- * src     = Source for operation (cudaXtDesc *; input).
+ * dst     = Destination for operation (gpu_mem_block *; output).
+ * src     = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_real_to_complex_imW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_real_to_complex_imW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -141,28 +142,28 @@ __global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *dst, CUREAL *src
 /*
  * Add real to complex.re
  *
- * grida   = Destination for operation (cudaXtDesc *; output).
- * gridb   = Source for operation (cudaXtDesc *; input).
+ * grida   = Destination for operation (gpu_mem_block *; output).
+ * gridb   = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_add_real_to_complex_reW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_add_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_add_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_add_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_add_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_add_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -191,28 +192,28 @@ __global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src
 /*
  * Add real to complex_im
  *
- * grida   = Destination for operation (cudaXtDesc *; output).
- * gridb   = Source for operation (cudaXtDesc *; input).
+ * grida   = Destination for operation (gpu_mem_block *; output).
+ * gridb   = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_add_real_to_complex_imW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_add_real_to_complex_imW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_add_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_add_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_add_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_add_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -241,28 +242,28 @@ __global__ void grid_cuda_product_complex_with_real_gpu(CUCOMPLEX *dst, CUREAL *
 /*
  * Product dst(complex) with src(real).
  *
- * dst     = Destination for operation (cudaXtDesc *; output).
- * src     = Source for operation (cudaXtDesc *; input).
+ * dst     = Destination for operation (gpu_mem_block *; output).
+ * src     = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_product_complex_with_realW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_product_complex_with_realW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_product_complex_with_real_gpu<<<blocks1,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_product_complex_with_real_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_product_complex_with_real_gpu<<<blocks2,threads>>>((CUCOMPLEX *) dst->data[i], (CUREAL *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_product_complex_with_real_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -291,28 +292,28 @@ __global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *dst, CUCOMPLEX *src, IN
 /*
  * Imag. part of src to real dst.
  *
- * dst     = Destination for operation (cudaXtDesc *; output).
- * src     = Source for operation (cudaXtDesc *; input).
+ * dst     = Destination for operation (gpu_mem_block *; output).
+ * src     = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_complex_im_to_realW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_complex_im_to_realW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_complex_im_to_real_gpu<<<blocks1,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_complex_im_to_real_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_complex_im_to_real_gpu<<<blocks2,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_complex_im_to_real_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -341,28 +342,28 @@ __global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *dst, CUCOMPLEX *src, IN
 /*
  * Real part of B to real A.
  *
- * dst     = Destination for operation (cudaXtDesc *; output).
- * src     = Source for operation (cudaXtDesc *; input).
+ * dst     = Destination for operation (gpu_mem_block *; output).
+ * src     = Source for operation (gpu_mem_block *; input).
  * nx      = # of points along x (INT; input).
  * ny      = # of points along y (INT; input).
  * nz      = # of points along z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_complex_re_to_realW(cudaXtDesc *dst, cudaXtDesc *src, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_complex_re_to_realW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
-  INT space = 0;  // only real space
   SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_complex_re_to_real_gpu<<<blocks1,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_complex_re_to_real_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(dst->GPUs[i]);
-    grid_cuda_complex_re_to_real_gpu<<<blocks2,threads>>>((CUREAL *) dst->data[i], (CUCOMPLEX *) src->data[i], nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_complex_re_to_real_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();

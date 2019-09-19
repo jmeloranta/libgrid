@@ -138,7 +138,7 @@ EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL scale) {
 
   if(gen == NULL) grid_cuda_random_seed(states, time(0));
 
-  cgrid_cuda_random_uniformW(cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz, grid->space);
+  cgrid_cuda_random_uniformW(cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -166,7 +166,7 @@ EXPORT INT cgrid_cuda_random_normal(cgrid *grid, REAL scale) {
 
   if(gen == NULL) grid_cuda_random_seed(states, time(0));
 
-  cgrid_cuda_random_normalW(cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz, grid->space);
+  cgrid_cuda_random_normalW(cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }

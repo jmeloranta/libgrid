@@ -80,17 +80,17 @@ int main(int argc, char *argv[]) {
   /* Parse command line arguments */
   threads = atoi(argv[1]);
   n = atoi(argv[2]);
-  time_step = atof(argv[3]);
+  time_step = (REAL) atof(argv[3]);
   iterations = atol(argv[4]);
-  wp_params.kx = atof(argv[5]);
-  wp_params.ky = atof(argv[6]);
-  wp_params.kz = atof(argv[7]);
-  wp_params.wx = atof(argv[8]);
-  wp_params.wy = atof(argv[9]);
-  wp_params.wz = atof(argv[10]);
-  wp_params.xc = atof(argv[11]);
-  wp_params.yc = atof(argv[12]);
-  wp_params.zc = atof(argv[13]);
+  wp_params.kx = (REAL) atof(argv[5]);
+  wp_params.ky = (REAL) atof(argv[6]);
+  wp_params.kz = (REAL) atof(argv[7]);
+  wp_params.wx = (REAL) atof(argv[8]);
+  wp_params.wy = (REAL) atof(argv[9]);
+  wp_params.wz = (REAL) atof(argv[10]);
+  wp_params.xc = (REAL) atof(argv[11]);
+  wp_params.yc = (REAL) atof(argv[12]);
+  wp_params.zc = (REAL) atof(argv[13]);
 
   if(wp_params.wx == 0.0 || wp_params.wy == 0.0 || wp_params.wz == 0.0) {
     fprintf(stderr, "Width cannot be zero.\n");

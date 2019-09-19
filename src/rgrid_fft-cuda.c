@@ -134,19 +134,20 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
     fprintf(stderr, "libgrid(cuda): Block not on GPU (c2r).\n");
     abort();
   }
+
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
     if((status = cufftExecC2R(grid->cufft_handle_c2r, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0])) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error in FFT (inverse): ");
       cufft_error_check(status);
-      return -1;
+      abort();
     }
   } else {
     if((status = cufftXtExecDescriptorC2R(grid->cufft_handle_c2r, block->gpu_info, block->gpu_info)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error in FFT (inverse): ");
       cufft_error_check(status);
-      return -1;
+      abort();
     }
   }
 #else /* double */
@@ -155,13 +156,13 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
     if((status = cufftExecZ2D(grid->cufft_handle_c2r, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0])) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error in FFT (inverse): ");
       cufft_error_check(status);
-      return -1;
+      abort();
     }
   } else {
     if((status = cufftXtExecDescriptorZ2D(grid->cufft_handle_c2r, block->gpu_info, block->gpu_info)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error in FFT (inverse): ");
       cufft_error_check(status);
-      return -1;
+      abort();
     }
   }
 #endif
