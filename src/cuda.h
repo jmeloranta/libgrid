@@ -22,3 +22,6 @@ struct gpu_mem_block {
 };
 
 typedef struct gpu_mem_block gpu_mem_block; 
+
+void grid_cufft_make_plan(cufftHandle *, cufftType, INT, INT, INT);
+

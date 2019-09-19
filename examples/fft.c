@@ -10,8 +10,8 @@
 #include <omp.h>
 
 /* Grid dimensions */
-#define NX 16
-#define NY 1024
+#define NX 512
+#define NY 512
 #define NZ 512
 
 /* Spatial step length of the grid */
@@ -21,6 +21,12 @@
 #define KX 1.0
 #define KY 1.0
 #define KZ 1.0
+
+/* If using CUDA, use the following GPU allocation */
+#ifdef USE_CUDA
+#define NGPUS 2
+int gpus[NGPUS] = {1, 2};
+#endif
 
 /* Function returning standing wave in x, y, and z directions */
 REAL func(void *NA, REAL x, REAL y, REAL z) {
@@ -34,9 +40,11 @@ int main(int argc, char **argv) {
 
   grid_threads_init(0);  /* Use all available cores */
 
+  grid_set_fftw_flags(0); /* Use fast (but not optimal) fftw planning */
+
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1, 0, NULL);
+  cuda_enable(1, NGPUS, gpus);
 #endif
 
   /* Allocate real grid with dimensions NX, NY, NZ and spatial step size STEP */

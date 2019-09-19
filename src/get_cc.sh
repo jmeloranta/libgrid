@@ -9,17 +9,24 @@ cat << E_O_F > sm-det-tmp.c
 
 int main(int argc, char *argv) {
 
-  int ndev, i;
+  int ndev, i, lowest_major = 99, lowest_minor = 99;
   struct cudaDeviceProp prop;
 
   if(cudaGetDeviceCount(&ndev) != cudaSuccess) {
     printf("sm_30\n");
     exit(0);
   }
-  i = 0;
 
-  cudaGetDeviceProperties(&prop, i);
-  printf("sm_%1d%1d\n", prop.major, prop.minor);
+  /* Use the lowest architecture all GPUs support */
+  for(i = 0; i < ndev; i++) {
+    cudaGetDeviceProperties(&prop, i);
+    if(prop.major < lowest_major) {
+      lowest_major = prop.major;
+      lowest_minor = prop.minor;
+    } else if(prop.major == lowest_major && prop.minor < lowest_minor) lowest_minor = prop.minor;
+  }
+
+  printf("sm_%1d%1d\n", lowest_major, lowest_minor);
   exit(0);
 }
 E_O_F

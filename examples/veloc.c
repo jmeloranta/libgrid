@@ -25,6 +25,12 @@
 #define NBINS 128
 #define BINSTEP 0.01
 
+/* If using CUDA, use the following GPU allocation */
+#ifdef USE_CUDA
+#define NGPUS 1
+int gpus[NGPUS] = {3};
+#endif
+
 EXPORT REAL complex planewave(void *arg, REAL x, REAL y, REAL z) {
 
   return SQRT(RHO0) + AMP * CEXP(I * (KX * x + KY * y + KZ * z));
@@ -40,7 +46,7 @@ int main(int argc, char **argv) {
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1, 0, NULL);
+  cuda_enable(1, NGPUS, gpus);
 #endif
   
   printf("KX = " FMT_R " Bohr^-1 KY = " FMT_R " Bohr^-1 KZ = " FMT_R " Bohr^-1.\n", KX, KY, KZ);

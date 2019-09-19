@@ -3,9 +3,9 @@
  *
  */
 
-#include <cuda/cuda_runtime_api.h>
-#include <cuda/cuda.h>
-#include <cuda/device_launch_parameters.h>
+#include <cuda_runtime_api.h>
+#include <cuda.h>
+#include <device_launch_parameters.h>
 #include <cufft.h>
 #include "../cuda-math.h"
 

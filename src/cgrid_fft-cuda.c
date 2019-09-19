@@ -61,6 +61,7 @@ EXPORT int cgrid_cufft_fft(cgrid *grid) {
   }
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
+    cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
     if((status = cufftExecC2C(grid->cufft_handle, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0], CUFFT_FORWARD)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(CUDA): Error in CFFT (forward): ");
       cufft_error_check(status);
@@ -75,6 +76,7 @@ EXPORT int cgrid_cufft_fft(cgrid *grid) {
   }
 #else
   if(cuda_ngpus() == 1) {
+    cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
     if((status = cufftExecZ2Z(grid->cufft_handle, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0], CUFFT_FORWARD)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(CUDA): Error in CFFT (forward): ");
       cufft_error_check(status);
@@ -129,6 +131,7 @@ EXPORT int cgrid_cufft_fft_inv(cgrid *grid) {
   }
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
+    cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
     if((status = cufftExecC2C(grid->cufft_handle, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0], CUFFT_INVERSE)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(CUDA): Error in CFFT (backward): ");
       cufft_error_check(status);
@@ -143,6 +146,7 @@ EXPORT int cgrid_cufft_fft_inv(cgrid *grid) {
   }
 #else /* double */
   if(cuda_ngpus() == 1) {
+    cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
     if((status = cufftExecZ2Z(grid->cufft_handle, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->data[0], CUFFT_INVERSE)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(CUDA): Error in CFFT (backward): ");
       cufft_error_check(status);

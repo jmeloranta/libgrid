@@ -20,8 +20,8 @@
 #define CUCOMPLEX cufftDoubleComplex
 #endif
 #include "cuda-math.h"
-#include <cuda/cufft.h>
-#include <cuda/cufftXt.h>
+#include <cufft.h>
+#include <cufftXt.h>
 #include "cuda-vars.h"
 
 extern void *grid_gpu_rand_addr;

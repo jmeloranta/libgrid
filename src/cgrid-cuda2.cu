@@ -17,11 +17,11 @@
  */
 
 #include <stdio.h>
-#include <cuda/cuda_runtime_api.h>
-#include <cuda/cuda.h>
-#include <cuda/device_launch_parameters.h>
-#include <cuda/cufft.h>
-#include <cuda/cufftXt.h>
+#include <cuda_runtime_api.h>
+#include <cuda.h>
+#include <device_launch_parameters.h>
+#include <cufft.h>
+#include <cufftXt.h>
 #include "cuda-math.h"
 #include "cgrid_bc-cuda.h"
 #include "cuda-vars.h"

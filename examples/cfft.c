@@ -22,6 +22,12 @@
 #define KY 1.0
 #define KZ 1.0
 
+/* If using CUDA, use the following GPU allocation */
+#ifdef USE_CUDA
+#define NGPUS 1
+int gpus[NGPUS] = {3};
+#endif
+
 /* Function returning standing wave in x, y, and z directions */
 REAL complex func(void *NA, REAL x, REAL y, REAL z) {
 
@@ -36,7 +42,7 @@ int main(int argc, char **argv) {
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1, 0, NULL);
+  cuda_enable(1, NGPUS, gpus);
 #endif
 
   /* Allocate real grid with dimensions NX, NY, NZ and spatial step size STEP */

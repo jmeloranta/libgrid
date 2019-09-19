@@ -90,16 +90,12 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   grid->nz2 = nz2 = 2 * (nz / 2 + 1);
   grid->grid_len = len = ((size_t) (nx * ny * nz2)) * sizeof(REAL);
 
-#ifdef USE_CUDA
-  if(cudaMallocHost((void **) &(grid->value), len) != cudaSuccess) { /* Use page-locked grids */
-#else
 #if defined(SINGLE_PREC)
   if (!(grid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(DOUBLE_PREC)
   if (!(grid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(QUAD_PREC)
   if (!(grid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
-#endif
 #endif
     fprintf(stderr, "libgrid: Error in rgrid_alloc(). Could not allocate memory for rgrid->value.\n");
     abort();
@@ -133,7 +129,7 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   rgrid_cufft_alloc_r2c(grid);
   rgrid_cufft_alloc_c2r(grid);
 #endif
-  
+
   if (grid->value_outside == RGRID_NEUMANN_BOUNDARY)
     grid->fft_norm = 1.0 / (2.0 * ((REAL) grid->nx) * 2.0 * ((REAL) grid->ny) * 2.0 * ((REAL) grid->nz));
   else
@@ -188,16 +184,12 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
 
-#ifdef USE_CUDA
-  if(cudaMallocHost((void **) &(ngrid->value), len) != cudaSuccess) { /* Use page-locked grids */
-#else
 #if defined(SINGLE_PREC)
   if (!(ngrid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(DOUBLE_PREC)
   if (!(ngrid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(QUAD_PREC)
   if (!(ngrid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
-#endif
 #endif
     fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");
     free(ngrid);
@@ -335,17 +327,15 @@ EXPORT void rgrid_free(rgrid *grid) {
   if (grid) {
 #ifdef USE_CUDA
     cuda_remove_block(grid->value, 0);
-    if(grid->value) cudaFreeHost(grid->value);
     if(grid->cufft_handle_r2c != -1) cufftDestroy(grid->cufft_handle_r2c);
     if(grid->cufft_handle_c2r != -1) cufftDestroy(grid->cufft_handle_c2r);
-#else
+#endif
 #if defined(SINGLE_PREC)
     if (grid->value) fftwf_free(grid->value);
 #elif defined(DOUBLE_PREC)
     if (grid->value) fftw_free(grid->value);
 #elif defined(QUAD_PREC)
     if (grid->value) fftwl_free(grid->value);
-#endif
 #endif
     rgrid_fftw_free(grid);
     free(grid);

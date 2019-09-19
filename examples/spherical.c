@@ -21,6 +21,12 @@
 #define NBINS (NX / 2)
 #define VOLEL 0   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
 
+/* If using CUDA, use the following GPU allocation */
+#ifdef USE_CUDA
+#define NGPUS 1
+int gpus[NGPUS] = {3};
+#endif
+
 /* Function to be mapped onto the grid */
 REAL func(void *NA, REAL x, REAL y, REAL z) {
 
@@ -39,7 +45,7 @@ int main(int argc, char **argv) {
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1, 0, NULL);
+  cuda_enable(1, NGPUS, gpus);
 #endif
   
   /* Allocate real grid */

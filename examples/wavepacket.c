@@ -38,6 +38,12 @@
 /* Otherwise for 2nd order accuracy */
 #define FOURTH_ORDER_FFT
 
+/* If using CUDA, use the following GPU allocation */
+#ifdef USE_CUDA
+#define NGPUS 1
+int gpus[NGPUS] = {3};
+#endif
+
 REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
 REAL complex harmonic(void *arg, REAL x, REAL y, REAL z);
 
@@ -108,7 +114,7 @@ int main(int argc, char *argv[]) {
   
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1, 0, NULL);
+  cuda_enable(1, NGPUS, gpus);
 #endif
 
   /* allocate memory (mass = 1.0) */

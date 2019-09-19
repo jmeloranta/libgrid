@@ -211,8 +211,6 @@ EXPORT size_t cuda_memory() {
 
 EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
 
-  size_t i, st = 0;
-
 #ifdef CUDA_DEBUG
   fprintf(stderr, "cuda: mem2gpu from host to GPU mem (%s).\n", block->id);
 #endif
@@ -222,20 +220,22 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
     abort();
   }
 
-  if(use_ngpus == 1 || block->cufft_handle == -1) { /* Copy without cuttf handle */
-    for(i = 0; i < block->gpu_info->descriptor->nGPUs; i++) {
-      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
-        cuda_error_check();
-        return -1;
-      }        
-      if(cudaMemcpy(block->gpu_info->descriptor->data[i], &(((char *) block->host_mem)[st]), block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
-        cuda_error_check();
-        return -1;
-      }        
-      st = block->gpu_info->descriptor->size[i];
-    }
+  if(block->cufft_handle == -1) {
+    fprintf(stderr, "libgrid(cuda): mem2gpu called for non-cufft capable block.\n");
+    abort();
+  }
+
+  if(use_ngpus == 1) {
+    if(cudaSetDevice(block->gpu_info->descriptor->GPUs[0]) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
+      cuda_error_check();
+      return -1;
+    }        
+    if(cudaMemcpy(block->gpu_info->descriptor->data[0], (char *) block->host_mem, block->gpu_info->descriptor->size[0], cudaMemcpyHostToDevice) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
+      cuda_error_check();
+      return -1;
+    }        
   } else {
     cufftResult status;
     if((status = cufftXtMemcpy(block->cufft_handle, block->gpu_info, block->host_mem, CUFFT_COPY_HOST_TO_DEVICE)) != CUFFT_SUCCESS) {
@@ -259,8 +259,6 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
 
 EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
 
-  size_t i, st = 0;
-
 #ifdef CUDA_DEBUG
   fprintf(stderr, "cuda: gpu2mem from GPU to host mem (%s).\n", block->id);
 #endif
@@ -270,19 +268,21 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
     abort();
   }
 
-  if(use_ngpus == 1 || block->cufft_handle == -1) { /* Copy without cuttf handle */
-    for(i = 0; i < block->gpu_info->descriptor->nGPUs; i++) {
-      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
-        cuda_error_check();
-        return -1;
-      }        
-      if(cudaMemcpy(&(((char *) block->host_mem)[st]), block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
-        cuda_error_check();
-        return -1;
-      }
-      st = block->gpu_info->descriptor->size[i];
+  if(block->cufft_handle == -1) {
+    fprintf(stderr, "libgrid(cuda): gpu2mem called for non-cufft capable block.\n");
+    abort();
+  }
+
+  if(use_ngpus == 1) {
+    if(cudaSetDevice(block->gpu_info->descriptor->GPUs[0]) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
+      cuda_error_check();
+      return -1;
+    }        
+    if(cudaMemcpy((char *) block->host_mem, block->gpu_info->descriptor->data[0], block->gpu_info->descriptor->size[0], cudaMemcpyDeviceToHost) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
+      cuda_error_check();
+      return -1;
     }
   } else {
     cufftResult status;
@@ -1134,8 +1134,9 @@ EXPORT void cuda_statistics(char verbose) {
 
   gpu_mem_block *ptr;
   long n = 0, nl = 0, lc = 999999, hc = 0;
-  size_t total_size = 0, i;
+  size_t total_size = 0;
   time_t oldest = time(0), newest = 0;
+  int i;
 
   if(!enable_cuda) {
     fprintf(stderr, "CUDA not enabled.\n");
@@ -1626,7 +1627,7 @@ EXPORT void cuda_gpu_info() {
  *
  */
 
-EXPORT void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT nz) {
+void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT nz) {
 
   size_t wrksize[MAX_GPU], maxsize = 0;
   void *gpumem[MAX_GPU];
@@ -1638,6 +1639,7 @@ EXPORT void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT 
   if(*plan > grid_cufft_highest_plan) grid_cufft_highest_plan = *plan;
   cufftSetAutoAllocation(*plan, 0);
 
+  cudaSetDevice(gpus[0]);
   if(ngpus > 1) {
     if((status = cufftXtSetGPUs(*plan, ngpus, gpus)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error allocating GPUs in rcufft_workspace.\n");

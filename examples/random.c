@@ -15,6 +15,12 @@
 #define NZ 128
 #define STEP 0.5
 
+/* If using CUDA, use the following GPU allocation */
+#ifdef USE_CUDA
+#define NGPUS 1
+int gpus[NGPUS] = {3};
+#endif
+
 int main(int argc, char **argv) {
   
   rgrid *ngrid, *ugrid;
@@ -24,7 +30,7 @@ int main(int argc, char **argv) {
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
-  cuda_enable(1, 0, NULL);
+  cuda_enable(1, NGPUS, gpus);
 #endif
   
   /* Allocate real grid for the right hand side (and the solution) */
