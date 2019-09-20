@@ -30,7 +30,7 @@ EXPORT REAL grid_polynomial_interpolate(REAL *xa, REAL *ya, INT n, REAL x, REAL 
   dif = FABS(x - xa[0]);
   if(!(c = (REAL *) malloc(sizeof(REAL) * (size_t) (n+1))) || !(d = (REAL *) malloc(sizeof(REAL) * (size_t) (n+1)))) {
     fprintf(stderr, "libgrid: Out of memory in grid_polynomial_interpolate().\n");
-    exit(1);
+    abort();
   }
   
   for (i = 1; i <= n; i++) {
@@ -49,7 +49,7 @@ EXPORT REAL grid_polynomial_interpolate(REAL *xa, REAL *ya, INT n, REAL x, REAL 
       w = c[i+1] - d[i];
       if((den = ho - hp) == 0.0) {
 	fprintf(stderr, "libgrid: Polynomial interpolation failed.\n");
-	exit(1);
+	abort();
       }
       den = w / den;
       d[i] = hp * den;
@@ -89,7 +89,7 @@ EXPORT void grid_spline_ypp(REAL *x, REAL *y, INT n, REAL yp1, REAL ypn, REAL *y
 
   if(!(u = (REAL *) malloc(sizeof(REAL) * (size_t) n))) {
     fprintf(stderr, "libgrid: Out of memory in grid_spline_ypp().\n");
-    exit(1);
+    abort();
   }
 
   if(yp1 > 0.99e30) y2[0] = u[0] = 0.0;
@@ -149,7 +149,7 @@ EXPORT REAL grid_spline_interpolate(REAL *xa, REAL *ya, REAL *y2a, INT n, REAL x
   h = xa[khi] - xa[klo];
   if(h == 0.0) {
     fprintf(stderr, "libgrid: Bad x input values for grid_spline_interpolation() (repeated value).\n");
-    exit(1);
+    abort();
   }
 
   a = (xa[khi] - x) / h;

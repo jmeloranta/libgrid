@@ -21,7 +21,7 @@ static char cgrid_bc_conv(cgrid *grid) {
   else if(grid->value_outside == CGRID_PERIODIC_BOUNDARY) return 2;
   else {
     fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
-    exit(1);
+    abort();
   }
 }
 #endif
@@ -162,7 +162,7 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 
   if(!(ngrid = (cgrid *) malloc(sizeof(cgrid)))) {
     fprintf(stderr, "libgrid: Out of memory in cgrid_clone().\n");
-    exit(1);
+    abort();
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(cgrid));
 #if defined(SINGLE_PREC)
@@ -428,7 +428,7 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
   sprintf(file, "%s.grd", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   cgrid_write(grid, fp);
   fclose(fp);
@@ -437,7 +437,7 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
   sprintf(file, "%s.x", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   j = ny / 2;
   k = nz / 2;
@@ -452,7 +452,7 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
   sprintf(file, "%s.y", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   i = nx / 2;
   k = nz / 2;
@@ -467,7 +467,7 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
   sprintf(file, "%s.z", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   i = nx / 2;
   j = ny / 2;
@@ -507,7 +507,7 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
   sprintf(file, "%s.grd", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   cgrid_write(grid, fp);
   fclose(fp);
@@ -516,7 +516,7 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
   sprintf(file, "%s.x", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   j = 0;
   k = 0;
@@ -534,7 +534,7 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
   sprintf(file, "%s.y", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   i = 0;
   k = 0;
@@ -552,7 +552,7 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
   sprintf(file, "%s.z", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   i = 0;
   j = 0;
@@ -583,7 +583,7 @@ EXPORT void cgrid_read_grid(cgrid *grid, char *file) {
 
   if(!(fp = fopen(file, "r"))) {
     fprintf(stderr, "libgrid: Can't open complex grid file %s.\n", file);
-    exit(1);
+    abort();
   }
   cgrid_read(grid, fp);
   fclose(fp);
@@ -2995,7 +2995,7 @@ EXPORT void cgrid_phase(rgrid *dst, cgrid *src) {
 #endif
   if(dst->nx != src->nx || dst->ny != src->ny || dst->nz != src->nz) {
     fprintf(stderr, "libgrid: incompatible dimensions in cgrid_phase().\n");
-    exit(1);
+    abort();
   }
 
 #pragma omp parallel for firstprivate(src,dst) private(i) default(none) schedule(runtime)
@@ -3111,7 +3111,7 @@ EXPORT void cgrid_poisson(cgrid *grid) {
 
   if(grid->value_outside != CGRID_PERIODIC_BOUNDARY) {
     fprintf(stderr, "libgrid: Only periodic boundary Poisson solver implemented.\n");
-    exit(1);
+    abort();
   }
 
 #ifdef USE_CUDA

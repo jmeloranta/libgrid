@@ -16,6 +16,7 @@
 #include <device_launch_parameters.h>
 
 /* Global variables */
+char grid_gpu_mem_holder;  /* Just to get a host mem address */
 void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_)
 cudaXtDesc *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
 
@@ -33,13 +34,9 @@ EXPORT void cgrid_cuda_init(size_t len) {
     if(grid_gpu_mem) {
       cuda_unlock_block(grid_gpu_mem);
       cuda_remove_block(grid_gpu_mem, 0);
-      cudaFreeHost(grid_gpu_mem);    
     }
     prev_len = len;
-    if(cudaMallocHost((void **) &grid_gpu_mem, len) != cudaSuccess) {
-      fprintf(stderr, "libgrid(CUDA): Not enough memory in cgrid_cuda_init().\n");
-      abort();
-    }
+    grid_gpu_mem = (void *) &grid_gpu_mem_holder;
     if(!(cuda_add_block(grid_gpu_mem, len, -1, "GPU TEMP", 0))) {  /* Reserve memory on ALL GPUs (cufft_handle = -1) */
       fprintf(stderr, "libgrid(CUDA): Failed to allocate temporary space on GPU.\n");
       abort();

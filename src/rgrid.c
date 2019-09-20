@@ -43,7 +43,7 @@ static char rgrid_bc_conv(rgrid *grid) {
   else if(grid->value_outside == RGRID_PERIODIC_BOUNDARY) return 2;
   else {
     fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
-    exit(1);
+    abort();
   }
 }
 #endif
@@ -180,7 +180,7 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
 
   if(!(ngrid = (rgrid *) malloc(sizeof(rgrid)))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_clone().\n");
-    exit(1);
+    abort();
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
 
@@ -449,7 +449,7 @@ EXPORT rgrid *rgrid_read_compat(rgrid *grid, FILE *in) {
 
   if (nx != grid->nx || ny != grid->ny || nz != grid->nz || step != grid->step) {
     fprintf(stderr, "libgrid: Interpolation not supported for compatibility mode.\n");
-    exit(1);
+    abort();
   }
   
   for (i = 0; i < nx; i++)
@@ -481,7 +481,7 @@ EXPORT void rgrid_read_grid(rgrid *grid, char *file) {
 
   if(!(fp = fopen(file, "r"))) {
     fprintf(stderr, "libgrid: Can't open real grid file %s.\n", file);
-    exit(1);
+    abort();
   }
   rgrid_read(grid, fp);
   fclose(fp);
@@ -508,7 +508,7 @@ EXPORT void rgrid_read_grid_compat(rgrid *grid, char *file) {
 
   if(!(fp = fopen(file, "r"))) {
     fprintf(stderr, "libgrid: Can't open real grid file %s.\n", file);
-    exit(1);
+    abort();
   }
   rgrid_read_compat(grid, fp);
   fclose(fp);
@@ -542,7 +542,7 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
   sprintf(file, "%s.grd", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   rgrid_write(grid, fp);
   fclose(fp);
@@ -551,7 +551,7 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
   sprintf(file, "%s.x", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   j = ny / 2;
   k = nz / 2;
@@ -565,7 +565,7 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
   sprintf(file, "%s.y", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   i = nx / 2;
   k = nz / 2;
@@ -579,7 +579,7 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
   sprintf(file, "%s.z", base);
   if(!(fp = fopen(file, "w"))) {
     fprintf(stderr, "Can't open %s for writing.\n", file);
-    exit(1);
+    abort();
   }
   i = nx / 2;
   j = ny / 2;
@@ -2640,7 +2640,7 @@ EXPORT void rgrid_poisson(rgrid *grid) {
 
   if(grid->value_outside != RGRID_PERIODIC_BOUNDARY) {
     fprintf(stderr, "libgrid: Only periodic boundary Poisson solver implemented.\n");
-    exit(1);
+    abort();
   }
 
 #ifdef USE_CUDA
@@ -2929,7 +2929,7 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
 
   if(dest->nx != src->nx || dest->ny != src->ny || dest->nz != src->nz) {
     fprintf(stderr, "libgrid: Incompatible grids for rgrid_threshold_clear().\n");
-    exit(1);
+    abort();
   }
 
 #ifdef USE_CUDA
@@ -3121,7 +3121,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
-    exit(1);
+    abort();
   }
   bzero(nvals, sizeof(INT) * (size_t) nbins);
   bzero(bins, sizeof(REAL) * (size_t) nbins);
@@ -3198,7 +3198,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
-    exit(1);
+    abort();
   }
   bzero(nvals, sizeof(INT) * (size_t) nbins);
   bzero(bins, sizeof(REAL) * (size_t) nbins);
@@ -3268,7 +3268,7 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
   }
   if(dest == source) {
     fprintf(stderr, "libgrid: dft_driver_npoint_smooth() - dest and source cannot be equal.\n");
-    exit(1);
+    abort();
   }
 
   for (i = 0; i < nx; i++) 

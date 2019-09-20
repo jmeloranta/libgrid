@@ -17,7 +17,7 @@ static char *grid_fft_wisfile() {
 
   if(buf == NULL && !(buf = (char *) malloc(128))) {
     fprintf(stderr, "libgrid: memory allocation failure (grid_fft_wisfile).\n");
-    exit(1);
+    abort();
   }
   gethostname(hn, sizeof(hn));
   sprintf(buf, "fftw-%s.wis", hn);  

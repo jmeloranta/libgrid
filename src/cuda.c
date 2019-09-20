@@ -248,7 +248,7 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
     }    
   } else {
     printf("Not implemented yet.\n");
-    exit(0);
+    abort();
    // TODO shuffled 
   }
   cuda_error_check();
@@ -301,7 +301,7 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
   } else {
 // TODO shuffled
     printf("Not implemented yet.\n");
-    exit(0);
+    abort();
   } 
   cuda_error_check();
 
@@ -483,7 +483,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
     if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
       fprintf(stderr, "libgrid(cuda): Error allocating memory (setdevice).\n");
       cuda_error_check();
-      exit(1);
+      abort();
     }    
     if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), length) != cudaSuccess) {
       for(j = 0; j < i; j++) {
@@ -1668,6 +1668,10 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
     cuda_remove_block(&grid_cufft_workarea, 0);
     block = cuda_add_block(&grid_cufft_workarea, maxsize, -1, "cufft temp", 0);
     cuda_lock_block(&grid_cufft_workarea);
+  }
+  if(!block) {
+    fprintf(stderr, "libgrid(cuda): Out of GPU memory.\n");
+    abort();
   }
 
   /* Set up the work areas */

@@ -23,6 +23,7 @@ typedef struct curandState curandState;
 /* End copy from curand_kernel.h */
 
 static curandGenerator_t *gen = NULL;
+char grid_gpu_rand_holder;  // Place holder
 void *grid_gpu_rand = NULL; // cuRAND states (host)
 void *grid_gpu_rand_addr = NULL; // cuRAND states (GPU)
 
@@ -39,16 +40,11 @@ EXPORT INT grid_cuda_random_seed(INT states, INT seed) {
     free(gen);
     cuda_unlock_block(grid_gpu_rand);
     cuda_remove_block(grid_gpu_rand, 0);
-    cudaFreeHost(grid_gpu_rand);
     gen = NULL;
   }
   if(gen == NULL) {
-    if(cudaMallocHost((void **) &grid_gpu_rand, len) != cudaSuccess) {
-      fprintf(stderr, "libgrid(CUDA): Not enough memory in grid_cuda_random_seed().\n");
-      abort();
-    }
-    bzero(grid_gpu_rand, len);
-    if(!(cuda_add_block(grid_gpu_rand, len, -1, "GPU RAND", 1))) {
+    grid_gpu_rand = (void *) &grid_gpu_rand_holder;
+    if(!(cuda_add_block(grid_gpu_rand, len, -1, "GPU RAND", 0))) {
       fprintf(stderr, "libgrid(CUDA): Failed to allocate temporary space on GPU.\n");
       abort();
     }

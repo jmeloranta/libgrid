@@ -197,7 +197,7 @@ EXPORT wf *grid_wf_clone(wf *gwf, char *id) {
 
   if(!(nwf = (wf *) malloc(sizeof(wf)))) {
     fprintf(stderr, "libgrid: Out of memory in grid_wf_clone().\n");
-    exit(1);
+    abort();
   }
   bcopy((void *) gwf, (void *) nwf, sizeof(wf));
   if(!(nwf->grid = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, 0, id))) {
@@ -340,7 +340,7 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
     case WF_2ND_ORDER_FFT:
       if(gwfp->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
-        exit(1);
+        abort();
       }
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       cgrid_copy(gwfp->grid, gwf->grid);
@@ -350,7 +350,7 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
     case WF_2ND_ORDER_CFFT:
       if(gwfp->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
-        exit(1);
+        abort();
       }
       grid_wf_propagate_kinetic_cfft(gwf, half_time);
       cgrid_copy(gwfp->grid, gwf->grid);
@@ -361,7 +361,7 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
     case WF_4TH_ORDER_CFFT:
     case WF_4TH_ORDER_CN:
       fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
-      exit(1);
+      abort();
     case WF_2ND_ORDER_CN:
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       cgrid_copy(gwfp->grid, gwf->grid);
@@ -406,7 +406,7 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
     case WF_4TH_ORDER_CFFT:
     case WF_4TH_ORDER_CN:
       fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
-      exit(1);
+      abort();
     case WF_2ND_ORDER_CN:
       grid_wf_propagate_potential(gwf, time, potential, 0.0);
       grid_wf_propagate_kinetic_cn(gwf, half_time);
@@ -442,7 +442,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
     case WF_2ND_ORDER_FFT:
       if(gwf->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
-        exit(1);
+        abort();
       }
       grid_wf_propagate_potential(gwf, half_time, potential, cons);
       grid_wf_propagate_kinetic_fft(gwf, time);
@@ -451,7 +451,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
     case WF_4TH_ORDER_FFT:
       if(gwf->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
-        exit(1);
+        abort();
       }
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
       if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
@@ -467,7 +467,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
     case WF_2ND_ORDER_CFFT:
       if(gwf->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
-        exit(1);
+        abort();
       }
       grid_wf_propagate_potential(gwf, half_time, potential, cons);
       grid_wf_propagate_kinetic_cfft(gwf, time);
@@ -476,7 +476,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
     case WF_4TH_ORDER_CFFT:
       if(gwf->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
-        exit(1);
+        abort();
       }
       if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
       if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace2");
@@ -538,7 +538,7 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
 #ifdef USE_CUDA
   if(gwf->ts_func && gwf->ts_func != grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
-    exit(1);
+    abort();
   }
   if(cuda_status() && !grid_cuda_wf_propagate_potential(gwf, tstep, potential, cons)) return;
 #endif

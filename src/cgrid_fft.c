@@ -120,7 +120,7 @@ EXPORT void cgrid_fftw_alloc(cgrid *grid) {
     ibk[0] = FFTW_RODFT01; ibk[1] = FFTW_RODFT01; ibk[2] = FFTW_RODFT01;
   } else {
     fprintf(stderr, "libgrid: Incompatible boundary condition for FFT.\n");
-    exit(1);
+    abort();
   }
 #if defined(SINGLE_PREC)
   fftwf_plan_with_nthreads((int) grid_threads());

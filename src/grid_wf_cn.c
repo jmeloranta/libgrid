@@ -111,7 +111,7 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
-    exit(1);
+    abort();
   }
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_x(gwf, tstep, workspace, workspace2, workspace3)) return;
 #endif
@@ -244,7 +244,7 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
-    exit(1);
+    abort();
   }
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_y(gwf, tstep, workspace, workspace2, workspace3)) return;
 #endif
@@ -377,7 +377,7 @@ EXPORT void grid_wf_propagate_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace
 #ifdef USE_CUDA
   if(time && time != &grid_wf_absorb) {
     fprintf(stderr, "libgrid(CUDA): Only grid_wf_absorb function can be used for time().\n");
-    exit(1);
+    abort();
   }
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cn_z(gwf, tstep, workspace, workspace2, workspace3)) return;
 #endif

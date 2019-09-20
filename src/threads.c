@@ -53,7 +53,7 @@ EXPORT void grid_set_fftw_flags(char f) {
     break;
   default:
     fprintf(stderr, "libgrid: Unknown FFT flags.\n");
-    exit(1);
+    abort();
   }
 }
 
@@ -77,7 +77,7 @@ EXPORT char grid_get_fftw_flags() {
     return 3;
   default:
     fprintf(stderr, "libgrid: Unknown FFT flags.\n");
-    exit(1);
+    abort();
   }
 }
 
