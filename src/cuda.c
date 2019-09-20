@@ -232,19 +232,25 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
     abort();
   }
 
-  for(i = 0; i < use_ngpus; i++) {
-    if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
-      fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
-      cuda_error_check();
-      abort();
-    }        
-    if(cudaMemcpy(block->gpu_info->descriptor->data[i], &(((char *) block->host_mem)[st]), block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
-      fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
-      cuda_error_check();
-      abort();
-    }        
-    st += block->gpu_info->descriptor->size[i];
-  }    
+  if(block->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) {
+    for(i = 0; i < use_ngpus; i++) {
+      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
+        cuda_error_check();
+        abort();
+      }        
+      if(cudaMemcpy(block->gpu_info->descriptor->data[i], &(((char *) block->host_mem)[st]), block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
+        cuda_error_check();
+        abort();
+      }        
+      st += block->gpu_info->descriptor->size[i];
+    }    
+  } else {
+    printf("Not implemented yet.\n");
+    exit(0);
+   // TODO shuffled 
+  }
   cuda_error_check();
 
   return 0;
@@ -278,19 +284,25 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
     abort();
   }
 
-  for(i = 0; i < use_ngpus; i++) {
-    if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
-      fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
-      cuda_error_check();
-      abort();
-    }        
-    if(cudaMemcpy(&(((char *) block->host_mem)[st]), block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) {
-      fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
-      cuda_error_check();
-      abort();
-    }        
-    st += block->gpu_info->descriptor->size[i];
-  }    
+  if(block->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) {
+    for(i = 0; i < use_ngpus; i++) {
+      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
+        cuda_error_check();
+        abort();
+      }        
+      if(cudaMemcpy(&(((char *) block->host_mem)[st]), block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
+        cuda_error_check();
+        abort();
+      }        
+      st += block->gpu_info->descriptor->size[i];
+    }    
+  } else {
+// TODO shuffled
+    printf("Not implemented yet.\n");
+    exit(0);
+  } 
   cuda_error_check();
 
   return 0;
@@ -448,56 +460,52 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
 
 static int alloc_mem(gpu_mem_block *block, size_t length) {
 
-  int i;
+  int i, j;
 
-  if(use_ngpus == 1 || block->cufft_handle == -1) {
-    /* This is for GPU blocks that are not to be used with cufft */
-    if(!(block->gpu_info = (cudaLibXtDesc *) malloc(sizeof(cudaLibXtDesc)))) {
-      fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
-      abort();
-    }
-    if(!(block->gpu_info->descriptor = (cudaXtDesc *) malloc(sizeof(cudaXtDesc)))) {
-      fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
-      abort();
-    }
-    block->gpu_info->version = 0;
-    block->gpu_info->descriptor->version = CUDA_XT_DESCRIPTOR_VERSION;
-    block->gpu_info->descriptor->nGPUs = use_ngpus;
-    for(i = 0; i < use_ngpus; i++) {
-      block->gpu_info->descriptor->GPUs[i] = use_gpus[i];
-      if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): Error allocating memory (setdevice).\n");
-        cuda_error_check();
-        exit(1);
-      }    
-      if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), length) != cudaSuccess) {
-        int j;
-        for(j = 0; j < i; j++) {
-           if(cudaSetDevice(use_gpus[j]) != cudaSuccess) {
-            fprintf(stderr, "libgrid(cuda): Error alllocating memory (setdevice).\n");
-            cuda_error_check();
-            exit(0);
-          }    
-          cudaFree(block->gpu_info->descriptor->data[j]);
-        }
-        free(block->gpu_info->descriptor);
-        free(block->gpu_info);
-        block->gpu_info = NULL;
-        return -1;
+  // CUFFT blocks are divided over GPUS (this allocates one extra element for some GPUs)
+  // non-CUFFT blocks allocate the same amount on every GPU
+  if(block->cufft_handle != -1) length = length / (size_t) use_ngpus + (size_t) 1;
+
+  /* This is for GPU blocks that are not to be used with cufft */
+  if(!(block->gpu_info = (cudaLibXtDesc *) malloc(sizeof(cudaLibXtDesc)))) {
+    fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
+    abort();
+  }
+  if(!(block->gpu_info->descriptor = (cudaXtDesc *) malloc(sizeof(cudaXtDesc)))) {
+    fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
+    abort();
+  }
+  block->gpu_info->version = 0;
+  block->gpu_info->descriptor->version = 0;
+  block->gpu_info->descriptor->nGPUs = use_ngpus;
+  for(i = 0; i < use_ngpus; i++) {
+    block->gpu_info->descriptor->GPUs[i] = use_gpus[i];
+    if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): Error allocating memory (setdevice).\n");
+      cuda_error_check();
+      exit(1);
+    }    
+    if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), length) != cudaSuccess) {
+      for(j = 0; j < i; j++) {
+         if(cudaSetDevice(use_gpus[j]) != cudaSuccess) {
+          fprintf(stderr, "libgrid(cuda): Error alllocating memory (setdevice).\n");
+          cuda_error_check();
+          abort();
+        }    
+      cudaFree(block->gpu_info->descriptor->data[j]);
       }
-      block->gpu_info->descriptor->size[i] = length;  /* Reserve length amount of memory on ALL GPUs */
-    }
-    block->gpu_info->descriptor->cudaXtState = NULL;
-    block->gpu_info->library = LIB_FORMAT_CUFFT;
-    block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
-    block->gpu_info->libDescriptor = NULL;
-  } else {    /* cufft capable blocks */
-    cufftResult status;
-    if((status = cufftXtMalloc(block->cufft_handle, &(block->gpu_info), CUFFT_XT_FORMAT_INPLACE)) != CUFFT_SUCCESS) {
-      cufft_error_check(status);
+      free(block->gpu_info->descriptor);
+      free(block->gpu_info);
+      block->gpu_info = NULL;
       return -1;
     }
+    block->gpu_info->descriptor->size[i] = length;
   }
+  block->gpu_info->descriptor->cudaXtState = NULL;
+  block->gpu_info->library = LIB_FORMAT_CUFFT;
+  block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  block->gpu_info->libDescriptor = NULL;
+
   return 0;
 }
 
