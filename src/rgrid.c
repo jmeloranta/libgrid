@@ -126,8 +126,10 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   
   grid->plan = grid->iplan = NULL;  // No need to allocate these yet
 #ifdef USE_CUDA  
-  rgrid_cufft_alloc_r2c(grid);
-  rgrid_cufft_alloc_c2r(grid);
+  if(cuda_status()) {
+    rgrid_cufft_alloc_r2c(grid);
+    rgrid_cufft_alloc_c2r(grid);
+  }
 #endif
 
   if (grid->value_outside == RGRID_NEUMANN_BOUNDARY)

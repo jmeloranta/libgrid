@@ -4,7 +4,11 @@
 #include <cufft.h>
 #include <cufftXt.h>
 
-#define MAX_GPU 8   /* Set to zero to disable multi-GPU code */
+/* Maximum number of GPUs */
+#define MAX_GPU 8
+
+/* Maximum number of CUFFT plans */
+#define MAX_PLANS 128
 
 #define GRID_CUDA_SKIP_TRANSFER 0
 #define GRID_CUDA_TRANSFER_DATA 1
@@ -23,5 +27,12 @@ struct gpu_mem_block {
 
 typedef struct gpu_mem_block gpu_mem_block; 
 
-void grid_cufft_make_plan(cufftHandle *, cufftType, INT, INT, INT);
+struct cufft_plan_data {
+  INT nx;       // grid dimension x
+  INT ny;       // grid dimension y
+  INT nz;       // grid dimension z
+};
 
+typedef struct cufft_plan_data cufft_plan_data;
+
+void grid_cufft_make_plan(cufftHandle *, cufftType, INT, INT, INT);

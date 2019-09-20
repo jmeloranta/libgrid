@@ -893,7 +893,7 @@ extern "C" void cgrid_cuda_integralW(gpu_mem_block *grid, INT nx, INT ny, INT nz
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }
@@ -993,7 +993,7 @@ extern "C" void cgrid_cuda_integral_regionW(gpu_mem_block *grid, INT il, INT iu,
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }
@@ -1077,7 +1077,7 @@ extern "C" void cgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT 
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUREAL), &tmp);  // get on the real part
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);  // get on the real part
     *value += tmp;
   }
 
@@ -1156,7 +1156,7 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(gpu_mem_block *grid, g
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }
@@ -1236,7 +1236,7 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(gpu_mem_block *grida, gpu_mem
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRIDA->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }
@@ -2030,7 +2030,7 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CU
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, DST->GPUs[i], 0, sizeof(CUCOMPLEX), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
     value->x += tmp.x;  /// + overloaded to device function - work around!
     value->y += tmp.y;
   }

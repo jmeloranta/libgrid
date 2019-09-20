@@ -22,6 +22,7 @@ static size_t total_alloc = 0;
 static int *use_gpus, use_ngpus = 0;
 static char grid_cufft_workarea;  /* gpu block memory holder */
 static cufftHandle grid_cufft_highest_plan = -1;
+cufft_plan_data grid_plan_data[MAX_PLANS];
 
 #include "cuda-private.h"
 
@@ -460,11 +461,16 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
 
 static int alloc_mem(gpu_mem_block *block, size_t length) {
 
-  int i, j;
+  INT i, j, ngpu1, ngpu2, nnx1, nnx2, nx;
+  size_t rlength;
 
-  // CUFFT blocks are divided over GPUS (this allocates one extra element for some GPUs)
-  // non-CUFFT blocks allocate the same amount on every GPU
-  if(block->cufft_handle != -1) length = length / (size_t) use_ngpus + (size_t) 1;
+  if(block->cufft_handle != -1) {
+    nx = grid_plan_data[block->cufft_handle].nx; 
+    ngpu2 = use_ngpus;
+    ngpu1 = nx % ngpu2;
+    nnx2 = nx / ngpu2;
+    nnx1 = nnx2 + 1;
+  } else nnx1 = nnx2 = ngpu1 = ngpu2 = nx = 0;
 
   /* This is for GPU blocks that are not to be used with cufft */
   if(!(block->gpu_info = (cudaLibXtDesc *) malloc(sizeof(cudaLibXtDesc)))) {
@@ -484,8 +490,15 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
       fprintf(stderr, "libgrid(cuda): Error allocating memory (setdevice).\n");
       cuda_error_check();
       abort();
-    }    
-    if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), length) != cudaSuccess) {
+    } 
+   
+    /* if cufft capable block, use cufft partitioning of data. Otherwise allocate length amount of data on each GPU */
+    if(block->cufft_handle != -1) {      
+      if(i < ngpu1) rlength = ((size_t) nnx1) * length / (size_t) nx;
+      else rlength = ((size_t) nnx2) * length / (size_t) nx;
+    } else rlength = length;
+
+    if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), rlength) != cudaSuccess) {
       for(j = 0; j < i; j++) {
          if(cudaSetDevice(use_gpus[j]) != cudaSuccess) {
           fprintf(stderr, "libgrid(cuda): Error alllocating memory (setdevice).\n");
@@ -499,7 +512,7 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
       block->gpu_info = NULL;
       return -1;
     }
-    block->gpu_info->descriptor->size[i] = length;
+    block->gpu_info->descriptor->size[i] = rlength;
   }
   block->gpu_info->descriptor->cudaXtState = NULL;
   block->gpu_info->library = LIB_FORMAT_CUFFT;
@@ -975,7 +988,7 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
  * If the data is not on GPU, it will be retrieved from host memory instead.
  *
  * host_mem = Host memory for output (void *; input).
- * gpu      = Which GPU to access (int).
+ * gpu      = Which GPU to access in the gpu array (int).
  * index    = Index for the host memory array (size_t; input).
  * size     = Size of each element in bytes for indexing (size_t; input).
  * value    = Where the value will be stored (void *; output).
@@ -1003,7 +1016,7 @@ EXPORT int cuda_get_element(void *host_mem, int gpu, size_t index, size_t size, 
 #ifdef CUDA_DEBUG
   fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
-  if(cudaSetDevice(gpu) != cudaSuccess) {
+  if(cudaSetDevice(ptr->gpu_info->descriptor->GPUs[gpu]) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): Error getting element (setdevice).\n");
     cuda_error_check();
     return 0;
@@ -1048,7 +1061,7 @@ EXPORT int cuda_set_element(void *host_mem, int gpu, size_t index, size_t size, 
 #ifdef CUDA_DEBUG
   fprintf(stderr, "cuda: found in GPU memory.\n");
 #endif
-  if(cudaSetDevice(gpu) != cudaSuccess) {
+  if(cudaSetDevice(ptr->gpu_info->descriptor->GPUs[gpu]) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): Error setting element (setdevice).\n");
     cuda_error_check();
     return 0;
@@ -1636,6 +1649,9 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
   int i, ngpus = cuda_ngpus(), *gpus = cuda_gpus();
   cufftResult status;
 
+  if(grid_cufft_highest_plan == -1)
+    bzero(grid_plan_data, sizeof(cufft_plan_data) * MAX_PLANS);
+
   cufftCreate(plan);
   if(*plan > grid_cufft_highest_plan) grid_cufft_highest_plan = *plan;
   cufftSetAutoAllocation(*plan, 0);
@@ -1654,6 +1670,15 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
     cufft_error_check(status);
     return;
   }
+
+  /* Since we don't have access to cufft plan data, we have to store this by ourselves */
+  if(*plan < 0 || *plan >= MAX_PLANS) {
+    fprintf(stderr, "libgrid(cuda): Increase MAX_PLANS in cuda.h.\n");
+    abort();
+  }
+  grid_plan_data[*plan].nx = nx;
+  grid_plan_data[*plan].ny = ny;
+  grid_plan_data[*plan].nz = nz;
 
   /* Maximum amount of memory on GPU */
   for(i = 0; i < ngpus; i++)

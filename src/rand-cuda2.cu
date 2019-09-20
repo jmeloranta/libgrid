@@ -25,7 +25,7 @@
 #include "cuda-vars.h"
 #include "cuda.h"
 
-extern void *grid_gpu_rand_addr;
+extern cudaXtDesc *grid_gpu_rand_addr;
 extern "C" void cuda_error_check();
 extern "C" int cuda_ngpus();
 extern "C" int *cuda_gpus();
@@ -59,12 +59,11 @@ extern "C" void grid_cuda_random_seedW(INT states, INT seed) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks(1, 1, 1);
-  curandState *st = (curandState *) grid_gpu_rand_addr;
   INT i, *gpus = (INT *) cuda_gpus();
 
   for(i = 0; i < cuda_ngpus(); i++) {
     cudaSetDevice(gpus[i]);
-    grid_cuda_random_seed_gpu<<<blocks,threads>>>(st, states, seed);
+    grid_cuda_random_seed_gpu<<<blocks,threads>>>((curandState *) grid_gpu_rand_addr->data[i], states, seed);
   }
   cuda_error_check();
 }
@@ -105,16 +104,15 @@ extern "C" void rgrid_cuda_random_uniformW(gpu_mem_block *grid, CUREAL scale, IN
 
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
-  curandState *st = (curandState *) grid_gpu_rand_addr;
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_random_uniform_gpu<<<blocks1,threads>>>((CUREAL *) GRID->data[i], st, scale, nnx1, ny, nz, nzz);
+    rgrid_cuda_random_uniform_gpu<<<blocks1,threads>>>((CUREAL *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_random_uniform_gpu<<<blocks2,threads>>>((CUREAL *) GRID->data[i], st, scale, nnx2, ny, nz, nzz);
+    rgrid_cuda_random_uniform_gpu<<<blocks2,threads>>>((CUREAL *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -156,16 +154,15 @@ extern "C" void rgrid_cuda_random_normalW(gpu_mem_block *grid, CUREAL scale, INT
 
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
-  curandState *st = (curandState *) grid_gpu_rand_addr;
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_random_normal_gpu<<<blocks1,threads>>>((CUREAL *) GRID->data[i], st, scale, nnx1, ny, nz, nzz);
+    rgrid_cuda_random_normal_gpu<<<blocks1,threads>>>((CUREAL *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_random_normal_gpu<<<blocks2,threads>>>((CUREAL *) GRID->data[i], st, scale, nnx2, ny, nz, nzz);
+    rgrid_cuda_random_normal_gpu<<<blocks2,threads>>>((CUREAL *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -206,16 +203,15 @@ extern "C" void cgrid_cuda_random_uniformW(gpu_mem_block *grid, CUREAL scale, IN
 
   SETUP_VARIABLES(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
-  curandState *st = (curandState *) grid_gpu_rand_addr;
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_random_uniform_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], st, scale, nnx1, nny1, nz);
+    cgrid_cuda_random_uniform_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, nny1, nz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_random_uniform_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], st, scale, nnx2, nny2, nz);
+    cgrid_cuda_random_uniform_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, nny2, nz);
   }
 
   cuda_error_check();
@@ -257,16 +253,15 @@ extern "C" void cgrid_cuda_random_normalW(gpu_mem_block *grid, CUREAL scale, INT
 
   SETUP_VARIABLES(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
-  curandState *st = (curandState *) grid_gpu_rand_addr;
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_random_normal_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], st, scale, nnx1, nny1, nz);
+    cgrid_cuda_random_normal_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, nny1, nz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_random_normal_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], st, scale, nnx2, nny2, nz);
+    cgrid_cuda_random_normal_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, nny2, nz);
   }
 
   cuda_error_check();

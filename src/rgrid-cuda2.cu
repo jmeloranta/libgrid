@@ -889,7 +889,7 @@ extern "C" void rgrid_cuda_integralW(gpu_mem_block *grid, INT nx, INT ny, INT nz
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     *value = *value + tmp;
   }
 
@@ -988,7 +988,7 @@ extern "C" void rgrid_cuda_integral_regionW(gpu_mem_block *grid, INT il, INT iu,
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     *value = *value + tmp;
   }
   cuda_error_check();
@@ -1065,7 +1065,7 @@ extern "C" void rgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT 
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     *value = *value + tmp;
   }
 
@@ -1146,7 +1146,7 @@ extern "C" void rgrid_cuda_integral_of_productW(gpu_mem_block *grid1, gpu_mem_bl
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID1->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     *value = *value + tmp;
   }
 
@@ -1227,7 +1227,7 @@ extern "C" void rgrid_cuda_grid_expectation_valueW(gpu_mem_block *grid1, gpu_mem
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID1->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     *value = *value + tmp;
   }
 
@@ -1694,7 +1694,7 @@ extern "C" void grid_cuda_maxW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CURE
 
   // Reduce over GPUs
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     if(i == 0) *value = tmp;
     else if(tmp > *value) *value = tmp;    
   }
@@ -1751,7 +1751,7 @@ extern "C" void grid_cuda_minW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CURE
 
   // Reduce over GPUs
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, GRID->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     if(i == 0) *value = tmp;
     else if(tmp > *value) *value = tmp;    
   }
@@ -2397,7 +2397,7 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace
   // Reduce over GPUs
   *value = 0.0;
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, LAPLACE->GPUs[i], 0, sizeof(CUREAL), &tmp);
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     *value += tmp;
   }
 

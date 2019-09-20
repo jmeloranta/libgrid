@@ -1,6 +1,8 @@
 /*
  * Example: Integrate over gaussian (complex version).
  *
+ * The result should be (1, 0).
+ *
  */
 
 #include <stdio.h>
