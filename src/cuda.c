@@ -248,9 +248,8 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
       st += block->gpu_info->descriptor->size[i];
     }    
   } else {
-    printf("Not implemented yet.\n");
+    fprintf(stderr, "libgrid(cuda): Shuffled transfer not implemented yet.\n");
     abort();
-   // TODO shuffled 
   }
   cuda_error_check();
 
@@ -300,8 +299,7 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
       st += block->gpu_info->descriptor->size[i];
     }    
   } else {
-// TODO shuffled
-    printf("Not implemented yet.\n");
+    fprintf(stderr, "libgrid(cuda): Shuffled transfer not implemented yet.\n");
     abort();
   } 
   cuda_error_check();

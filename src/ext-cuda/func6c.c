@@ -22,8 +22,8 @@
 #include "func6.h"
 
 #ifdef USE_CUDA
-extern void grid_func6a_cuda_operate_oneW(CUREAL *, CUREAL *, CUREAL, CUREAL, CUREAL, INT, INT, INT);
-extern void grid_func6b_cuda_operate_oneW(CUREAL *, CUREAL *, CUREAL, CUREAL, CUREAL, INT, INT, INT);
+extern void grid_func6a_cuda_operate_oneW(gpu_mem_block *, gpu_mem_block *, CUREAL, CUREAL, CUREAL, INT, INT, INT);
+extern void grid_func6b_cuda_operate_oneW(gpu_mem_block *, gpu_mem_block *, CUREAL, CUREAL, CUREAL, INT, INT, INT);
 #endif
 
 static inline REAL lwl3(REAL mass, REAL temp) {
@@ -95,30 +95,31 @@ static inline REAL grid_func6a(REAL rhop, REAL mass, REAL temp, REAL c4) {
 }
 
 #ifdef USE_CUDA
-EXPORT char grid_func6a_cuda_operate_one(rgrid *gridc, rgrid *grida, REAL mass, REAL temp, REAL c4) {
+EXPORT char grid_func6a_cuda_operate_one(rgrid *dst, rgrid *src, REAL mass, REAL temp, REAL c4) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
-  grid_func6a_cuda_operate_oneW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(grida->value), mass, temp, c4, grida->nx, grida->ny, grida->nz);
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
+  grid_func6a_cuda_operate_oneW(cuda_block_address(dst->value), cuda_block_address(src->value), mass, temp, c4, dst->nx, dst->ny, dst->nz);
+
   return 0;
 }
 #endif
 
-EXPORT void grid_func6a_operate_one(rgrid *gridc, rgrid *grida, REAL mass, REAL temp, REAL c4) {
+EXPORT void grid_func6a_operate_one(rgrid *dst, rgrid *src, REAL mass, REAL temp, REAL c4) {
 
-  INT ij, k, ijnz, nxy = gridc->nx * gridc->ny, nz = gridc->nz, nzz = gridc->nz2;
-  REAL *avalue = grida->value;
-  REAL *cvalue = gridc->value;
+  INT ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2;
+  REAL *svalue = src->value;
+  REAL *dvalue = dst->value;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func6a_cuda_operate_one(gridc, grida, mass, temp, c4)) return;
-  cuda_remove_block(grida->value, 1);
-  cuda_remove_block(gridc->value, 0);
+  if(cuda_status() && !grid_func6a_cuda_operate_one(dst, src, mass, temp, c4)) return;
+  cuda_remove_block(src->value, 1);
+  cuda_remove_block(dst->value, 0);
 #endif
-#pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,cvalue,mass,temp,c4) private(ij,ijnz,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nxy,nz,nzz,dvalue,svalue,mass,temp,c4) private(ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     for(k = 0; k < nz; k++)
-      cvalue[ijnz + k] = grid_func6a(avalue[ijnz + k], mass, temp, c4);
+      dvalue[ijnz + k] = grid_func6a(svalue[ijnz + k], mass, temp, c4);
   }
 }
 
@@ -132,29 +133,30 @@ static inline REAL grid_func6b(REAL rhop, REAL mass, REAL temp, REAL c4) {
 }
 
 #ifdef USE_CUDA
-EXPORT char grid_func6b_cuda_operate_one(rgrid *gridc, rgrid *grida, REAL mass, REAL temp, REAL c4) {
+EXPORT char grid_func6b_cuda_operate_one(rgrid *dst, rgrid *src, REAL mass, REAL temp, REAL c4) {
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
-  grid_func6b_cuda_operate_oneW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(grida->value), mass, temp, c4, grida->nx, grida->ny, grida->nz);
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
+  grid_func6b_cuda_operate_oneW(cuda_block_address(dst->value), cuda_block_address(src->value), mass, temp, c4, dst->nx, dst->ny, dst->nz);
+
   return 0;
 }
 #endif
 
-EXPORT void grid_func6b_operate_one(rgrid *gridc, rgrid *grida, REAL mass, REAL temp, REAL c4) {
+EXPORT void grid_func6b_operate_one(rgrid *dst, rgrid *src, REAL mass, REAL temp, REAL c4) {
 
-  INT ij, k, ijnz, nxy = gridc->nx * gridc->ny, nz = gridc->nz, nzz = gridc->nz2;
-  REAL *avalue = grida->value;
-  REAL *cvalue = gridc->value;
+  INT ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2;
+  REAL *svalue = src->value;
+  REAL *dvalue = dst->value;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func6b_cuda_operate_one(gridc, grida, mass, temp, c4)) return;
-  cuda_remove_block(grida->value, 1);
-  cuda_remove_block(gridc->value, 0);
+  if(cuda_status() && !grid_func6b_cuda_operate_one(dst, src, mass, temp, c4)) return;
+  cuda_remove_block(src->value, 1);
+  cuda_remove_block(dst->value, 0);
 #endif
-#pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,cvalue,mass,temp,c4) private(ij,ijnz,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nxy,nz,nzz,dvalue,svalue,mass,temp,c4) private(ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     for(k = 0; k < nz; k++)
-      cvalue[ijnz + k] = grid_func6b(avalue[ijnz + k], mass, temp, c4);
+      dvalue[ijnz + k] = grid_func6b(svalue[ijnz + k], mass, temp, c4);
   }
 }

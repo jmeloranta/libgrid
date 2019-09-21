@@ -7,7 +7,9 @@
 #include <cuda.h>
 #include <device_launch_parameters.h>
 #include <cufft.h>
+#include "../cuda.h"
 #include "../cuda-math.h"
+#include "../cuda-vars.h"
 
 #include "func7.h"
 
@@ -31,7 +33,7 @@ __device__ CUREAL pot_func(CUREAL r, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL
   return a0 * EXP(-a1 * r) - a2 * r4 - a3 * r6 - a4 * r8 - a5 * r10;
 }
 
-__global__ void grid_func7a_cuda_operate_one_gpu(CUCOMPLEX *a, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {  /* Exectutes at GPU */
+__global__ void grid_func7a_cuda_operate_one_gpu(CUCOMPLEX *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nx2, INT ny2, INT nz2, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL x, y, z;
@@ -42,17 +44,24 @@ __global__ void grid_func7a_cuda_operate_one_gpu(CUCOMPLEX *a, CUREAL rmin, CURE
   x = ((CUREAL) (i - nx2)) * step - x0;
   y = ((CUREAL) (j - ny2)) * step - y0;    
   z = ((CUREAL) (k - nz2)) * step - z0;        
-  a[idx].x += pot_func(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
+  dst[idx].x += pot_func(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
 }
 
-extern "C" void grid_func7a_cuda_operate_oneW(CUCOMPLEX *grid, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
+extern "C" void grid_func7a_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
 
-  grid_func7a_cuda_operate_one_gpu<<<blocks,threads>>>(grid, rmin, radd, a0, a1, a2, a3, a4, a5, nx, ny, nz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7a_cuda_operate_one_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx1, ny, nz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7a_cuda_operate_one_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx2, ny, nz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
   cuda_error_check();
 }
 
@@ -76,7 +85,7 @@ __device__ CUREAL pot_funcd(CUREAL rp, CUREAL rmin, CUREAL radd, CUREAL a0, CURE
   return (-a0 * a1 * EXP(-a1 * r) + 4.0 * a2 * r5 + 6.0 * a3 * r7 + 8.0 * a4 * r9 + 10.0 * a5 * r11) / rp;
 }
 
-__global__ void grid_func7b_cuda_operate_one_gpu(CUREAL *a, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nzz, INT nx2, INT ny2, INT nz2, REAL x0, REAL y0, REAL z0, REAL step) {  /* Exectutes at GPU */
+__global__ void grid_func7b_cuda_operate_one_gpu(CUREAL *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nzz, INT nx2, INT ny2, INT nz2, REAL x0, REAL y0, REAL z0, REAL step) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL x, y, z;
@@ -87,23 +96,30 @@ __global__ void grid_func7b_cuda_operate_one_gpu(CUREAL *a, CUREAL rmin, CUREAL 
   x = ((CUREAL) (i - nx2)) * step - x0;
   y = ((CUREAL) (j - ny2)) * step - y0;    
   z = ((CUREAL) (k - nz2)) * step - z0;        
-  a[idx] = x * pot_funcd(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
+  dst[idx] = x * pot_funcd(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
 }
 
-extern "C" void grid_func7b_cuda_operate_oneW(CUREAL *grid, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
+extern "C" void grid_func7b_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
 
-  grid_func7b_cuda_operate_one_gpu<<<blocks,threads>>>(grid, rmin, radd, a0, a1, a2, a3, a4, a5, nx, ny, nz, 2 * (nz / 2 + 1), nx/2, ny/2, nz/2, x0, y0, z0, step);
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7b_cuda_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx1, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7b_cuda_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx2, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
   cuda_error_check();
 }
 
 /****************** d/dy of the potential function **********************/
 
-__global__ void grid_func7c_cuda_operate_one_gpu(CUREAL *a, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nzz, INT nx2, INT ny2, INT nz2, REAL x0, REAL y0, REAL z0, REAL step) {  /* Exectutes at GPU */
+__global__ void grid_func7c_cuda_operate_one_gpu(CUREAL *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nzz, INT nx2, INT ny2, INT nz2, REAL x0, REAL y0, REAL z0, REAL step) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL x, y, z;
@@ -114,23 +130,30 @@ __global__ void grid_func7c_cuda_operate_one_gpu(CUREAL *a, CUREAL rmin, CUREAL 
   x = ((CUREAL) (i - nx2)) * step - x0;
   y = ((CUREAL) (j - ny2)) * step - y0;    
   z = ((CUREAL) (k - nz2)) * step - z0;        
-  a[idx] = y * pot_funcd(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
+  dst[idx] = y * pot_funcd(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
 }
 
-extern "C" void grid_func7c_cuda_operate_oneW(CUREAL *grid, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
+extern "C" void grid_func7c_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
 
-  grid_func7c_cuda_operate_one_gpu<<<blocks,threads>>>(grid, rmin, radd, a0, a1, a2, a3, a4, a5, nx, ny, nz, 2 * (nz / 2 + 1), nx/2, ny/2, nz/2, x0, y0, z0, step);
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7c_cuda_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx1, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7c_cuda_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx2, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
   cuda_error_check();
 }
 
 /****************** d/dz of the potential function **********************/
 
-__global__ void grid_func7d_cuda_operate_one_gpu(CUREAL *a, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nzz, INT nx2, INT ny2, INT nz2, REAL x0, REAL y0, REAL z0, REAL step) {  /* Exectutes at GPU */
+__global__ void grid_func7d_cuda_operate_one_gpu(CUREAL *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, INT nzz, INT nx2, INT ny2, INT nz2, REAL x0, REAL y0, REAL z0, REAL step) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL x, y, z;
@@ -141,16 +164,23 @@ __global__ void grid_func7d_cuda_operate_one_gpu(CUREAL *a, CUREAL rmin, CUREAL 
   x = ((CUREAL) (i - nx2)) * step - x0;
   y = ((CUREAL) (j - ny2)) * step - y0;    
   z = ((CUREAL) (k - nz2)) * step - z0;        
-  a[idx] = z * pot_funcd(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
+  dst[idx] = z * pot_funcd(SQRT(x*x + y*y + z*z), rmin, radd, a0, a1, a2, a3, a4, a5);
 }
 
-extern "C" void grid_func7d_cuda_operate_oneW(CUREAL *grid, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
+extern "C" void grid_func7d_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
 
-  grid_func7d_cuda_operate_one_gpu<<<blocks,threads>>>(grid, rmin, radd, a0, a1, a2, a3, a4, a5, nx, ny, nz, 2 * (nz / 2 + 1), nx/2, ny/2, nz/2, x0, y0, z0, step);
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7d_cuda_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx1, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func7d_cuda_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx2, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
+  }
+
   cuda_error_check();
 }

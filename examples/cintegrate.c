@@ -17,8 +17,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 2
-int gpus[NGPUS] = {3, 4};
+#define NGPUS 1
+int gpus[NGPUS] = {3};
 #endif
 
 /* Equation to be integrated */

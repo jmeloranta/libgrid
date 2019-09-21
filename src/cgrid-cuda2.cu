@@ -1071,7 +1071,7 @@ extern "C" void cgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT 
   // Reduce over GPUs
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);  // get on the real part
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
     value->x += tmp.x;
     value->y += tmp.y;
   }

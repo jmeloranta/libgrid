@@ -7,7 +7,9 @@
 #include <cuda.h>
 #include <device_launch_parameters.h>
 #include <cufft.h>
+#include "../cuda.h"
 #include "../cuda-math.h"
+#include "../cuda-vars.h"
 
 #include "func6.h"
 
@@ -65,7 +67,7 @@ __device__ CUREAL find_z0(CUREAL val) {
   return (b + a) / 2.0;       
 }
 
-__global__ void grid_func6a_cuda_operate_one_gpu(CUREAL *c, CUREAL *a, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_func6a_cuda_operate_one_gpu(CUREAL *dst, CUREAL *src, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz, INT nzz) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL rhop, tmp, m;
@@ -75,7 +77,7 @@ __global__ void grid_func6a_cuda_operate_one_gpu(CUREAL *c, CUREAL *a, CUREAL ma
 
   idx = (i * ny + j) * nzz + k;
 
-  rhop = a[idx];
+  rhop = src[idx];
 
   l3 = lwl3(mass, temp);
   rl3 = rhop * l3;
@@ -87,21 +89,28 @@ __global__ void grid_func6a_cuda_operate_one_gpu(CUREAL *c, CUREAL *a, CUREAL ma
     g32 = gf(z0, 3.0/2.0);
     m = c4 * GRID_AUKB * temp * (LOG(z0) + rl3 / g12 - g32 / g12);
   }
-  c[idx] = m;
+  dst[idx] = m;
 }
 
-extern "C" void grid_func6a_cuda_operate_oneW(CUREAL *gridc, CUREAL *grida, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz) {
+extern "C" void grid_func6a_cuda_operate_oneW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz) {
 
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
-  grid_func6a_cuda_operate_one_gpu<<<blocks,threads>>>(gridc, grida, mass, temp, c4, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func6a_cuda_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], mass, temp, c4, nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func6a_cuda_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], mass, temp, c4, nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }
 
-__global__ void grid_func6b_cuda_operate_one_gpu(CUREAL *c, CUREAL *a, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz, INT nzz) {  /* Exectutes at GPU */
+__global__ void grid_func6b_cuda_operate_one_gpu(CUREAL *dst, CUREAL *src, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz, INT nzz) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL rhop;
@@ -111,21 +120,28 @@ __global__ void grid_func6b_cuda_operate_one_gpu(CUREAL *c, CUREAL *a, CUREAL ma
 
   idx = (i * ny + j) * nzz + k;
 
-  rhop = a[idx];
+  rhop = src[idx];
 
   l3 = lwl3(mass, temp);
   z = find_z0(rhop * l3);
   
-  c[idx] = (c4 * GRID_AUKB * temp * (rhop * LOG(z) - gf(z, 5.0 / 2.0) / l3));;
+  dst[idx] = (c4 * GRID_AUKB * temp * (rhop * LOG(z) - gf(z, 5.0 / 2.0) / l3));;
 }
 
-extern "C" void grid_func6b_cuda_operate_oneW(CUREAL *gridc, CUREAL *grida, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz) {
+extern "C" void grid_func6b_cuda_operate_oneW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz) {
 
-  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
-              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
-  grid_func6b_cuda_operate_one_gpu<<<blocks,threads>>>(gridc, grida, mass, temp, c4, nx, ny, nz, 2 * (nz / 2 + 1));
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func6b_cuda_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], mass, temp, c4, nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_func6b_cuda_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], mass, temp, c4, nnx2, ny, nz, nzz);
+  }
+
   cuda_error_check();
 }

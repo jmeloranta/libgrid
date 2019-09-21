@@ -9,7 +9,7 @@
 #include "func3.h"
 
 #ifdef USE_CUDA
-extern void grid_func3_cuda_operate_one_productW(CUREAL *, CUREAL *, CUREAL *, CUREAL, CUREAL, INT, INT, INT);
+extern void grid_func3_cuda_operate_one_productW(gpu_mem_block *, gpu_mem_block *, gpu_mem_block *, CUREAL, CUREAL, INT, INT, INT);
 #endif
 
 /* rho * (dG/rho) + G(rho) */
@@ -22,42 +22,43 @@ static inline REAL grid_func3(REAL rhop, REAL xi, REAL rhobf) {
 }
 
 #ifdef USE_CUDA
-EXPORT char grid_func3_cuda_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, REAL xi, REAL rhobf) {
+EXPORT char grid_func3_cuda_operate_one_product(rgrid *dst, rgrid *src1, rgrid *src2, REAL xi, REAL rhobf) {
 
-  if(cuda_three_block_policy(grida->value, grida->grid_len, grida->cufft_handle_r2c, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle_r2c, gridb->id, 1, gridc->value, gridc->grid_len, gridc->cufft_handle_r2c, gridc->id, 0) < 0) return -1;
-  grid_func3_cuda_operate_one_productW((CUREAL *) cuda_block_address(gridc->value), (CUREAL *) cuda_block_address(gridb->value), (CUREAL *) cuda_block_address(grida->value), xi, rhobf, grida->nx, grida->ny, grida->nz);
+  if(cuda_three_block_policy(src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
+  grid_func3_cuda_operate_one_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), xi, rhobf, dst->nx, dst->ny, dst->nz);
+
   return 0;
 }
 #endif
 
 /*
- * Multiply grid by rho * (dG/drho) + G(rho): gridc = gridb * (grida * (dG/drho)(grida) + G(grida)).
+ * Multiply grid by rho * (dG/drho) + G(rho): dst = src1 * (src2 * (dG/drho)(src2) + G(src2)).
  *
- * gridc = Destination grid (rgrid *; output).
- * gridb = Source grid for multiplication (rgrid *; input).
- * grida = Source grid for G() (rgrid *; input).
+ * dst  = Destination grid (rgrid *; output).
+ * src1 = Source grid for multiplication (rgrid *; input).
+ * src2 = Source grid for G() (rgrid *; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_func3_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, REAL xi, REAL rhobf) {
+EXPORT void grid_func3_operate_one_product(rgrid *dst, rgrid *src1, rgrid *src2, REAL xi, REAL rhobf) {
 
-  INT ij, k, ijnz, nxy = gridc->nx * gridc->ny, nz = gridc->nz, nzz = gridc->nz2;
-  REAL *avalue = grida->value;
-  REAL *bvalue = gridb->value;
-  REAL *cvalue = gridc->value;
+  INT ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2;
+  REAL *s2value = src2->value;
+  REAL *s1value = src1->value;
+  REAL *dvalue = dst->value;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func3_cuda_operate_one_product(gridc, gridb, grida, xi, rhobf)) return;
-  cuda_remove_block(gridb->value, 1);
-  cuda_remove_block(grida->value, 1);
-  cuda_remove_block(gridc->value, 0);
+  if(cuda_status() && !grid_func3_cuda_operate_one_product(dst, src1, src2, xi, rhobf)) return;
+  cuda_remove_block(src1->value, 1);
+  cuda_remove_block(src2->value, 1);
+  cuda_remove_block(dst->value, 0);
 #endif
-#pragma omp parallel for firstprivate(nxy,nz,nzz,avalue,bvalue,cvalue,xi,rhobf) private(ij,ijnz,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nxy,nz,nzz,dvalue,s1value,s2value,xi,rhobf) private(ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     for(k = 0; k < nz; k++)
-      cvalue[ijnz + k] = bvalue[ijnz + k] * grid_func3(avalue[ijnz + k], xi, rhobf);
+      dvalue[ijnz + k] = s1value[ijnz + k] * grid_func3(s2value[ijnz + k], xi, rhobf);
   }
 }

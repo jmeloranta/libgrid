@@ -16,10 +16,10 @@
 #include "func7.h"
 
 #ifdef USE_CUDA
-extern void grid_func7a_cuda_operate_oneW(CUCOMPLEX *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
-extern void grid_func7b_cuda_operate_oneW(CUREAL *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
-extern void grid_func7c_cuda_operate_oneW(CUREAL *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
-extern void grid_func7d_cuda_operate_oneW(CUREAL *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
+extern void grid_func7a_cuda_operate_oneW(gpu_mem_block *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
+extern void grid_func7b_cuda_operate_oneW(gpu_mem_block *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
+extern void grid_func7c_cuda_operate_oneW(gpu_mem_block *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
+extern void grid_func7d_cuda_operate_oneW(gpu_mem_block *, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, CUREAL, INT, INT, INT, CUREAL, CUREAL, CUREAL, CUREAL);
 #endif
 
 /************ Potential function ************************/
@@ -41,33 +41,34 @@ static inline REAL grid_func7a(REAL r, REAL rmin, REAL radd, REAL a0, REAL a1, R
 }
 
 #ifdef USE_CUDA
-EXPORT char grid_func7a_cuda_operate_one(cgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT char grid_func7a_cuda_operate_one(cgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
-  grid_func7a_cuda_operate_oneW((CUCOMPLEX *) cuda_block_address(grid->value), rmin, radd, a0, a1, a2, a3, a4, a5, grid->nx, grid->ny, grid->nz, x0, y0, z0, grid->step);
+  if(cuda_one_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 1) < 0) return -1;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
+  grid_func7a_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+
   return 0;
 }
 #endif
 
-EXPORT void grid_func7a_operate_one(cgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT void grid_func7a_operate_one(cgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
-  INT i, j, ij, k, ijnz, nxy = grid->nx * grid->ny, nz = grid->nz, ny = grid->ny;
-  INT nx2 = grid->nx / 2, ny2 = grid->ny / 2, nz2 = grid->nz / 2;
-  REAL complex *value = grid->value;
-  REAL x, y, z, r, x0, y0, z0, step = grid->step, x2, y2;
+  INT i, j, ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, ny = dst->ny;
+  INT nx2 = dst->nx / 2, ny2 = dst->ny / 2, nz2 = dst->nz / 2;
+  REAL complex *value = dst->value;
+  REAL x, y, z, r, x0, y0, z0, step = dst->step, x2, y2;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func7a_cuda_operate_one(grid, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
-  cuda_remove_block(grid->value, 1);
+  if(cuda_status() && !grid_func7a_cuda_operate_one(dst, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
+  cuda_remove_block(dst->value, 1);
 #endif
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
 #pragma omp parallel for firstprivate(nxy,nz,value,rmin,radd,a0,a1,a2,a3,a4,a5,x0,y0,z0,step,nx2,ny2,nz2,ny) private(i,j,ij,ijnz,k,x,y,z,r,x2,y2) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
@@ -106,32 +107,33 @@ static inline REAL grid_func7b(REAL rp, REAL rmin, REAL radd, REAL a0, REAL a1, 
 }
 
 #ifdef USE_CUDA
-EXPORT char grid_func7b_cuda_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT char grid_func7b_cuda_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
-  grid_func7b_cuda_operate_oneW((CUREAL *) cuda_block_address(grid->value), rmin, radd, a0, a1, a2, a3, a4, a5, grid->nx, grid->ny, grid->nz, x0, y0, z0, grid->step);
+  if(cuda_one_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0) return -1;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
+  grid_func7b_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+
   return 0;
 }
 #endif
 
-EXPORT void grid_func7b_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT void grid_func7b_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
-  INT i, j, ij, k, ijnz, nxy = grid->nx * grid->ny, nz = grid->nz, nzz = grid->nz2, ny = grid->ny;
-  INT nx2 = grid->nx / 2, ny2 = grid->ny / 2, nz2 = grid->nz / 2;
-  REAL *value = grid->value, x, y, z, r, x0, y0, z0, step = grid->step;
+  INT i, j, ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2, ny = dst->ny;
+  INT nx2 = dst->nx / 2, ny2 = dst->ny / 2, nz2 = dst->nz / 2;
+  REAL *value = dst->value, x, y, z, r, x0, y0, z0, step = dst->step;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func7b_cuda_operate_one(grid, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
-  cuda_remove_block(grid->value, 1);
+  if(cuda_status() && !grid_func7b_cuda_operate_one(dst, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
+  cuda_remove_block(dst->value, 1);
 #endif
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
 #pragma omp parallel for firstprivate(nxy,nz,nzz,value,rmin,radd,a0,a1,a2,a3,a4,a5,x0,y0,z0,step,nx2,ny2,nz2,ny) private(i,j,ij,ijnz,k,x,y,z,r) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
@@ -150,32 +152,33 @@ EXPORT void grid_func7b_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, 
 /************* d/dy of potential function *******************/
 
 #ifdef USE_CUDA
-EXPORT char grid_func7c_cuda_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT char grid_func7c_cuda_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
-  grid_func7c_cuda_operate_oneW((CUREAL *) cuda_block_address(grid->value), rmin, radd, a0, a1, a2, a3, a4, a5, grid->nx, grid->ny, grid->nz, x0, y0, z0, grid->step);
+  if(cuda_one_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0) return -1;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
+  grid_func7c_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+
   return 0;
 }
 #endif
 
-EXPORT void grid_func7c_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT void grid_func7c_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
-  INT i, j, ij, k, ijnz, nxy = grid->nx * grid->ny, nz = grid->nz, nzz = grid->nz2, ny = grid->ny;
-  INT nx2 = grid->nx / 2, ny2 = grid->ny / 2, nz2 = grid->nz / 2;
-  REAL *value = grid->value, x, y, z, r, x0, y0, z0, step = grid->step;
+  INT i, j, ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2, ny = dst->ny;
+  INT nx2 = dst->nx / 2, ny2 = dst->ny / 2, nz2 = dst->nz / 2;
+  REAL *value = dst->value, x, y, z, r, x0, y0, z0, step = dst->step;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func7c_cuda_operate_one(grid, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
-  cuda_remove_block(grid->value, 1);
+  if(cuda_status() && !grid_func7c_cuda_operate_one(dst, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
+  cuda_remove_block(dst->value, 1);
 #endif
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
 #pragma omp parallel for firstprivate(nxy,nz,nzz,value,rmin,radd,a0,a1,a2,a3,a4,a5,x0,y0,z0,step,nx2,ny2,nz2,ny) private(i,j,ij,ijnz,k,x,y,z,r) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
@@ -194,32 +197,33 @@ EXPORT void grid_func7c_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, 
 /************* d/dz of potential function *******************/
 
 #ifdef USE_CUDA
-EXPORT char grid_func7d_cuda_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT char grid_func7d_cuda_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
   REAL x0, y0, z0;
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
-  grid_func7d_cuda_operate_oneW((CUREAL *) cuda_block_address(grid->value), rmin, radd, a0, a1, a2, a3, a4, a5, grid->nx, grid->ny, grid->nz, x0, y0, z0, grid->step);
+  if(cuda_one_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 1) < 0) return -1;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
+  grid_func7d_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+
   return 0;
 }
 #endif
 
-EXPORT void grid_func7d_operate_one(rgrid *grid, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
+EXPORT void grid_func7d_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL a0, REAL a1, REAL a2, REAL a3, REAL a4, REAL a5) {
 
-  INT i, j, ij, k, ijnz, nxy = grid->nx * grid->ny, nz = grid->nz, nzz = grid->nz2, ny = grid->ny;
-  INT nx2 = grid->nx / 2, ny2 = grid->ny / 2, nz2 = grid->nz / 2;
-  REAL *value = grid->value, x, y, z, r, x0, y0, z0, step = grid->step;
+  INT i, j, ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2, ny = dst->ny;
+  INT nx2 = dst->nx / 2, ny2 = dst->ny / 2, nz2 = dst->nz / 2;
+  REAL *value = dst->value, x, y, z, r, x0, y0, z0, step = dst->step;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_func7b_cuda_operate_one(grid, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
-  cuda_remove_block(grid->value, 1);
+  if(cuda_status() && !grid_func7b_cuda_operate_one(dst, rmin, radd, a0, a1, a2, a3, a4, a5)) return;
+  cuda_remove_block(dst->value, 1);
 #endif
-  x0 = grid->x0;
-  y0 = grid->y0;
-  z0 = grid->z0;
+  x0 = dst->x0;
+  y0 = dst->y0;
+  z0 = dst->z0;
 #pragma omp parallel for firstprivate(nxy,nz,nzz,value,rmin,radd,a0,a1,a2,a3,a4,a5,x0,y0,z0,step,nx2,ny2,nz2,ny) private(i,j,ij,ijnz,k,x,y,z,r) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
