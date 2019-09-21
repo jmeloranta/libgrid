@@ -894,7 +894,7 @@ extern "C" void cgrid_cuda_integralW(gpu_mem_block *grid, INT nx, INT ny, INT nz
   *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
     cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);
-    value->x += tmp.x;  /// + overloaded to device function - work around!
+    value->x += tmp.x;  // + overloaded to device function - work around!
     value->y += tmp.y;
   }
 
@@ -1010,25 +1010,25 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z;
   INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
-  extern __shared__ CUREAL els2[];
+  extern __shared__ CUCOMPLEX els[];
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
-      els2[t] = 0.0;
+      els[t].x = els[t].y = 0.0;
   }
   __syncthreads();
 
   idx = (i * ny + j) * nz + k;
   idx2 = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
-  els2[idx2] += a[idx].x * a[idx].x + a[idx].y * a[idx].y;
+  els[idx2] = els[idx2] + (a[idx].x * a[idx].x + a[idx].y * a[idx].y);
   __syncthreads();
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++) {
       idx2 = (blockIdx.z * gridDim.y + blockIdx.y) * gridDim.x + blockIdx.x;
-      blocks[idx2].x += els2[t];  // reduce threads
+      blocks[idx2] = blocks[idx2] + els[t];  // reduce threads
     }
   }
 }
@@ -1040,45 +1040,40 @@ __global__ void cgrid_cuda_integral_of_square_gpu(CUCOMPLEX *a, CUCOMPLEX *block
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
- * value    = Result (CUREAL *; output).
+ * value    = Result (CUCOMPLEX *; output).
  *
  */
 
-extern "C" void cgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CUREAL *value) {
+extern "C" void cgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CUCOMPLEX *value) {
 
   SETUP_VARIABLES(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
-  CUREAL tmp;
+  CUCOMPLEX tmp;
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_square_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
-    cuda_error_check();
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_square_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cuda_error_check();
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
-    cuda_error_check();
   }
 
   // Reduce over GPUs
-  *value = 0.0;
+  *value = CUMAKE(0.0,0.0);
   for(i = 0; i < ngpu2; i++) {
-    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);  // get on the real part
-    *value += tmp;
+    cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUCOMPLEX), &tmp);  // get on the real part
+    value->x += tmp.x;
+    value->y += tmp.y;
   }
 
   cuda_error_check();

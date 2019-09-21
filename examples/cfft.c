@@ -24,8 +24,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 6
-int gpus[NGPUS] = {1, 2, 3, 4, 5, 6};
+#define NGPUS 2
+int gpus[NGPUS] = {1, 2};
 #endif
 
 /* Function returning standing wave in x, y, and z directions */

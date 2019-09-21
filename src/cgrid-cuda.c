@@ -505,6 +505,7 @@ EXPORT char cgrid_cuda_constant(cgrid *grid, REAL complex c) {
 EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
   REAL step = grid->step;
+  CUCOMPLEX tmp;
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -513,7 +514,8 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, &tmp);
+  *value = tmp.x + I * tmp.y;
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
@@ -539,6 +541,7 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT ju, INT kl, INT ku, REAL complex *value) {
 
   REAL step = grid->step;
+  CUCOMPLEX tmp;
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -547,7 +550,8 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, &tmp);
+  *value = tmp.x + I * tmp.y;
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
@@ -567,6 +571,7 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
   REAL step = grid->step;
+  CUCOMPLEX tmp;
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -575,7 +580,8 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, (CUREAL *) value);
+  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, &tmp);
+  *value = tmp.x;
 
   if(grid->nx != 1) *value *= step;
   if(grid->ny != 1) *value *= step;
@@ -596,6 +602,7 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb, REAL complex *value) {
 
   REAL step = grida->step;
+  CUCOMPLEX tmp;
 
   if(grida->host_lock || gridb->host_lock) {
     cuda_remove_block(grida->value, 1);
@@ -605,7 +612,8 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, &tmp);
+  *value = tmp.x + I * tmp.y;
 
   if(gridb->nx != 1) *value *= step;
   if(gridb->ny != 1) *value *= step;
@@ -626,6 +634,7 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL complex *value) {
 
   REAL step = grida->step;
+  CUCOMPLEX tmp;
 
   if(grida->host_lock || gridb->host_lock) {
     cuda_remove_block(grida->value, 1);
@@ -635,7 +644,8 @@ EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL c
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, (CUCOMPLEX *) value);
+  cgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, &tmp);
+  *value = tmp.x + I * tmp.y;
 
   if(gridb->nx != 1) *value *= step;
   if(gridb->ny != 1) *value *= step;

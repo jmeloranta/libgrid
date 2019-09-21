@@ -1,7 +1,7 @@
 /*
  * Example: Integrate over gaussian (complex version).
  *
- * The result should be (1, 0).
+ * Both results should be (1, 0).
  *
  */
 
@@ -17,8 +17,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 1
-int gpus[NGPUS] = {3};
+#define NGPUS 2
+int gpus[NGPUS] = {3, 4};
 #endif
 
 /* Equation to be integrated */
@@ -45,14 +45,16 @@ int main(int argc, char **argv) {
 #endif
   
   /* Allocate real grid for the right hand side (and the solution) */
-  grid = cgrid_alloc(NX, NY, NZ, STEP, CGRID_PERIODIC_BOUNDARY, NULL, "Poisson1");
+  grid = cgrid_alloc(NX, NY, NZ, STEP, CGRID_PERIODIC_BOUNDARY, NULL, "cintegral");
 
   /* Map the right hand side to the grid */
   cgrid_map(grid, gaussian, NULL);
 
   value = cgrid_integral(grid);
-  printf("Integral = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
+  printf("Integral direct = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
+  cgrid_power(grid, grid, 0.5);
+  value = cgrid_integral_of_square(grid);
+  printf("Integral using square = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
 
   return 0;
 }
-

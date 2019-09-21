@@ -54,7 +54,7 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
   ts.y = CIMAG(tstep);
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, pot->value, pot->grid_len, pot->cufft_handle, pot->id, 1) < 0) return -1;
-   
+
   grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, add_abs, amp, rho0, cons, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
 
   return 0;

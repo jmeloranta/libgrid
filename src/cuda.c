@@ -1019,11 +1019,10 @@ EXPORT int cuda_get_element(void *host_mem, int gpu, size_t index, size_t size, 
   if(cudaSetDevice(ptr->gpu_info->descriptor->GPUs[gpu]) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): Error getting element (setdevice).\n");
     cuda_error_check();
-    return 0;
   }    
   if(cudaMemcpy(value, &(((char *) ptr->gpu_info->descriptor->data[gpu])[index * size]), size, cudaMemcpyDeviceToHost) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): read failed in cuda_get_element().\n");
-    abort();
+    cuda_error_check();
   }
   return 0;
 }
@@ -1064,9 +1063,11 @@ EXPORT int cuda_set_element(void *host_mem, int gpu, size_t index, size_t size, 
   if(cudaSetDevice(ptr->gpu_info->descriptor->GPUs[gpu]) != cudaSuccess) {
     fprintf(stderr, "libgrid(cuda): Error setting element (setdevice).\n");
     cuda_error_check();
-    return 0;
   }    
-  if(cudaMemcpy(&(((char *) ptr->gpu_info->descriptor->data[gpu])[index * size]), value, size, cudaMemcpyHostToDevice) != cudaSuccess) return -1;
+  if(cudaMemcpy(&(((char *) ptr->gpu_info->descriptor->data[gpu])[index * size]), value, size, cudaMemcpyHostToDevice) != cudaSuccess) {
+    fprintf(stderr, "libgrid(cuda): write failed in cuda_set_element().\n");
+    cuda_error_check();
+  }
   return 0;
 }
 

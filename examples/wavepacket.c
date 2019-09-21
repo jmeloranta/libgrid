@@ -36,12 +36,12 @@
 
 /* Define this for 4th order accuracy in time */
 /* Otherwise for 2nd order accuracy */
-#define FOURTH_ORDER_FFT
+//#define FOURTH_ORDER_FFT
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 1
-int gpus[NGPUS] = {3};
+#define NGPUS 2
+int gpus[NGPUS] = {1, 2};
 #endif
 
 REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
   
   /* Initialize wave function */
   grid_wf_map(gwf, wavepacket, &wp_params);
+
   grid_wf_normalize(gwf);
   
   /* Map potential */

@@ -55,11 +55,13 @@ __global__ void grid_cuda_random_seed_gpu(curandState *st, INT states, INT seed)
  *
  */
 
+#include <stdio.h>
 extern "C" void grid_cuda_random_seedW(INT states, INT seed) {
 
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks(1, 1, 1);
-  INT i, *gpus = (INT *) cuda_gpus();
+  int *gpus = (int *) cuda_gpus();  // This must be int rather than INT
+  INT i;
 
   for(i = 0; i < cuda_ngpus(); i++) {
     cudaSetDevice(gpus[i]);
