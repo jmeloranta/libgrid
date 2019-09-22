@@ -62,10 +62,12 @@ int main(int argc, char **argv) {
   wrk2 = rgrid_clone(wrk1, "wrk2");
   wrk3 = rgrid_clone(wrk1, "wrk3");
 
+#if NGPUS == 1
   grid_wf_velocity(gwf, wrk1, wrk2, wrk3, 100.0);
   rgrid_write_grid("vx-fd", wrk1);
   rgrid_write_grid("vy-fd", wrk2);
   rgrid_write_grid("vz-fd", wrk3);
+#endif
 
   grid_wf_fft_velocity(gwf, wrk1, wrk2, wrk3);
   rgrid_write_grid("vx-fft", wrk1);
