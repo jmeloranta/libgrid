@@ -73,8 +73,8 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex tstep) {
   cgrid *grid = gwf->grid;
 
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
+  if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
 
   if(gwf->grid->nx != 1) grid_wf_propagate_cn_x(gwf, tstep, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);
   if(gwf->grid->ny != 1) grid_wf_propagate_cn_y(gwf, tstep, gwf->cworkspace, gwf->cworkspace2, gwf->cworkspace3);

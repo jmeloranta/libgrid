@@ -65,6 +65,9 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
     abort();
   }
 
+  if(block->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) fprintf(stderr, "libgrid(cuda): FFT with wrong subformat.\n");
+
+
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
@@ -97,6 +100,7 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
   }
 #endif
 
+  block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   cuda_error_check();
 
   return 0;
@@ -135,6 +139,8 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
     abort();
   }
 
+  if(block->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) fprintf(stderr, "libgrid(cuda): IFFT with wrong subformat.\n");
+
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);
@@ -167,6 +173,7 @@ EXPORT int rgrid_cufft_fft_inv(rgrid *grid) {
   }
 #endif
 
+  block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 
   return 0;

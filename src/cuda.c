@@ -1143,6 +1143,24 @@ EXPORT char cuda_status() {
  *
  */
 
+static char *subformat(int fmt) {
+
+  switch(fmt) {
+    case CUFFT_XT_FORMAT_INPUT:
+      return "Linear order across GPUs (INPUT)";
+    case CUFFT_XT_FORMAT_OUTPUT:
+      return "Scrambled order depending on transform (OUTPUT)";
+    case CUFFT_XT_FORMAT_INPLACE:
+      return "Linear order across GPUs (INPLACE)";
+    case CUFFT_XT_FORMAT_INPLACE_SHUFFLED:
+      return "Shuffled order across GPUs (INPLACE_SHUFFLED)";
+    case CUFFT_XT_FORMAT_1D_INPUT_SHUFFLED:
+      return "Shuffled order for 1-D transformation (1D_INPUT_SHUFFLED).";
+    default:
+      return "Unknown subformat";
+  }
+}
+
 EXPORT void cuda_statistics(char verbose) {
 
   gpu_mem_block *ptr;
@@ -1185,6 +1203,7 @@ EXPORT void cuda_statistics(char verbose) {
     for(ptr = gpu_blocks_head; ptr; ptr = ptr->next, n++) {
       fprintf(stderr, "Block number: %ld\n", n);
       fprintf(stderr, "Block ID    : %s\n", ptr->id);
+      fprintf(stderr, "Storage fmt : %s\n", subformat(ptr->gpu_info->subFormat));
       fprintf(stderr, "Host mem    : %lx\n", (long unsigned int) ptr->host_mem);
       fprintf(stderr, "GPU blocks  : ");
       for(i = 0; i < use_ngpus; i++)

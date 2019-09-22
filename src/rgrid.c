@@ -178,20 +178,20 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
 
   rgrid *ngrid;
-  size_t len = ((size_t) (grid->nx * grid->ny * grid->nz2)) * sizeof(REAL);
 
   if(!(ngrid = (rgrid *) malloc(sizeof(rgrid)))) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_clone().\n");
     abort();
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
+  strcpy(ngrid->id, id);
 
 #if defined(SINGLE_PREC)
-  if (!(ngrid->value = (REAL *) fftwf_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftwf_malloc(ngrid->grid_len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(DOUBLE_PREC)
-  if (!(ngrid->value = (REAL *) fftw_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftw_malloc(ngrid->grid_len))) {  /* Extra space needed to hold the FFT data */
 #elif defined(QUAD_PREC)
-  if (!(ngrid->value = (REAL *) fftwl_malloc(len))) {  /* Extra space needed to hold the FFT data */
+  if (!(ngrid->value = (REAL *) fftwl_malloc(ngrid->grid_len))) {  /* Extra space needed to hold the FFT data */
 #endif
     fprintf(stderr, "libgrid: Error in rgrid_clone(). Could not allocate memory for ngrid->value.\n");
     free(ngrid);
@@ -202,6 +202,7 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
   rgrid_cufft_alloc_c2r(ngrid);
 #endif
   ngrid->plan = ngrid->iplan = NULL;
+  ngrid->flag = 0;
 
   return ngrid;
 }

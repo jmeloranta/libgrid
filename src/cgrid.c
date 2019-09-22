@@ -159,19 +159,20 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
 EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 
   cgrid *ngrid;
-  size_t len = sizeof(REAL complex) * (size_t) (grid->nx * grid->ny * grid->nz);
 
   if(!(ngrid = (cgrid *) malloc(sizeof(cgrid)))) {
     fprintf(stderr, "libgrid: Out of memory in cgrid_clone().\n");
     abort();
   }
   bcopy((void *) grid, (void *) ngrid, sizeof(cgrid));
+  strcpy(ngrid->id, id);
+
 #if defined(SINGLE_PREC)
-  if (!(ngrid->value = (REAL complex *) fftwf_malloc(len))) {
+  if (!(ngrid->value = (REAL complex *) fftwf_malloc(ngrid->grid_len))) {
 #elif defined(DOUBLE_PREC)
-  if (!(ngrid->value = (REAL complex *) fftw_malloc(len))) {
+  if (!(ngrid->value = (REAL complex *) fftw_malloc(ngrid->grid_len))) {
 #elif defined(QUAD_PREC)
-  if (!(ngrid->value = (REAL complex *) fftwl_malloc(len))) {
+  if (!(ngrid->value = (REAL complex *) fftwl_malloc(ngrid->grid_len))) {
 #endif
     fprintf(stderr, "libgrid: Error in cgrid_clone(). Could not allocate memory for ngrid->value.\n");
     free(ngrid);
@@ -181,6 +182,8 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
   cgrid_cufft_alloc(ngrid); // We have to allocate these for cuda.c to work
 #endif
   ngrid->plan = ngrid->iplan = ngrid->implan = ngrid->iimplan = NULL;
+  ngrid->flag = 0;
+
   return ngrid;
 }
 
