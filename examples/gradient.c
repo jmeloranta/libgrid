@@ -24,8 +24,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 1
-int gpus[NGPUS] = {3};
+#define NGPUS 2
+int gpus[NGPUS] = {1, 2};
 #endif
 
 /* Function returning standing wave in x, y, and z directions */
@@ -56,12 +56,14 @@ int main(int argc, char **argv) {
   /* Map the standing wave function onto the grid */
   rgrid_map(grid, &func, NULL);
 
+#if NGPUS == 1
   rgrid_fd_gradient(grid, grad_x, grad_y, grad_z);
 
   /* Output the fd gradient */
   rgrid_write_grid("fd_grad_x", grad_x);
   rgrid_write_grid("fd_grad_y", grad_y);
   rgrid_write_grid("fd_grad_z", grad_z);
+#endif
 
   /* Perform FFT */
   rgrid_fft(grid);

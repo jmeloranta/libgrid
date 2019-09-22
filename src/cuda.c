@@ -498,12 +498,12 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
 
     if(cudaMalloc((void **) &(block->gpu_info->descriptor->data[i]), rlength) != cudaSuccess) {
       for(j = 0; j < i; j++) {
-         if(cudaSetDevice(use_gpus[j]) != cudaSuccess) {
+        if(cudaSetDevice(use_gpus[j]) != cudaSuccess) {
           fprintf(stderr, "libgrid(cuda): Error alllocating memory (setdevice).\n");
           cuda_error_check();
           abort();
         }    
-      cudaFree(block->gpu_info->descriptor->data[j]);
+        cudaFree(block->gpu_info->descriptor->data[j]);
       }
       free(block->gpu_info->descriptor);
       free(block->gpu_info);
