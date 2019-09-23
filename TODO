@@ -5,6 +5,6 @@
 - Poisson solver for other than periodic BC
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
-- Test compressible/incompressible decomposition with plane waves and vortex line.
+- mem2gpu and gpu2mem are missing suffled copy (not usually needed).
 
 also fgrep TODO *.[ch] to find out more specific issues.
