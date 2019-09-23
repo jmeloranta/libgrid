@@ -164,6 +164,7 @@ extern "C" void grid_cuda_wf_densityW(gpu_mem_block *grid, gpu_mem_block *dens, 
     grid_cuda_wf_density_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUREAL *) DENS->data[i], nnx2, ny, nz, nzz);
   }
 
+  dens->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 

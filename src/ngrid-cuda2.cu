@@ -57,6 +57,11 @@ extern "C" void grid_cuda_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_block 
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): real_to_complex_re source must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     grid_cuda_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
@@ -105,6 +110,11 @@ extern "C" void grid_cuda_real_to_complex_imW(gpu_mem_block *dst, gpu_mem_block 
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
+
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): real_to_complex_im source must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -156,6 +166,11 @@ extern "C" void grid_cuda_add_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_bl
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): add_real_to_complex_re source must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     grid_cuda_add_real_to_complex_re_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
@@ -206,6 +221,11 @@ extern "C" void grid_cuda_add_real_to_complex_imW(gpu_mem_block *dst, gpu_mem_bl
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): add_real_to_complex_im source must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     grid_cuda_add_real_to_complex_im_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
@@ -255,6 +275,11 @@ extern "C" void grid_cuda_product_complex_with_realW(gpu_mem_block *dst, gpu_mem
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
+
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): product_complex_with_real source must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -316,6 +341,7 @@ extern "C" void grid_cuda_complex_im_to_realW(gpu_mem_block *dst, gpu_mem_block 
     grid_cuda_complex_im_to_real_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -366,5 +392,6 @@ extern "C" void grid_cuda_complex_re_to_realW(gpu_mem_block *dst, gpu_mem_block 
     grid_cuda_complex_re_to_real_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }

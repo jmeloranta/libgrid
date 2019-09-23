@@ -3491,3 +3491,39 @@ EXPORT void cgrid_host_unlock(cgrid *grid) {
   grid->host_lock = 0;
 #endif
 }
+
+/*
+ * Set space flag for grid. On CPU systems this does nothing.
+ * On GPU systems it affects the data storage order (INPLACE vs. INPLACE_SHUFFLED).
+ *
+ * In C2C transform on CPU there is no difference in the storage format. However,
+ * on GPU forward and inverse transforms store things differently across GPUs.
+ *
+ * This routine may have to be called if a grid is taken to Fourier space and
+ * then it is operated afterwards for real space. For example:
+ *
+ * cgrid_fft(grid1);
+ * cgrid_fft(grid2);
+ * cgrid_fft_convolute(grid3, grid2, grid1);
+ * cgrid_inverse_fft(grid3);
+ * ....
+ * <both grid1 and grid2 are left in INPLACE_SHUFFLED format>
+ * To use them in real space at this point, this routine must be used.
+ *
+ * grid = Grid for the operation (rgrid *; input).
+ * flag = 0: Real data or 1: fourier space data (char; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void cgrid_fft_space(cgrid *grid, char space) {
+
+#ifdef USE_CUDA
+  gpu_mem_block *ptr;
+
+  if(!(ptr = cuda_block_address(grid->value))) return; // Not on GPU
+  if(space) ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
+  else ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+#endif
+}

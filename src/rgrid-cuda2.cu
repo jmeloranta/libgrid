@@ -69,6 +69,11 @@ extern "C" void rgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
   SETUP_VARIABLES_RECIPROCAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): convolution sources must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_fft_convolute_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], norm, nx, nny1, nzz);
@@ -120,6 +125,11 @@ extern "C" void rgrid_cuda_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): Power must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_power_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], exponent, nnx1, ny, nz, nzz);
@@ -130,6 +140,7 @@ extern "C" void rgrid_cuda_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL
     rgrid_cuda_power_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], exponent, nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -167,6 +178,11 @@ extern "C" void rgrid_cuda_abs_powerW(gpu_mem_block *dst, gpu_mem_block *src, CU
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): Abs power must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_abs_power_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], exponent, nnx1, ny, nz, nzz);
@@ -177,6 +193,7 @@ extern "C" void rgrid_cuda_abs_powerW(gpu_mem_block *dst, gpu_mem_block *src, CU
     rgrid_cuda_abs_power_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], exponent, nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -210,6 +227,11 @@ extern "C" void rgrid_cuda_multiplyW(gpu_mem_block *grid, CUREAL c, INT nx, INT 
 
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): multiply must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -256,6 +278,11 @@ extern "C" void rgrid_cuda_multiply_fftW(gpu_mem_block *grid, CUREAL c, INT nx, 
 
   SETUP_VARIABLES_RECIPROCAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): multiply_fft must be in Fourier space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -304,6 +331,11 @@ extern "C" void rgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): Sum must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_sum_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx1, ny, nz, nzz);
@@ -313,6 +345,8 @@ extern "C" void rgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_sum_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx2, ny, nz, nzz);
   }
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 
   cuda_error_check();
 }
@@ -351,6 +385,11 @@ extern "C" void rgrid_cuda_differenceW(gpu_mem_block *dst, gpu_mem_block *src1, 
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): difference must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_difference_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx1, ny, nz, nzz);
@@ -361,6 +400,7 @@ extern "C" void rgrid_cuda_differenceW(gpu_mem_block *dst, gpu_mem_block *src1, 
     rgrid_cuda_difference_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -398,6 +438,11 @@ extern "C" void rgrid_cuda_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): product must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_product_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx1, ny, nz, nzz);
@@ -408,6 +453,7 @@ extern "C" void rgrid_cuda_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu
     rgrid_cuda_product_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -445,6 +491,11 @@ extern "C" void rgrid_cuda_divisionW(gpu_mem_block *dst, gpu_mem_block *src1, gp
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): division must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_division_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx1, ny, nz, nzz);
@@ -455,6 +506,7 @@ extern "C" void rgrid_cuda_divisionW(gpu_mem_block *dst, gpu_mem_block *src1, gp
     rgrid_cuda_division_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -493,6 +545,11 @@ extern "C" void rgrid_cuda_division_epsW(gpu_mem_block *dst, gpu_mem_block *src1
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): division_eps must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_division_eps_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], eps, nnx1, ny, nz, nzz);
@@ -503,6 +560,7 @@ extern "C" void rgrid_cuda_division_epsW(gpu_mem_block *dst, gpu_mem_block *src1
     rgrid_cuda_division_eps_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], eps, nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -538,6 +596,11 @@ extern "C" void rgrid_cuda_addW(gpu_mem_block *grid, CUREAL c, INT nx, INT ny, I
 
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): add must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -581,19 +644,24 @@ __global__ void rgrid_cuda_multiply_and_add_gpu(CUREAL *dst, CUREAL cm, CUREAL c
  *
  */
 
-extern "C" void rgrid_cuda_multiply_and_addW(gpu_mem_block *grid, CUREAL cm, REAL ca, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_multiply_and_addW(gpu_mem_block *dst, CUREAL cm, REAL ca, INT nx, INT ny, INT nz) {
 
-  SETUP_VARIABLES_REAL(grid);
-  cudaXtDesc *GRID = grid->gpu_info->descriptor;
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): multiply_and_add must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_multiply_and_add_gpu<<<blocks1,threads>>>((CUREAL *) GRID->data[i], cm, ca, nnx1, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_and_add_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], cm, ca, nnx1, ny, nz, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_multiply_and_add_gpu<<<blocks2,threads>>>((CUREAL *) GRID->data[i], cm, ca, nnx2, ny, nz, nzz);
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_and_add_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], cm, ca, nnx2, ny, nz, nzz);
   }
 
   cuda_error_check();
@@ -632,6 +700,11 @@ extern "C" void rgrid_cuda_add_and_multiplyW(gpu_mem_block *dst, CUREAL ca, CURE
 
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): add_and_multiply must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -680,6 +753,11 @@ extern "C" void rgrid_cuda_add_scaledW(gpu_mem_block *dst, CUREAL d, gpu_mem_blo
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): add_scaled must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_add_scaled_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], d, (CUREAL *) SRC->data[i], nnx1, ny, nz, nzz);
@@ -727,6 +805,11 @@ extern "C" void rgrid_cuda_add_scaled_productW(gpu_mem_block *dst, CUREAL d, gpu
 
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): add_scaled_product must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -784,6 +867,7 @@ extern "C" void rgrid_cuda_constantW(gpu_mem_block *dst, CUREAL c, INT nx, INT n
     rgrid_cuda_constant_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], c, nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -869,6 +953,11 @@ extern "C" void rgrid_cuda_integralW(gpu_mem_block *grid, INT nx, INT ny, INT nz
   CUREAL tmp;
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): integral must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -958,6 +1047,11 @@ extern "C" void rgrid_cuda_integral_regionW(gpu_mem_block *grid, INT il, INT iu,
   INT b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): integral_region must be in real space (INPLACE).");
+    abort();
+  }
+
   if(il < 0) il = 0;  
   if(jl < 0) jl = 0;  
   if(kl < 0) kl = 0;  
@@ -1046,6 +1140,11 @@ extern "C" void rgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT 
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): integral_of_square must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
@@ -1124,6 +1223,11 @@ extern "C" void rgrid_cuda_integral_of_productW(gpu_mem_block *grid1, gpu_mem_bl
   CUREAL tmp;
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
+
+  if(grid1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || grid2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): integral_of_product must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID1->GPUs[i]);
@@ -1206,6 +1310,11 @@ extern "C" void rgrid_cuda_grid_expectation_valueW(gpu_mem_block *grid1, gpu_mem
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
+  if(grid1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || grid2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): grid_expectation_value must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID1->GPUs[i]);
     rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
@@ -1272,6 +1381,11 @@ extern "C" void rgrid_cuda_fd_gradient_xW(gpu_mem_block *src, gpu_mem_block *dst
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_gradient_x must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1279,6 +1393,8 @@ extern "C" void rgrid_cuda_fd_gradient_xW(gpu_mem_block *src, gpu_mem_block *dst
 
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta, bc, nx, ny, nz, nzz);
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1320,6 +1436,11 @@ extern "C" void rgrid_cuda_fd_gradient_yW(gpu_mem_block *src, gpu_mem_block *dst
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_gradient_y must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1327,6 +1448,8 @@ extern "C" void rgrid_cuda_fd_gradient_yW(gpu_mem_block *src, gpu_mem_block *dst
 
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta, bc, nx, ny, nz, nzz);
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1368,6 +1491,11 @@ extern "C" void rgrid_cuda_fd_gradient_zW(gpu_mem_block *src, gpu_mem_block *dst
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_gradient_z must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1375,6 +1503,8 @@ extern "C" void rgrid_cuda_fd_gradient_zW(gpu_mem_block *src, gpu_mem_block *dst
 
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta, bc, nx, ny, nz, nzz);
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1421,6 +1551,11 @@ extern "C" void rgrid_cuda_fd_laplaceW(gpu_mem_block *src, gpu_mem_block *dst, C
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_laplace must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1428,6 +1563,8 @@ extern "C" void rgrid_cuda_fd_laplaceW(gpu_mem_block *src, gpu_mem_block *dst, C
 
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta2, bc, nx, ny, nz, nzz);
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1472,6 +1609,11 @@ extern "C" void rgrid_cuda_fd_laplace_xW(gpu_mem_block *src, gpu_mem_block *dst,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_laplace_x must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1480,6 +1622,7 @@ extern "C" void rgrid_cuda_fd_laplace_xW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta2, bc, nx, ny, nz, nzz);
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1524,6 +1667,11 @@ extern "C" void rgrid_cuda_fd_laplace_yW(gpu_mem_block *src, gpu_mem_block *dst,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_laplace_y must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1532,6 +1680,7 @@ extern "C" void rgrid_cuda_fd_laplace_yW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta2, bc, nx, ny, nz, nzz);
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1576,6 +1725,11 @@ extern "C" void rgrid_cuda_fd_laplace_zW(gpu_mem_block *src, gpu_mem_block *dst,
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_laplace_z must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1584,6 +1738,7 @@ extern "C" void rgrid_cuda_fd_laplace_zW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta2, bc, nx, ny, nz, nzz);
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1635,6 +1790,11 @@ extern "C" void rgrid_cuda_fd_gradient_dot_gradientW(gpu_mem_block *src, gpu_mem
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): fd_gradient_dot_gradient must be in real space (INPLACE).");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1643,6 +1803,7 @@ extern "C" void rgrid_cuda_fd_gradient_dot_gradientW(gpu_mem_block *src, gpu_mem
   cudaSetDevice(DST->GPUs[0]);
   rgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>((CUREAL *) SRC->data[0], (CUREAL *) DST->data[0], inv_delta2, bc, nx, ny, nz, nzz);
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1681,6 +1842,11 @@ extern "C" void grid_cuda_maxW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CURE
   INT i, ngpu2 = grid->gpu_info->descriptor->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);  CUREAL tmp;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): max must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -1738,6 +1904,11 @@ extern "C" void grid_cuda_minW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CURE
   CUREAL tmp;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): min must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -1816,6 +1987,11 @@ extern "C" void rgrid_cuda_abs_rotW(gpu_mem_block *rot, gpu_mem_block *fx, gpu_m
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *ROT = rot->gpu_info->descriptor, *FX = fx->gpu_info->descriptor, *FY = fy->gpu_info->descriptor, *FZ = fz->gpu_info->descriptor;
 
+  if(fx->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || fy->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || fz->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): abs_rot must be in real space (INPLACE).");
+    abort();
+  }
+
   if(ROT->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1824,6 +2000,8 @@ extern "C" void rgrid_cuda_abs_rotW(gpu_mem_block *rot, gpu_mem_block *fx, gpu_m
   cudaSetDevice(ROT->GPUs[0]);
   rgrid_cuda_abs_rot_gpu<<<blocks,threads>>>((CUREAL *) ROT->data[0], (CUREAL *) FX->data[0], (CUREAL *) FY->data[0], (CUREAL *) FZ->data[0], 
                                              inv_delta, bc, nx, ny, nz, nzz);
+
+  rot->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 
   cuda_error_check();
 }
@@ -1883,6 +2061,11 @@ extern "C" void rgrid_cuda_ipowerW(gpu_mem_block *dst, gpu_mem_block *src, INT e
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): ipower must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_ipower_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], exponent, nnx1, ny, nz, nzz);
@@ -1893,6 +2076,7 @@ extern "C" void rgrid_cuda_ipowerW(gpu_mem_block *dst, gpu_mem_block *src, INT e
     rgrid_cuda_ipower_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], exponent, nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1933,6 +2117,11 @@ extern "C" void rgrid_cuda_threshold_clearW(gpu_mem_block *dst, gpu_mem_block *s
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): threshold_clear must be in real space (INPLACE).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     rgrid_cuda_threshold_clear_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], ul, ll, uval, lval, nnx1, ny, nz, nzz);
@@ -1943,6 +2132,7 @@ extern "C" void rgrid_cuda_threshold_clearW(gpu_mem_block *dst, gpu_mem_block *s
     rgrid_cuda_threshold_clear_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], ul, ll, uval, lval, nnx2, ny, nz, nzz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -1985,6 +2175,11 @@ extern "C" void rgrid_cuda_zero_indexW(gpu_mem_block *grid, INT lx, INT hx, INT 
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
   INT seg = 0;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): clear_index must be in real space (INPLACE).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
@@ -2044,6 +2239,11 @@ extern "C" void rgrid_cuda_poissonW(gpu_mem_block *grid, CUREAL norm, CUREAL ste
   INT seg = 0;
   CUREAL ilx = 2.0 * M_PI / ((CUREAL) nx), ily = 2.0 * M_PI / ((CUREAL) ny), ilz = M_PI / ((CUREAL) nzz);
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): poisson must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     rgrid_cuda_poisson_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], norm, step2, ilx, ily, ilz, nx, nny1, nzz, seg);
@@ -2098,6 +2298,11 @@ extern "C" void rgrid_cuda_fft_gradient_xW(gpu_mem_block *gradient_x, REAL kx0, 
   cudaXtDesc *GRADIENT_X = gradient_x->gpu_info->descriptor;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step);
 
+  if(gradient_x->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_gradient_x must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRADIENT_X->GPUs[i]);
     rgrid_cuda_fft_gradient_x_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRADIENT_X->data[i], kx0, step, norm, lx, nx, nny1, nzz, nx / 2);
@@ -2150,6 +2355,11 @@ extern "C" void rgrid_cuda_fft_gradient_yW(gpu_mem_block *gradient_y, REAL ky0, 
   cudaXtDesc *GRADIENT_Y = gradient_y->gpu_info->descriptor;
   INT seg = 0;
   REAL ly = 2.0 * M_PI / (((REAL) ny) * step);
+
+  if(gradient_y->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_gradient_y must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRADIENT_Y->GPUs[i]);
@@ -2204,6 +2414,11 @@ extern "C" void rgrid_cuda_fft_gradient_zW(gpu_mem_block *gradient_z, REAL kz0, 
   SETUP_VARIABLES_RECIPROCAL(gradient_z);
   cudaXtDesc *GRADIENT_Z = gradient_z->gpu_info->descriptor;
   REAL lz = M_PI / (((REAL) nzz - 1) * step);
+
+  if(gradient_z->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_gradient_z must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRADIENT_Z->GPUs[i]);
@@ -2274,6 +2489,11 @@ extern "C" void rgrid_cuda_fft_laplaceW(gpu_mem_block *laplace, CUREAL norm, CUR
   SETUP_VARIABLES_RECIPROCAL(laplace);
   cudaXtDesc *LAPLACE = laplace->gpu_info->descriptor;
   INT seg = 0;
+
+  if(laplace->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_laplace must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(LAPLACE->GPUs[i]);
@@ -2371,6 +2591,11 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace
   CUREAL tmp;
   INT seg = 0, s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
+
+  if(laplace->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_laplace_expectation_value must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(LAPLACE->GPUs[i]);

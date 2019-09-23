@@ -3691,3 +3691,30 @@ EXPORT void rgrid_host_unlock(rgrid *grid) {
   grid->host_lock = 0;
 #endif
 }
+
+/*
+ * Set space flag for grid. On CPU systems this does nothing.
+ * On GPU systems it affects the data storage order (INPLACE vs. INPLACE_SHUFFLED).
+ *
+ * Since the real and complex (R2C and C2R) storage formats are already different
+ * on CPU systems, this routine probably does not need to be called. If there is
+ * a complaint that the data is in wrong space (real vs. fourier) then there is
+ * likely something wrong with the program.
+ *
+ * grid = Grid for the operation (rgrid *; input).
+ * flag = 0: Real data or 1: fourier space data (char; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fft_space(rgrid *grid, char space) {
+
+#ifdef USE_CUDA
+  gpu_mem_block *ptr;
+
+  if(!(ptr = cuda_block_address(grid->value))) return; // Not on GPU
+  if(space) ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
+  else ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+#endif
+}
