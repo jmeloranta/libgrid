@@ -827,10 +827,14 @@ __global__ void cgrid_cuda_constant_gpu(CUCOMPLEX *dst, CUCOMPLEX c, INT nx, INT
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
+ * NOTE: This reverts to INPLACE storage format as we are likely starting a new computation.
+ *       If this is not the wanted behavior, use cgrid_fft_space() to revert to Fourier space.
+ *
  */
 
 extern "C" void cgrid_cuda_constantW(gpu_mem_block *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
 
