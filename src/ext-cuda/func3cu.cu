@@ -3,6 +3,7 @@
  *
  */
 
+#include <stdio.h>
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <device_launch_parameters.h>
@@ -34,8 +35,14 @@ __global__ void grid_func3_cuda_operate_one_product_gpu(CUREAL *dst, CUREAL *src
 
 extern "C" void grid_func3_cuda_operate_one_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, CUREAL xi, CUREAL rhobf, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): func3 wrong subformat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);

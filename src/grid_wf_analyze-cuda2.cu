@@ -60,6 +60,7 @@ __global__ void grid_cuda_wf_velocity_x_gpu(CUCOMPLEX *wf, CUREAL *vx, CUREAL in
 
 extern "C" void grid_cuda_wf_velocity_xW(gpu_mem_block *gwf, gpu_mem_block *vx, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
 
+  vx->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -79,7 +80,6 @@ extern "C" void grid_cuda_wf_velocity_xW(gpu_mem_block *gwf, gpu_mem_block *vx, 
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_velocity_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VX->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
-  vx->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -125,6 +125,7 @@ __global__ void grid_cuda_wf_velocity_y_gpu(CUCOMPLEX *wf, CUREAL *vy, CUREAL in
 
 extern "C" void grid_cuda_wf_velocity_yW(gpu_mem_block *gwf, gpu_mem_block *vy, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
 
+  vy->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -144,7 +145,6 @@ extern "C" void grid_cuda_wf_velocity_yW(gpu_mem_block *gwf, gpu_mem_block *vy, 
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_velocity_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VY->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
-  vy->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -190,6 +190,7 @@ __global__ void grid_cuda_wf_velocity_z_gpu(CUCOMPLEX *wf, CUREAL *vz, CUREAL in
 
 extern "C" void grid_cuda_wf_velocity_zW(gpu_mem_block *gwf, gpu_mem_block *vz, CUREAL inv_delta, CUREAL cutoff, INT nx, INT ny, INT nz, INT nz2) {
 
+  vz->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -209,7 +210,6 @@ extern "C" void grid_cuda_wf_velocity_zW(gpu_mem_block *gwf, gpu_mem_block *vz, 
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_velocity_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VZ->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
-  vz->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -247,6 +247,7 @@ __global__ void grid_cuda_wf_fft_velocity_setup_gpu(CUCOMPLEX *wf, CUREAL *veloc
 
 extern "C" void grid_cuda_wf_fft_velocity_setupW(gpu_mem_block *gwf, gpu_mem_block *veloc, CUREAL c, INT nx, INT ny, INT nz, INT nzz) {
 
+  veloc->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES(gwf);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VELOC = veloc->gpu_info->descriptor;
 
@@ -265,7 +266,6 @@ extern "C" void grid_cuda_wf_fft_velocity_setupW(gpu_mem_block *gwf, gpu_mem_blo
     grid_cuda_wf_fft_velocity_setup_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GWF->data[i], (CUREAL *) VELOC->data[i], c, nnx2, ny, nz, nzz);
   }
 
-  veloc->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -307,6 +307,7 @@ __global__ void grid_cuda_wf_probability_flux_x_gpu(CUCOMPLEX *wf, CUREAL *flux,
 
 extern "C" void grid_cuda_wf_probability_flux_xW(gpu_mem_block *gwf, gpu_mem_block *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
 
+  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -326,7 +327,6 @@ extern "C" void grid_cuda_wf_probability_flux_xW(gpu_mem_block *gwf, gpu_mem_blo
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_probability_flux_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
-  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -368,6 +368,7 @@ __global__ void grid_cuda_wf_probability_flux_y_gpu(CUCOMPLEX *wf, CUREAL *flux,
 
 extern "C" void grid_cuda_wf_probability_flux_yW(gpu_mem_block *gwf, gpu_mem_block *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
 
+  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -387,7 +388,6 @@ extern "C" void grid_cuda_wf_probability_flux_yW(gpu_mem_block *gwf, gpu_mem_blo
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_probability_flux_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
-  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -429,6 +429,7 @@ __global__ void grid_cuda_wf_probability_flux_z_gpu(CUCOMPLEX *wf, CUREAL *flux,
 
 extern "C" void grid_cuda_wf_probability_flux_zW(gpu_mem_block *gwf, gpu_mem_block *flux, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nz2) {
 
+  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -448,7 +449,6 @@ extern "C" void grid_cuda_wf_probability_flux_zW(gpu_mem_block *gwf, gpu_mem_blo
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_probability_flux_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
-  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -507,6 +507,7 @@ __global__ void grid_cuda_wf_lx_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
 
 extern "C" void grid_cuda_wf_lxW(gpu_mem_block *gwf, gpu_mem_block *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL y0, CUREAL z0, CUREAL step) {
 
+  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -526,7 +527,6 @@ extern "C" void grid_cuda_wf_lxW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_lx_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, ny/2, nz/2, y0, z0, step);
 
-  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -585,6 +585,7 @@ __global__ void grid_cuda_wf_ly_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
 
 extern "C" void grid_cuda_wf_lyW(gpu_mem_block *gwf, gpu_mem_block *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL x0, CUREAL z0, CUREAL step) {
 
+  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -604,7 +605,6 @@ extern "C" void grid_cuda_wf_lyW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_ly_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, nx/2, nz/2, x0, z0, step);
 
-  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -663,6 +663,7 @@ __global__ void grid_cuda_wf_lz_gpu(CUCOMPLEX *wf, CUREAL *workspace, CUREAL inv
 
 extern "C" void grid_cuda_wf_lzW(gpu_mem_block *gwf, gpu_mem_block *workspace, CUREAL inv_delta, INT nx, INT ny, INT nz, INT nzz, CUREAL x0, CUREAL y0, CUREAL step) {
 
+  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -682,6 +683,5 @@ extern "C" void grid_cuda_wf_lzW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_lz_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, nx/2, ny/2, x0, y0, step);
 
-  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }

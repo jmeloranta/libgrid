@@ -53,6 +53,7 @@ __global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *dst, CUREAL *src, IN
 
 extern "C" void grid_cuda_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
@@ -67,7 +68,6 @@ extern "C" void grid_cuda_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_block 
     grid_cuda_real_to_complex_re_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, nny2, nz, nzz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -103,6 +103,7 @@ __global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src, IN
 
 extern "C" void grid_cuda_real_to_complex_imW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
@@ -117,7 +118,6 @@ extern "C" void grid_cuda_real_to_complex_imW(gpu_mem_block *dst, gpu_mem_block 
     grid_cuda_real_to_complex_im_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUREAL *) SRC->data[i], nnx2, nny2, nz, nzz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -319,6 +319,7 @@ __global__ void grid_cuda_complex_im_to_real_gpu(CUREAL *dst, CUCOMPLEX *src, IN
 
 extern "C" void grid_cuda_complex_im_to_realW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
@@ -333,7 +334,6 @@ extern "C" void grid_cuda_complex_im_to_realW(gpu_mem_block *dst, gpu_mem_block 
     grid_cuda_complex_im_to_real_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, nny2, nz, nzz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -370,6 +370,7 @@ __global__ void grid_cuda_complex_re_to_real_gpu(CUREAL *dst, CUCOMPLEX *src, IN
 
 extern "C" void grid_cuda_complex_re_to_realW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
   INT nzz = 2 * (nz / 2 + 1);
@@ -384,6 +385,5 @@ extern "C" void grid_cuda_complex_re_to_realW(gpu_mem_block *dst, gpu_mem_block 
     grid_cuda_complex_re_to_real_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, nny2, nz, nzz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }

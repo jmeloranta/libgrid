@@ -156,7 +156,8 @@ __global__ void grid_cuda_wf_density_gpu(CUCOMPLEX *grid, CUREAL *dens, INT nx, 
 
 extern "C" void grid_cuda_wf_densityW(gpu_mem_block *grid, gpu_mem_block *dens, INT nx, INT ny, INT nz) {
 
-  SETUP_VARIABLES_REAL(grid);  
+  dens->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  SETUP_VARIABLES_REAL(dens);  
   cudaXtDesc *GRID = grid->gpu_info->descriptor, *DENS = dens->gpu_info->descriptor;
 
   if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
@@ -174,7 +175,6 @@ extern "C" void grid_cuda_wf_densityW(gpu_mem_block *grid, gpu_mem_block *dens, 
     grid_cuda_wf_density_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUREAL *) DENS->data[i], nnx2, ny, nz, nzz);
   }
 
-  dens->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 

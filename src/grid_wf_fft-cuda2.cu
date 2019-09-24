@@ -77,6 +77,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_fftW(gpu_mem_block *grid, CUREAL 
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
   CUREAL cx, cy, cz;
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_fft wrong subformat.\n");
+    abort();
+  }
+
   cx = 2.0 * M_PI / (((CUREAL) nx) * step);
   cy = 2.0 * M_PI / (((CUREAL) ny) * step);
   cz = 2.0 * M_PI / (((CUREAL) nz) * step);
@@ -163,6 +168,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cfftW(gpu_mem_block *grid, CUREAL
   SETUP_VARIABLES_SEG(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
   CUREAL cx, cy, cz;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_fft wrong subformat.\n");
+    abort();
+  }
 
   cx = 2.0 * M_PI / (((CUREAL) nx) * step);
   cy = 2.0 * M_PI / (((CUREAL) ny) * step);

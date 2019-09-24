@@ -3,6 +3,7 @@
  *
  */
 
+#include <stdio.h>
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <device_launch_parameters.h>
@@ -94,8 +95,14 @@ __global__ void grid_func6a_cuda_operate_one_gpu(CUREAL *dst, CUREAL *src, CUREA
 
 extern "C" void grid_func6a_cuda_operate_oneW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
+
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): func6a wrong subformat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -130,8 +137,14 @@ __global__ void grid_func6b_cuda_operate_one_gpu(CUREAL *dst, CUREAL *src, CUREA
 
 extern "C" void grid_func6b_cuda_operate_oneW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL mass, CUREAL temp, CUREAL c4, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
+
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): func6b wrong subformat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);

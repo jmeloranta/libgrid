@@ -3,6 +3,7 @@
  *
  */
 
+#include <stdio.h>
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <device_launch_parameters.h>
@@ -49,6 +50,7 @@ __global__ void grid_func7a_cuda_operate_one_gpu(CUCOMPLEX *dst, CUREAL rmin, CU
 
 extern "C" void grid_func7a_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
 
@@ -101,6 +103,7 @@ __global__ void grid_func7b_cuda_operate_one_gpu(CUREAL *dst, CUREAL rmin, CUREA
 
 extern "C" void grid_func7b_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
 
@@ -148,6 +151,7 @@ extern "C" void grid_func7c_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, C
     grid_func7c_cuda_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], rmin, radd, a0, a1, a2, a3, a4, a5, nnx2, ny, nz, nzz, nx/2, ny/2, nz/2, x0, y0, z0, step);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -169,6 +173,7 @@ __global__ void grid_func7d_cuda_operate_one_gpu(CUREAL *dst, CUREAL rmin, CUREA
 
 extern "C" void grid_func7d_cuda_operate_oneW(gpu_mem_block *dst, CUREAL rmin, CUREAL radd, CUREAL a0, CUREAL a1, CUREAL a2, CUREAL a3, CUREAL a4, CUREAL a5, INT nx, INT ny, INT nz, CUREAL x0, CUREAL y0, CUREAL z0, CUREAL step) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
 

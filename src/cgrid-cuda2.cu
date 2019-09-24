@@ -66,6 +66,7 @@ __global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CU
 
 extern "C" void cgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, CUREAL norm, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -84,7 +85,6 @@ extern "C" void cgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
     cgrid_cuda_fft_convolute_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], norm, nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   cuda_error_check();
 }
 
@@ -122,6 +122,7 @@ __global__ void cgrid_cuda_abs_power_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, CUREAL 
 
 extern "C" void cgrid_cuda_abs_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL exponent, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC = src->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -135,7 +136,6 @@ extern "C" void cgrid_cuda_abs_powerW(gpu_mem_block *dst, gpu_mem_block *src, CU
     cgrid_cuda_abs_power_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], exponent, nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -171,6 +171,7 @@ __global__ void cgrid_cuda_power_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, CUREAL x, I
 
 extern "C" void cgrid_cuda_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL exponent, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC = src->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -184,7 +185,6 @@ extern "C" void cgrid_cuda_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL
     cgrid_cuda_power_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], exponent, nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -265,6 +265,7 @@ __global__ void cgrid_cuda_sum_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *s
 
 extern "C" void cgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -283,7 +284,6 @@ extern "C" void cgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem
     cgrid_cuda_sum_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -318,6 +318,7 @@ __global__ void cgrid_cuda_difference_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOM
 
 extern "C" void cgrid_cuda_differenceW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -336,7 +337,6 @@ extern "C" void cgrid_cuda_differenceW(gpu_mem_block *dst, gpu_mem_block *src1, 
     cgrid_cuda_difference_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -371,6 +371,7 @@ __global__ void cgrid_cuda_product_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLE
 
 extern "C" void cgrid_cuda_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -389,7 +390,6 @@ extern "C" void cgrid_cuda_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu
     cgrid_cuda_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -424,6 +424,7 @@ __global__ void cgrid_cuda_conjugate_product_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1
 
 extern "C" void cgrid_cuda_conjugate_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -442,7 +443,6 @@ extern "C" void cgrid_cuda_conjugate_productW(gpu_mem_block *dst, gpu_mem_block 
     cgrid_cuda_conjugate_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -479,6 +479,7 @@ __global__ void cgrid_cuda_division_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPL
 
 extern "C" void cgrid_cuda_divisionW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -497,7 +498,6 @@ extern "C" void cgrid_cuda_divisionW(gpu_mem_block *dst, gpu_mem_block *src1, gp
     cgrid_cuda_division_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -536,6 +536,7 @@ __global__ void cgrid_cuda_division_eps_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUC
 
 extern "C" void cgrid_cuda_division_epsW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, CUREAL eps, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
@@ -554,7 +555,6 @@ extern "C" void cgrid_cuda_division_epsW(gpu_mem_block *dst, gpu_mem_block *src1
     cgrid_cuda_division_eps_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], eps, nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1333,6 +1333,7 @@ __global__ void cgrid_cuda_fd_gradient_x_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUR
 
 extern "C" void cgrid_cuda_fd_gradient_xW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1347,7 +1348,6 @@ extern "C" void cgrid_cuda_fd_gradient_xW(gpu_mem_block *src, gpu_mem_block *dst
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1381,6 +1381,7 @@ __global__ void cgrid_cuda_fd_gradient_y_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUR
 
 extern "C" void cgrid_cuda_fd_gradient_yW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1395,7 +1396,6 @@ extern "C" void cgrid_cuda_fd_gradient_yW(gpu_mem_block *src, gpu_mem_block *dst
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1429,6 +1429,7 @@ __global__ void cgrid_cuda_fd_gradient_z_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUR
 
 extern "C" void cgrid_cuda_fd_gradient_zW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1443,7 +1444,6 @@ extern "C" void cgrid_cuda_fd_gradient_zW(gpu_mem_block *src, gpu_mem_block *dst
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1482,6 +1482,7 @@ __global__ void cgrid_cuda_fd_laplace_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CUREAL
 
 extern "C" void cgrid_cuda_fd_laplaceW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1496,7 +1497,6 @@ extern "C" void cgrid_cuda_fd_laplaceW(gpu_mem_block *src, gpu_mem_block *dst, C
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1530,6 +1530,7 @@ __global__ void cgrid_cuda_fd_laplace_x_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CURE
 
 extern "C" void cgrid_cuda_fd_laplace_xW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1544,7 +1545,6 @@ extern "C" void cgrid_cuda_fd_laplace_xW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1578,6 +1578,7 @@ __global__ void cgrid_cuda_fd_laplace_y_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CURE
 
 extern "C" void cgrid_cuda_fd_laplace_yW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1592,7 +1593,6 @@ extern "C" void cgrid_cuda_fd_laplace_yW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1626,6 +1626,7 @@ __global__ void cgrid_cuda_fd_laplace_z_gpu(CUCOMPLEX *src, CUCOMPLEX *dst, CURE
 
 extern "C" void cgrid_cuda_fd_laplace_zW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1640,7 +1641,6 @@ extern "C" void cgrid_cuda_fd_laplace_zW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1685,6 +1685,7 @@ __global__ void cgrid_cuda_fd_gradient_dot_gradient_gpu(CUCOMPLEX *src, CUCOMPLE
 
 extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(gpu_mem_block *src, gpu_mem_block *dst, CUREAL inv_delta2, char bc, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
               (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
@@ -1704,7 +1705,6 @@ extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(gpu_mem_block *src, gpu_mem
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1738,6 +1738,7 @@ __global__ void cgrid_cuda_conjugate_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, INT nx,
 
 extern "C" void cgrid_cuda_conjugateW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
 
@@ -1751,7 +1752,6 @@ extern "C" void cgrid_cuda_conjugateW(gpu_mem_block *dst, gpu_mem_block *src, IN
     cgrid_cuda_conjugate_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, nny2, nz);
   }
 
-  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
