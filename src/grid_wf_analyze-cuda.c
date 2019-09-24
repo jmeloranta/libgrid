@@ -14,7 +14,7 @@
  *
  */
 
-EXPORT char grid_cuda_wf_velocity_x(wf *gwf, rgrid *vx, REAL inv_delta, REAL cutoff) {
+EXPORT char grid_cuda_wf_fd_velocity_x(wf *gwf, rgrid *vx, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
@@ -27,7 +27,7 @@ EXPORT char grid_cuda_wf_velocity_x(wf *gwf, rgrid *vx, REAL inv_delta, REAL cut
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, vx->value, vx->grid_len, vx->cufft_handle_r2c, vx->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_velocity_xW(cuda_block_address(grid->value), cuda_block_address(vx->value), inv_delta, cutoff, grid->nx, grid->ny, grid->nz, vx->nz2);
+  grid_cuda_wf_fd_velocity_xW(cuda_block_address(grid->value), cuda_block_address(vx->value), inv_delta, grid->nx, grid->ny, grid->nz, vx->nz2);
 
   return 0;
 }
@@ -37,7 +37,7 @@ EXPORT char grid_cuda_wf_velocity_x(wf *gwf, rgrid *vx, REAL inv_delta, REAL cut
  *
  */
 
-EXPORT char grid_cuda_wf_velocity_y(wf *gwf, rgrid *vy, REAL inv_delta, REAL cutoff) {
+EXPORT char grid_cuda_wf_fd_velocity_y(wf *gwf, rgrid *vy, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
@@ -50,7 +50,7 @@ EXPORT char grid_cuda_wf_velocity_y(wf *gwf, rgrid *vy, REAL inv_delta, REAL cut
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, vy->value, vy->grid_len, vy->cufft_handle_r2c, vy->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_velocity_yW(cuda_block_address(grid->value), cuda_block_address(vy->value), inv_delta, cutoff, grid->nx, grid->ny, grid->nz, vy->nz2);
+  grid_cuda_wf_fd_velocity_yW(cuda_block_address(grid->value), cuda_block_address(vy->value), inv_delta, grid->nx, grid->ny, grid->nz, vy->nz2);
 
   return 0;
 }
@@ -60,7 +60,7 @@ EXPORT char grid_cuda_wf_velocity_y(wf *gwf, rgrid *vy, REAL inv_delta, REAL cut
  *
  */
 
-EXPORT char grid_cuda_wf_velocity_z(wf *gwf, rgrid *vz, REAL inv_delta, REAL cutoff) {
+EXPORT char grid_cuda_wf_fd_velocity_z(wf *gwf, rgrid *vz, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
@@ -73,7 +73,7 @@ EXPORT char grid_cuda_wf_velocity_z(wf *gwf, rgrid *vz, REAL inv_delta, REAL cut
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, vz->value, vz->grid_len, vz->cufft_handle_r2c, vz->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_velocity_zW(cuda_block_address(grid->value), cuda_block_address(vz->value), inv_delta, cutoff, grid->nx, grid->ny, grid->nz, vz->nz2);
+  grid_cuda_wf_fd_velocity_zW(cuda_block_address(grid->value), cuda_block_address(vz->value), inv_delta, grid->nx, grid->ny, grid->nz, vz->nz2);
 
   return 0;
 }
@@ -106,7 +106,7 @@ EXPORT char grid_cuda_wf_fft_velocity_setup(wf *gwf, rgrid *veloc, REAL c) {
  * 
  */
 
-EXPORT char grid_cuda_wf_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_delta) {
+EXPORT char grid_cuda_wf_fd_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
@@ -119,7 +119,7 @@ EXPORT char grid_cuda_wf_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_del
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_x->value, flux_x->grid_len, flux_x->cufft_handle_r2c, flux_x->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_probability_flux_xW(cuda_block_address(grid->value), cuda_block_address(flux_x->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_x->nz2);
+  grid_cuda_wf_fd_probability_flux_xW(cuda_block_address(grid->value), cuda_block_address(flux_x->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_x->nz2);
 
   return 0;
 }
@@ -129,7 +129,7 @@ EXPORT char grid_cuda_wf_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_del
  * 
  */
 
-EXPORT char grid_cuda_wf_probability_flux_y(wf *gwf, rgrid *flux_y, REAL inv_delta) {
+EXPORT char grid_cuda_wf_fd_probability_flux_y(wf *gwf, rgrid *flux_y, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
@@ -148,7 +148,7 @@ EXPORT char grid_cuda_wf_probability_flux_y(wf *gwf, rgrid *flux_y, REAL inv_del
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_y->value, flux_y->grid_len, flux_y->cufft_handle_r2c, flux_y->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_probability_flux_yW(cuda_block_address(grid->value), cuda_block_address(flux_y->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_y->nz2);
+  grid_cuda_wf_fd_probability_flux_yW(cuda_block_address(grid->value), cuda_block_address(flux_y->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_y->nz2);
 
   return 0;
 }
@@ -158,7 +158,7 @@ EXPORT char grid_cuda_wf_probability_flux_y(wf *gwf, rgrid *flux_y, REAL inv_del
  * 
  */
 
-EXPORT char grid_cuda_wf_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_delta) {
+EXPORT char grid_cuda_wf_fd_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_delta) {
 
   cgrid *grid = gwf->grid;
 
@@ -171,76 +171,8 @@ EXPORT char grid_cuda_wf_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_del
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_z->value, flux_z->grid_len, flux_z->cufft_handle_r2c, flux_z->id, 0) < 0) 
     return -1;
 
-  grid_cuda_wf_probability_flux_zW(cuda_block_address(grid->value), cuda_block_address(flux_z->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_z->nz2);
+  grid_cuda_wf_fd_probability_flux_zW(cuda_block_address(grid->value), cuda_block_address(flux_z->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_z->nz2);
 
   return 0;
 }
 
-/*
- * Calculate angular momentum <L_x>. Integration done at higher level.
- *
- */
-
-EXPORT char grid_cuda_wf_lx(wf *gwf, rgrid *workspace, REAL inv_delta) {
-
-  cgrid *grid = gwf->grid;
-
-  if(grid->host_lock || workspace->host_lock) {
-    cuda_remove_block(grid->value, 1);
-    cuda_remove_block(workspace->value, 0);
-    return -1;
-  }
-
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, workspace->value, workspace->grid_len, workspace->cufft_handle_r2c, workspace->id, 0) < 0)
-    return -1;
-
-  grid_cuda_wf_lxW(cuda_block_address(grid->value), cuda_block_address(workspace->value), inv_delta, workspace->nx, workspace->ny, workspace->nz, workspace->nz2, grid->y0, grid->z0, grid->step);
-
-  return 0;
-}
-
-/*
- * Calculate angular momentum <L_y>. Integration done at higher level.
- *
- */
-
-EXPORT char grid_cuda_wf_ly(wf *gwf, rgrid *workspace, REAL inv_delta) {
-
-  cgrid *grid = gwf->grid;
-
-  if(grid->host_lock || workspace->host_lock) {
-    cuda_remove_block(grid->value, 1);
-    cuda_remove_block(workspace->value, 0);
-    return -1;
-  }
-
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, workspace->value, workspace->grid_len, workspace->cufft_handle_r2c, workspace->id, 0) < 0)
-    return -1;
-
-  grid_cuda_wf_lyW(cuda_block_address(grid->value), cuda_block_address(workspace->value), inv_delta, workspace->nx, workspace->ny, workspace->nz, workspace->nz2, grid->x0, grid->z0, grid->step);
-
-  return 0;
-}
-
-/*
- * Calculate angular momentum <L_z>. Integration done at higher level.
- *
- */
-
-EXPORT char grid_cuda_wf_lz(wf *gwf, rgrid *workspace, REAL inv_delta) {
-
-  cgrid *grid = gwf->grid;
-
-  if(grid->host_lock || workspace->host_lock) {
-    cuda_remove_block(grid->value, 1);
-    cuda_remove_block(workspace->value, 0);
-    return -1;
-  }
-
-  if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, workspace->value, workspace->grid_len, workspace->cufft_handle_r2c, workspace->id, 0) < 0)
-    return -1;
-
-  grid_cuda_wf_lzW(cuda_block_address(grid->value), cuda_block_address(workspace->value), inv_delta, workspace->nx, workspace->ny, workspace->nz, workspace->nz2, grid->x0, grid->y0, grid->step);
-
-  return 0;
-}

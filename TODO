@@ -5,7 +5,7 @@
 - Poisson solver for other than periodic BC
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
-- mem2gpu and gpu2mem are missing suffled copy (not usually needed).
+- mem2gpu and gpu2mem/mem2gpu are missing suffled copy (not usually needed). For mem2gpu we need to track in which space we are so that we can upload the data to GPU in the correct subformat.
 - FFT probabilbity flux routines (rho v / m) using FFT veloc. But in general: need to be able to switch between FD and FFT for the routines that use flux or velocity (grid_wf_analzye.c)
 - cworkspace sharing: multiple wf's should share the same memory space (to use less memory)
 

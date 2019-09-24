@@ -18,6 +18,8 @@
 #include <cuda.h>
 #endif
 
+extern char grid_analyze_method;
+
 /*
  * Local subroutine for rotating grid around z axis.
  *
@@ -770,9 +772,9 @@ EXPORT void rgrid_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y, REAL 
     i = ij / ny;
     j = ij % ny;
     x = ((REAL) (i - nx2)) * step - x0;
-    y = ((REAL) (j - ny2)) * step - y0;    
+    y = ((REAL) (j - ny2)) * step - y0;
     for(k = 0; k < nz; k++) {
-      z = ((REAL) (k - nz2)) * step - z0;      
+      z = ((REAL) (k - nz2)) * step - z0;
       value[ijnz + k] = func(farg, x, y, z);
     }
   }
@@ -2959,7 +2961,6 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
  * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
  * The incompressible part is then w = v - u.
  *
- * fd = 0 = use finite difference, 1 = FFT (char; input).
  * vx = X component of the vector field to be decomposed (rgrid *; input).
  * vy = Y component of the vector field to be decomposed (rgrid *; input).
  * vz = Z component of the vector field to be decomposed (rgrid *; input).
@@ -2972,11 +2973,13 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
  *
  * No return value.
  *
+ * Note: uses either FD or FFT based on grid_analyze_method.
+ *
  */
 
-EXPORT void rgrid_hodge(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, rgrid *uz, rgrid *wx, rgrid *wy, rgrid *wz) {
+EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, rgrid *uz, rgrid *wx, rgrid *wy, rgrid *wz) {
 
-  if(fd == 1) { /* FFT */
+  if(grid_analyze_method) { /* FFT */
     rgrid_div(wx, vx, vy, vz);
     rgrid_fft(wx);
     rgrid_poisson(wx);
@@ -3009,7 +3012,6 @@ EXPORT void rgrid_hodge(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgr
  *
  * This is special version of rgrid_hodge() such that it only computes the compressible part.
  *
- * fd = 0 = use finite difference, 1 = FFT (char; input).
  * vx        = X component of the vector field to be decomposed (rgrid *; input). Output: X component of compressible part.
  * vy        = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of compressible part.
  * vz        = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of compressible part.
@@ -3017,11 +3019,13 @@ EXPORT void rgrid_hodge(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgr
  *
  * No return value.
  *
+ * Note: uses either FD or FFT based on grid_analyze_method.
+ *
  */
 
-EXPORT void rgrid_hodge_comp(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) {
+EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) {
 
-  if(fd == 1) { /* FFT */
+  if(grid_analyze_method) { /* FFT */
     rgrid_div(workspace, vx, vy, vz);
     rgrid_fft(workspace);
     rgrid_poisson(workspace);
@@ -3048,7 +3052,6 @@ EXPORT void rgrid_hodge_comp(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *wo
  *
  * This is special version of rgrid_hodge() such that it only computes the incompressible part.
  *
- * fd         = 0 = use finite difference, 1 = FFT (char; input).
  * vx         = X component of the vector field to be decomposed (rgrid *; input). Output: X component of incompressible part.
  * vy         = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of incompressible part.
  * vz         = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of incompressible part.
@@ -3059,9 +3062,9 @@ EXPORT void rgrid_hodge_comp(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *wo
  *
  */
 
-EXPORT void rgrid_hodge_incomp(char fd, rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
+EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
 
-  if(fd == 1) { /* FFT */
+  if(grid_analyze_method == 1) { /* FFT */
     rgrid_div(workspace, vx, vy, vz);
     rgrid_fft(workspace);
     rgrid_poisson(workspace);
@@ -3717,4 +3720,91 @@ EXPORT void rgrid_fft_space(rgrid *grid, char space) {
   if(space) ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   else ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 #endif
+}
+
+/*
+ * Multiply real grid by coordinate x.
+ * 
+ * grid  = Grid to be operated on (rgrid *; input/output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_multiply_by_x(rgrid *grid) {
+
+  INT i, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nx2 = nx / 2;
+  REAL x, step = grid->step;
+  REAL x0 = grid->x0;
+  REAL *value = grid->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_multiply_by_x(grid)) return;
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nx2,nxy,step,value,x0) private(i,ij,ijnz,k,x) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    i = ij / ny;
+    x = ((REAL) (i - nx2)) * step - x0;
+    for(k = 0; k < nz; k++)
+      value[ijnz + k] *= x;
+  }
+}
+
+/*
+ * Multiply real grid by coordinate y.
+ * 
+ * grid  = Grid to be operated on (rgrid *; input/output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_multiply_by_y(rgrid *grid) {
+
+  INT j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, ny2 = ny / 2;
+  REAL y, step = grid->step;
+  REAL y0 = grid->y0;
+  REAL *value = grid->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_multiply_by_y(grid)) return;
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,ny2,nxy,step,value,y0) private(j,ij,ijnz,k,y) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    j = ij % ny;
+    y = ((REAL) (j - ny2)) * step - y0;    
+    for(k = 0; k < nz; k++)
+      value[ijnz + k] *= y;
+  }
+}
+
+/*
+ * Multiply real grid by coordinate z.
+ * 
+ * grid  = Grid to be operated on (rgrid *; input/output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_multiply_by_z(rgrid *grid) {
+
+  INT k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nzz = grid->nz2, nz2 = nz / 2;
+  REAL z, step = grid->step;
+  REAL z0 = grid->z0;
+  REAL *value = grid->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_multiply_by_z(grid)) return;
+#endif
+#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nz2,nxy,step,value,z0) private(ij,ijnz,k,z) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    for(k = 0; k < nz; k++) {
+      z = ((REAL) (k - nz2)) * step - z0;
+      value[ijnz + k] *= z;
+    }
+  }
 }

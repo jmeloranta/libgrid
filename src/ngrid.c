@@ -182,36 +182,71 @@ EXPORT void grid_add_real_to_complex_im(cgrid *dest, rgrid *source) {
 }
 
 /*
+ * Multiply real grid with square norm of complex grid: dest = src1 * |src2|^2
+ *
+ * dst  = Destination grid (cgrid *; output).
+ * src1  = Source grid 1 (rgrid *; input).
+ * src2  = Source grid 2 (rgrid *; input).
+ * 
+ * No return value.
+ *
+ */
+
+EXPORT void grid_product_norm(rgrid *dst, rgrid *src1, cgrid *src2) {
+  
+  INT ij, k, nz = dst->nz, nxy = dst->nx * dst->ny, ijnz, ijnz2, nzz = dst->nz2;
+  REAL *s1value = src1->value, *dvalue = dst->value;
+  REAL complex *s2value = src2->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_product_norm(dst, src1, src2)) return;
+#endif
+
+  dst->nx = src1->nx;
+  dst->ny = src1->ny;
+  dst->nz = src1->nz;
+  dst->step = src1->step;
+  
+#pragma omp parallel for firstprivate(nxy,nz,nzz,dvalue,s1value,s2value) private(ij,ijnz,ijnz2,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    ijnz2 = ij * nzz;
+    for(k = 0; k < nz; k++)
+      dvalue[ijnz + k] = s1value[ijnz2 + k] * sqnorm(s2value[ijnz + k]);
+  }
+}
+
+/*
  * Product of a real grid with a complex grid: dest(complex) = dest(complex) * source(real)
  *
- * dest   = destination grid (cgrid *; output).
- * source = source grid (rgrid *; input).
+ * dst  = destination grid (cgrid *; output).
+ * ssrc = source grid (rgrid *; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_product_complex_with_real(cgrid *dest, rgrid *source) {
+EXPORT void grid_product_complex_with_real(cgrid *dst, rgrid *src) {
   
-  INT ij, k, nz = source->nz, nxy = source->nx * source->ny, ijnz, ijnz2, nzz = source->nz2;
-  REAL *src = source->value;
-  REAL complex *dst = dest->value;
+  INT ij, k, nz = src->nz, nxy = src->nx * src->ny, ijnz, ijnz2, nzz = src->nz2;
+  REAL *svalue = src->value;
+  REAL complex *dvalue = dst->value;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_product_complex_with_real(dest, source)) return;
+  if(cuda_status() && !grid_cuda_product_complex_with_real(dst, src)) return;
 #endif
 
-  dest->nx = source->nx;
-  dest->ny = source->ny;
-  dest->nz = source->nz;
-  dest->step = source->step;
+  dst->nx = src->nx;
+  dst->ny = src->ny;
+  dst->nz = src->nz;
+  dst->step = src->step;
   
-#pragma omp parallel for firstprivate(nxy,nz,nzz,dst,src) private(ij,ijnz,ijnz2,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nxy,nz,nzz,dvalue,svalue) private(ij,ijnz,ijnz2,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     ijnz2 = ij * nzz;
     for(k = 0; k < nz; k++)
-      dst[ijnz + k] *= (REAL complex) src[ijnz2 + k];
+      dvalue[ijnz + k] *= (REAL complex) svalue[ijnz2 + k];
   }
 }
 

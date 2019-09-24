@@ -2625,3 +2625,171 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace
 
   cuda_error_check();
 }
+
+/*
+ *
+ * dst = dst * x
+ *
+ */
+
+__global__ void rgrid_cuda_multiply_by_x_gpu(CUREAL *dst, CUREAL x0, INT nx, INT ny, INT nz, INT nzz, CUREAL step, INT nx2) {
+  
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  CUREAL x;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  x = ((CUREAL) (i - nx2)) * step - x0;
+  dst[idx] = dst[idx] * x;
+}
+
+/*
+ * Multiply grid by x.
+ *
+ * dst      = Destination for operation (gpu_mem_block *; output).
+ * x0       = Origin x (CUREAL; input).
+ * step     = Step length (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ * Real space.
+ *
+ */
+
+extern "C" void rgrid_cuda_multiply_by_xW(gpu_mem_block *dst, CUREAL x0, CUREAL step, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): multiply_by_x must be in real space (INPLACE).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_by_x_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], x0, nnx1, ny, nz, nzz, step, nx / 2);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_by_x_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], x0, nnx2, ny, nz, nzz, step, nx / 2);
+  }
+
+  cuda_error_check();
+}
+
+/*
+ *
+ * dst = dst * y
+ *
+ */
+
+__global__ void rgrid_cuda_multiply_by_y_gpu(CUREAL *dst, CUREAL y0, INT nx, INT ny, INT nz, INT nzz, CUREAL step, INT ny2) {
+  
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  CUREAL y;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  y = ((CUREAL) (j - ny2)) * step - y0;
+  dst[idx] = dst[idx] * y;
+}
+
+/*
+ * Multiply grid by y.
+ *
+ * dst      = Destination for operation (gpu_mem_block *; output).
+ * y0       = Origin y (CUREAL; input).
+ * step     = Step length (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ * Real space.
+ *
+ */
+
+extern "C" void rgrid_cuda_multiply_by_yW(gpu_mem_block *dst, CUREAL y0, CUREAL step, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): multiply_by_y must be in real space (INPLACE).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_by_y_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], y0, nnx1, ny, nz, nzz, step, ny / 2);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_by_y_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], y0, nnx2, ny, nz, nzz, step, ny / 2);
+  }
+
+  cuda_error_check();
+}
+
+/*
+ *
+ * dst = dst * z
+ *
+ */
+
+__global__ void rgrid_cuda_multiply_by_z_gpu(CUREAL *dst, CUREAL z0, INT nx, INT ny, INT nz, INT nzz, CUREAL step, INT nz2) {
+  
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  CUREAL z;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  z = ((CUREAL) (k - nz2)) * step - z0;
+  dst[idx] = dst[idx] * z;
+}
+
+/*
+ * Multiply grid by z.
+ *
+ * dst      = Destination for operation (gpu_mem_block *; output).
+ * z0       = Origin z (CUREAL; input).
+ * step     = Step length (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ * Real space.
+ *
+ */
+
+extern "C" void rgrid_cuda_multiply_by_zW(gpu_mem_block *dst, CUREAL z0, CUREAL step, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): multiply_by_z must be in real space (INPLACE).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_by_z_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], z0, nnx1, ny, nz, nzz, step, nz / 2);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_multiply_by_z_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], z0, nnx2, ny, nz, nzz, step, nz / 2);
+  }
+
+  cuda_error_check();
+}

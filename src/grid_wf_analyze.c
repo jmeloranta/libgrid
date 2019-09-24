@@ -7,24 +7,95 @@
 #include "au.h"
 #include "private.h"
 
+char grid_analyze_method = 0; // 0 = FD and 1 = FFT
+
 /*
- * Calculate the velocity field.
+ * Generic frontend for calculating velocity. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
  *
  * gwf    = wavefunction for the operation (wf *).
  * vx     = x output grid containing the velocity (rgrid *).
  * vy     = y output grid containing the velocity (rgrid *).
  * vz     = z output grid containing the velocity (rgrid *).
- * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz, REAL cutoff) {
+EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz) {
+
+  if(grid_analyze_method) grid_wf_fft_velocity(gwf, vx, vy, vz);
+  else grid_wf_fd_velocity(gwf, vx, vy, vz);
+}
+
+/*
+ * Generic frontend for calculating velocity. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vx     = x output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx) {
+
+  if(grid_analyze_method) grid_wf_fft_velocity_x(gwf, vx);
+  else grid_wf_fd_velocity_x(gwf, vx);
+}
+
+/*
+ * Generic frontend for calculating velocity. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vy     = y output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy) {
+
+  if(grid_analyze_method) grid_wf_fft_velocity_y(gwf, vy);
+  else grid_wf_fd_velocity_x(gwf, vy);
+}
+
+/*
+ * Generic frontend for calculating velocity. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vz     = z output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz) {
+
+  if(grid_analyze_method) grid_wf_fft_velocity_z(gwf, vz);
+  else grid_wf_fd_velocity_z(gwf, vz);
+}
+
+/*
+ * Calculate the velocity field using finite difference.
+ *
+ * gwf    = wavefunction for the operation (wf *).
+ * vx     = x output grid containing the velocity (rgrid *).
+ * vy     = y output grid containing the velocity (rgrid *).
+ * vz     = z output grid containing the velocity (rgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_fd_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz) {
   
-  grid_wf_velocity_x(gwf, vx, cutoff);
-  grid_wf_velocity_y(gwf, vy, cutoff);
-  grid_wf_velocity_z(gwf, vz, cutoff);
+  grid_wf_fd_velocity_x(gwf, vx);
+  grid_wf_fd_velocity_y(gwf, vy);
+  grid_wf_fd_velocity_z(gwf, vz);
 }
 
 /*
@@ -33,13 +104,12 @@ EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz, REAL cuto
  *
  * gwf    = wavefunction for the operation (wf *).
  * vx     = x output grid containing the velocity (rgrid *).
- * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
+EXPORT void grid_wf_fd_velocity_x(wf *gwf, rgrid *vx) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
@@ -47,9 +117,9 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
   REAL complex pp, pm;
 
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_velocity_x(gwf, vx, inv_delta, cutoff)) return;
+  if(cuda_status() && !grid_cuda_wf_fd_velocity_x(gwf, vx, inv_delta)) return;
 #endif
-#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vx,grid,inv_delta,cutoff) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vx,grid,inv_delta) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -59,8 +129,6 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
       pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
       if(CABS(pp) < GRID_EPS) tmp = 0.0;
       else tmp = inv_delta * CARG(pp);
-      if(tmp > cutoff) tmp = cutoff;
-      else if(tmp < -cutoff) tmp = -cutoff;
       rgrid_value_to_index(vx, i, j, k, tmp);      
     }
   }
@@ -72,13 +140,12 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL cutoff) {
  *
  * gwf    = wavefunction for the operation (wf *).
  * vy     = y output grid containing the velocity (rgrid *).
- * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
+EXPORT void grid_wf_fd_velocity_y(wf *gwf, rgrid *vy) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
@@ -86,9 +153,9 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
   REAL complex pp, pm;
 
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_velocity_y(gwf, vy, inv_delta, cutoff)) return;
+  if(cuda_status() && !grid_cuda_wf_fd_velocity_y(gwf, vy, inv_delta)) return;
 #endif
-#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vy,grid,inv_delta,cutoff) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vy,grid,inv_delta) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -98,8 +165,6 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
       pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
       if(CABS(pp) < GRID_EPS) tmp = 0.0;
       else tmp = inv_delta * CARG(pp);
-      if(tmp > cutoff) tmp = cutoff;
-      else if(tmp < -cutoff) tmp = -cutoff;
       rgrid_value_to_index(vy, i, j, k, tmp);
     }
   }
@@ -111,13 +176,12 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL cutoff) {
  *
  * gwf    = wavefunction for the operation (wf *).
  * vz     = z output grid containing the velocity (rgrid *).
- * cutoff = cutoff value for velocity (|v| <= cutoff) (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL cutoff) {
+EXPORT void grid_wf_fd_velocity_z(wf *gwf, rgrid *vz) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
@@ -125,9 +189,9 @@ EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL cutoff) {
   REAL complex pp, pm;
 
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_velocity_z(gwf, vz, inv_delta, cutoff)) return;
+  if(cuda_status() && !grid_cuda_wf_fd_velocity_z(gwf, vz, inv_delta)) return;
 #endif
-#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vz,grid,inv_delta,cutoff) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,vz,grid,inv_delta) private(pm,pp,i,j,ij,k,tmp) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -137,13 +201,10 @@ EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL cutoff) {
       pp = pp * CONJ(pm) / (GRID_EPS + CONJ(pp) * pm);
       if(CABS(pp) < GRID_EPS) tmp = 0.0;
       else tmp = inv_delta * CARG(pp); // was CIMAG(CLOG(pp))
-      if(tmp > cutoff) tmp = cutoff;
-      else if(tmp < -cutoff) tmp = -cutoff;
       rgrid_value_to_index(vz, i, j, k, tmp);
     }
   }
 }
-
 
 /*
  * Calculate the velocity field (derivatives in the Fourier space).
@@ -322,8 +383,101 @@ EXPORT void grid_wf_fft_velocity_z(wf *gwf, rgrid *vz) {
 }
 
 /*
- * Calculate the probability flux x component (m^-2 s^-1). This is related to liquid momentum:
+ * Generic frontend for calculating probability flux. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf       = wavefunction for the operation (wf *).
+ * flux_x    = x output grid containing the flux (rgrid *).
+ * flux_y    = y output grid containing the flux (rgrid *).
+ * flux_z    = z output grid containing the flux (rgrid *).
+ *
+ * No return value.
+ */
+
+EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {
+
+  if(grid_analyze_method) grid_wf_fft_probability_flux(gwf, flux_x, flux_y, flux_z);
+  else grid_wf_fd_probability_flux(gwf, flux_x, flux_y, flux_z);
+}
+
+/*
+ * Generic frontend for calculating probability flux. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf       = wavefunction for the operation (wf *).
+ * flux_x    = x output grid containing the flux (rgrid *).
+ *
+ * No return value.
+ */
+
+EXPORT void grid_wf_probability_flux_x(wf *gwf, rgrid *flux_x) {
+
+  if(grid_analyze_method) grid_wf_fft_probability_flux_x(gwf, flux_x);
+  else grid_wf_fd_probability_flux_x(gwf, flux_x);
+}
+
+/*
+ * Generic frontend for calculating probability flux. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf       = wavefunction for the operation (wf *).
+ * flux_y    = y output grid containing the flux (rgrid *).
+ *
+ * No return value.
+ */
+
+EXPORT void grid_wf_probability_flux_y(wf *gwf, rgrid *flux_y) {
+
+  if(grid_analyze_method) grid_wf_fft_probability_flux_y(gwf, flux_y);
+  else grid_wf_fd_probability_flux_y(gwf, flux_y);
+}
+
+/*
+ * Generic frontend for calculating probability flux. This may use FD or FFT
+ * depending on the grid_analyze_method setting.
+ *
+ * gwf       = wavefunction for the operation (wf *).
+ * flux_z    = z output grid containing the flux (rgrid *).
+ *
+ * No return value.
+ */
+
+EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
+
+  if(grid_analyze_method) grid_wf_fft_probability_flux_z(gwf, flux_z);
+  else grid_wf_fd_probability_flux_z(gwf, flux_z);
+}
+
+/*
+ * Calculate the probability flux (m^-2 s^-1). This is related to liquid momentum:
  * rho_mass * velocity = mass * flux.
+ *
+ * gwf        = wavefunction for the operation (wf *).
+ * flux_x     = x output grid containing the flux (rgrid *).
+ * flux_y     = y output grid containing the flux (rgrid *).
+ * flux_z     = z output grid containing the flux (rgrid *).
+ *
+ * No return value.
+ *
+ * NOTES: - This is not the liquid velocity! Divide by density (rho) to get v (velocity):
+ *          v_i = flux_i / rho (i = x, y, z).
+ *        - This is in units of # of particles. Multiply by gwf->mass to get this in terms of mass.
+ */
+
+EXPORT void grid_wf_fd_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {
+  
+  /*
+   * J(r) = -i (hbar/2m) ( psi^* grad psi - psi grad psi^* )
+   *      = (hbar/m) Im[ psi^* grad psi ] 
+   */
+  grid_wf_fd_probability_flux_x(gwf, flux_x);
+  grid_wf_fd_probability_flux_y(gwf, flux_y);
+  grid_wf_fd_probability_flux_z(gwf, flux_z);
+}
+
+/*
+ * Calculate the probability flux x component (m^-2 s^-1). This is related to liquid momentum:
+ * rho_mass * velocity = mass * flux. Uses finite difference.
  * 
  * gwf       = wavefunction for the operation (wf *).
  * flux_x    = x output grid containing the flux (rgrid *).
@@ -332,14 +486,14 @@ EXPORT void grid_wf_fft_velocity_z(wf *gwf, rgrid *vz) {
  *
  */
 
-EXPORT void grid_wf_probability_flux_x(wf *gwf, rgrid *flux_x) {
+EXPORT void grid_wf_fd_probability_flux_x(wf *gwf, rgrid *flux_x) {
 
   cgrid *grid = gwf->grid;
   INT i, j, ij, k, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
   REAL inv_delta = HBAR / (2.0 * gwf->mass * grid->step);
 
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_probability_flux_x(gwf, flux_x, inv_delta)) return;
+  if(cuda_status() && !grid_cuda_wf_fd_probability_flux_x(gwf, flux_x, inv_delta)) return;
 #endif
 #pragma omp parallel for firstprivate(nx,ny,nz,nxy,flux_x,grid,inv_delta) private(i,j,ij,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -362,14 +516,14 @@ EXPORT void grid_wf_probability_flux_x(wf *gwf, rgrid *flux_x) {
  *
  */
 
-EXPORT void grid_wf_probability_flux_y(wf *gwf, rgrid *flux_y) {
+EXPORT void grid_wf_fd_probability_flux_y(wf *gwf, rgrid *flux_y) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
   REAL inv_delta = HBAR / (2.0 * gwf->mass * grid->step);
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_probability_flux_y(gwf, flux_y, inv_delta)) return;
+  if(cuda_status() && !grid_cuda_wf_fd_probability_flux_y(gwf, flux_y, inv_delta)) return;
 #endif
 #pragma omp parallel for firstprivate(nx,ny,nz,nxy,flux_y,grid,inv_delta) private(i,j,ij,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -392,14 +546,14 @@ EXPORT void grid_wf_probability_flux_y(wf *gwf, rgrid *flux_y) {
  *
  */
 
-EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
+EXPORT void grid_wf_fd_probability_flux_z(wf *gwf, rgrid *flux_z) {
 
   cgrid *grid = gwf->grid;
   INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz;
   REAL inv_delta = HBAR / (2.0 * gwf->mass * grid->step);
   
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_probability_flux_z(gwf, flux_z, inv_delta)) return;
+  if(cuda_status() && !grid_cuda_wf_fd_probability_flux_z(gwf, flux_z, inv_delta)) return;
 #endif
 #pragma omp parallel for firstprivate(nx,ny,nz,nxy,flux_z,grid,inv_delta) private(i,j,ij,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -412,30 +566,79 @@ EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
 }
 
 /*
- * Calculate the probability flux (m^-2 s^-1). This is related to liquid momentum:
- * rho_mass * velocity = mass * flux.
+ * Calculate probability flux using FFT: J = rho * flux.
  *
- * gwf        = wavefunction for the operation (wf *).
- * flux_x     = x output grid containing the flux (rgrid *).
- * flux_y     = y output grid containing the flux (rgrid *).
- * flux_z     = z output grid containing the flux (rgrid *).
+ * gwf    = Wavefunction (gwf *; input).
+ * flux_x = Flux x component (rgrid *; output).
+ * flux_y = Flux y component (rgrid *; output).
+ * flux_z = Flux z component (rgrid *; output).
  *
  * No return value.
  *
- * NOTES: - This is not the liquid velocity! Divide by density (rho) to get v (velocity):
- *          v_i = flux_i / rho (i = x, y, z).
- *        - This is in units of # of particles. Multiply by gwf->mass to get this in terms of mass.
+ * TODO: This is probably not the best way to do this.
+ *
  */
 
-EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {
-  
-  /*
-   * J(r) = -i (hbar/2m) ( psi^* grad psi - psi grad psi^* )
-   *      = (hbar/m) Im[ psi^* grad psi ] 
-   */
-  if(flux_x) grid_wf_probability_flux_x(gwf, flux_x);
-  if(flux_y) grid_wf_probability_flux_y(gwf, flux_y);
-  if(flux_z) grid_wf_probability_flux_z(gwf, flux_z);
+EXPORT void grid_wf_fft_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {
+
+  grid_wf_fft_velocity(gwf, flux_x, flux_y, flux_z);
+  grid_product_norm(flux_x, flux_x, gwf->grid);
+  grid_product_norm(flux_y, flux_y, gwf->grid);
+  grid_product_norm(flux_z, flux_z, gwf->grid);
+}
+
+/*
+ * Calculate probability flux using FFT: J = rho * flux.
+ *
+ * gwf    = Wavefunction (gwf *; input).
+ * flux_x = Flux x component (rgrid *; output).
+ *
+ * No return value.
+ *
+ * TODO: This is probably not the best way to do this.
+ *
+ */
+
+EXPORT void grid_wf_fft_probability_flux_x(wf *gwf, rgrid *flux_x) {
+
+  grid_wf_fft_velocity_x(gwf, flux_x);
+  grid_product_norm(flux_x, flux_x, gwf->grid);
+}
+
+/*
+ * Calculate probability flux using FFT: J = rho * flux.
+ *
+ * gwf    = Wavefunction (gwf *; input).
+ * flux_y = Flux y component (rgrid *; output).
+ *
+ * No return value.
+ *
+ * TODO: This is probably not the best way to do this.
+ *
+ */
+
+EXPORT void grid_wf_fft_probability_flux_y(wf *gwf, rgrid *flux_y) {
+
+  grid_wf_fft_velocity_y(gwf, flux_y);
+  grid_product_norm(flux_y, flux_y, gwf->grid);
+}
+
+/*
+ * Calculate probability flux using FFT: J = rho * flux.
+ *
+ * gwf    = Wavefunction (gwf *; input).
+ * flux_z = Flux z component (rgrid *; output).
+ *
+ * No return value.
+ *
+ * TODO: This is probably not the best way to do this.
+ *
+ */
+
+EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
+
+  grid_wf_fft_velocity_z(gwf, flux_z);
+  grid_product_norm(flux_z, flux_z, gwf->grid);
 }
 
 /*
@@ -490,104 +693,63 @@ EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
  * Calculate angular momentum expectation value <L_x>.
  *
  * wf         = Wavefunction (wf *; input).
- * workspace  = Workspace required for the operation (rgrid *; input).
+ * workspace1 = Workspace required for the operation (rgrid *; input).
+ * workspace2 = Workspace required for the operation (rgrid *; input).
  *
  * Return <L_x> (L_x = y p_z - z p_y).
  *
  */
- 
-EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace) {
 
-  cgrid *grid = wf->grid;
-  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, ny2 = ny / 2, nz2 = nz / 2;
-  REAL step = grid->step, inv_delta = HBAR / (2.0 * wf->mass * step), y, z, y0 = grid->y0, z0 = grid->z0;
-  
-#ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_lx(wf, workspace, inv_delta)) return rgrid_integral(workspace);
-#endif
-#pragma omp parallel for firstprivate(nx,ny,nz,ny2,nz2,nxy,workspace,grid,inv_delta,y0,z0,step) private(i,j,ij,k,y,z) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    j = ij % ny;
-    y = ((REAL) (j - ny2)) * step - y0;
-    for(k = 0; k < nz; k++) {
-      z = ((REAL) (k - nz2)) * step - z0;    
-      rgrid_value_to_index(workspace, i, j, k, 
-        (y * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j, k+1) - cgrid_value_at_index(grid, i, j, k-1))) /* y * p_z */
-        -z * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j+1, k) - cgrid_value_at_index(grid, i, j-1, k))) /*-z * p_y */
-        ) * inv_delta);
-    }
-  }
-  return rgrid_integral(workspace);
+EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+
+  grid_wf_pz(wf, workspace1);       // p_z
+  rgrid_multiply_by_y(workspace1);   // yp_z
+  grid_wf_py(wf, workspace2);       // p_y
+  rgrid_multiply_by_z(workspace2);   // zp_y    
+  rgrid_difference(workspace1, workspace1, workspace2); // yp_z - zp_y
+  return rgrid_integral(workspace1);
 }
 
 /*
  * Calculate angular momentum expectation value <L_y>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace  = Workspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (rgrid *; input).
+ * workspace2 = Workspace required for the operation (rgrid *; input).
  *
  * Return <L_y> (L_y = z * p_x - x * p_z).
  *
  */
  
-EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace) {
+EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
-  cgrid *grid = wf->grid;
-  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nx2 = nx / 2, nz2 = nz / 2;
-  REAL step = grid->step, inv_delta = HBAR / (2.0 * wf->mass * step), x, z, x0 = grid->x0, z0 = grid->z0;
-  
-#ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_ly(wf, workspace, inv_delta)) return rgrid_integral(workspace);
-#endif
-#pragma omp parallel for firstprivate(nx,ny,nz,nx2,nz2,nxy,workspace,grid,inv_delta,x0,z0,step) private(i,j,ij,k,x,z) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    j = ij % ny;
-    x = ((REAL) (i - nx2)) * step - x0;
-    for(k = 0; k < nz; k++) {
-      z = ((REAL) (k - nz2)) * step - z0;    
-      rgrid_value_to_index(workspace, i, j, k, 
-        (z * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i+1, j, k) - cgrid_value_at_index(grid, i-1, j, k))) /* z * p_x */
-        -x * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j, k+1) - cgrid_value_at_index(grid, i, j, k-1))) /*-x * p_z */
-        ) * inv_delta);
-    }
-  }
-  return rgrid_integral(workspace);
+  grid_wf_px(wf, workspace1);       // p_x
+  rgrid_multiply_by_z(workspace1);   // zp_x
+  grid_wf_pz(wf, workspace2);       // p_z
+  rgrid_multiply_by_x(workspace2);   // xp_z
+  rgrid_difference(workspace1, workspace1, workspace2); // zp_x - xp_z
+  return rgrid_integral(workspace1);
 }
 
 /*
  * Calculate angular momentum expectation value <L_z>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace  = Workspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (rgrid *; input).
+ * workspace2 = Workspace required for the operation (rgrid *; input).
  *
  * Return <L_z> (L_z = x p_y - y p_x).
  *
  */
  
-EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace) {
+EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
-  cgrid *grid = wf->grid;
-  INT i, j, k, ij, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nx2 = nx / 2, ny2 = ny / 2;
-  REAL step = grid->step, inv_delta = HBAR / (2.0 * wf->mass * step), x, y, x0 = grid->x0, y0 = grid->y0;
-  
-#ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_lz(wf, workspace, inv_delta)) return rgrid_integral(workspace);
-#endif
-#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nxy,workspace,grid,inv_delta,x0,y0,step) private(i,j,ij,k,x,y) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    j = ij % ny;
-    x = ((REAL) (i - nx2)) * step - x0;
-    y = ((REAL) (j - ny2)) * step - y0;    
-    for(k = 0; k < nz; k++)
-      rgrid_value_to_index(workspace, i, j, k, 
-        (x * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i, j+1, k) - cgrid_value_at_index(grid, i, j-1, k))) /* x * p_y */
-        -y * CIMAG(CONJ(cgrid_value_at_index(grid, i, j, k)) * (cgrid_value_at_index(grid, i+1, j, k) - cgrid_value_at_index(grid, i-1, j, k))) /*-y * p_x */
-        ) * inv_delta);
-  }
-  return rgrid_integral(workspace);
+  grid_wf_py(wf, workspace1);       // p_y
+  rgrid_multiply_by_x(workspace1);   // xp_y
+  grid_wf_px(wf, workspace2);       // p_x
+  rgrid_multiply_by_y(workspace2);   // yp_x
+  rgrid_difference(workspace1, workspace1, workspace2); // xp_y - yp_x
+  return rgrid_integral(workspace1);
 }
 
 /*
@@ -597,7 +759,8 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace) {
  * lx         = Value of l_x (REAL *).
  * ly         = Value of l_y (REAL *).
  * lz         = Value of l_z (REAL *).
- * workspace  = Workspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (rgrid *; input).
+ * workspace2 = Workspace required for the operation (rgrid *; input).
  *
  * NOTE: The old df_driver_L() routine returned angular momentum * mass.
  *       This routine does not include the mass.
@@ -606,31 +769,32 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace) {
  *
  */
  
-EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace) {
+EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace1, rgrid *workspace2) {
 
-  *lx = grid_wf_lx(wf, workspace);
-  *ly = grid_wf_ly(wf, workspace);
-  *lz = grid_wf_lz(wf, workspace);
+  *lx = grid_wf_lx(wf, workspace1, workspace2);
+  *ly = grid_wf_ly(wf, workspace1, workspace2);
+  *lz = grid_wf_lz(wf, workspace1, workspace2);
 }
 
 /*
  * Calculate the energy from the rotation constraint, -<omega*L>.
  *
- * gwf       = wavefunction for the system (wf *; input).
- * omega_x   = angular frequency in a.u., x-axis (REAL, input)
- * omega_y   = angular frequency in a.u., y-axis (REAL, input)
- * omega_z   = angular frequency in a.u., z-axis (REAL, input)
- * workspace = Workspace required for the operation (rgrid *).
+ * gwf        = wavefunction for the system (wf *; input).
+ * omega_x    = angular frequency in a.u., x-axis (REAL, input)
+ * omega_y    = angular frequency in a.u., y-axis (REAL, input)
+ * omega_z    = angular frequency in a.u., z-axis (REAL, input)
+ * workspace1 = Workspace required for the operation (rgrid *).
+ * workspace2 = Workspace required for the operation (rgrid *).
  *
  * Returns the rotational energy.
  *
  */
 
-EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL omega_z, rgrid *workspace) {
+EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL omega_z, rgrid *workspace1, rgrid *workspace2) {
 
   REAL lx, ly, lz;
 
-  grid_wf_l(gwf, &lx, &ly, &lz, workspace);
+  grid_wf_l(gwf, &lx, &ly, &lz, workspace1, workspace2);
   return -(omega_x * lx * gwf->mass) - (omega_y * ly * gwf->mass) - (omega_z * lz * gwf->mass);
 }
 
@@ -648,33 +812,22 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
  * workspace1 = Workspace 1 (rgrid *; input/output).
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
- * workspace4 = Workspace 4 (rgrid *; input/output).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
+EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3) {
 
   INT i;
 
-  grid_wf_density(gwf, workspace1);
-  rgrid_power(workspace1, workspace1, 0.5); // sqrt(rho)
+  grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
 
-  grid_wf_probability_flux_x(gwf, workspace2);  // = rho * v_x
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS); // = sqrt(rho) * v_x
-
-  grid_wf_probability_flux_y(gwf, workspace3);  // = rho * v_y
-  rgrid_division_eps(workspace3, workspace3, workspace1, GRID_EPS); // = sqrt(rho) * v_y
-
-  grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
-  rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
-
+  rgrid_fft(workspace1);
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
-  rgrid_fft(workspace4);
 
-  rgrid_spherical_average_reciprocal(workspace2, workspace3, workspace4, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -692,7 +845,6 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
  * binstep    = Step length in k-space in atomic units (REAL; input).
  * nbins      = Number of bins to use (INT; input).
- * fd         = 0 = use finite difference, 1 = FFT (char; input).
  * workspace1 = Workspace 1 (rgrid *; input/output).
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
@@ -703,29 +855,19 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  *
  */
 
-EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, char fd, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
+EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
 
   INT i;
 
-  grid_wf_density(gwf, workspace1);
-  rgrid_power(workspace1, workspace1, 0.5); // sqrt(rho)
+  grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
 
-  grid_wf_probability_flux_x(gwf, workspace2);  // = rho * v_x
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS); // = sqrt(rho) * v_x
+  rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
 
-  grid_wf_probability_flux_y(gwf, workspace3);  // = rho * v_y
-  rgrid_division_eps(workspace3, workspace3, workspace1, GRID_EPS); // = sqrt(rho) * v_y
-
-  grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
-  rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
-
-  rgrid_hodge_incomp(fd, workspace2, workspace3, workspace4, workspace1, workspace5);
-
+  rgrid_fft(workspace1);
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
-  rgrid_fft(workspace4);
 
-  rgrid_spherical_average_reciprocal(workspace2, workspace3, workspace4, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -743,7 +885,6 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, char
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
  * binstep    = Step length in k-space in atomic units (REAL; input).
  * nbins      = Number of bins to use (INT; input).
- * fd         = 0 = use finite difference, 1 = FFT (char; input).
  * workspace1 = Workspace 1 (rgrid *; input/output).
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
@@ -753,29 +894,20 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, char
  *
  */
 
-EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, char fd, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
+EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
 
   INT i;
 
-  grid_wf_density(gwf, workspace1);
-  rgrid_power(workspace1, workspace1, 0.5); // sqrt(rho)
+  grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
 
-  grid_wf_probability_flux_x(gwf, workspace2);  // = rho * v_x
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS); // = sqrt(rho) * v_x
 
-  grid_wf_probability_flux_y(gwf, workspace3);  // = rho * v_y
-  rgrid_division_eps(workspace3, workspace3, workspace1, GRID_EPS); // = sqrt(rho) * v_y
+  rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
 
-  grid_wf_probability_flux_z(gwf, workspace4);  // = rho * v_z
-  rgrid_division_eps(workspace4, workspace4, workspace1, GRID_EPS); // = sqrt(rho) * v_z
-
-  rgrid_hodge_comp(fd, workspace2, workspace3, workspace4, workspace1);
-
+  rgrid_fft(workspace1);
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
-  rgrid_fft(workspace4);
 
-  rgrid_spherical_average_reciprocal(workspace2, workspace3, workspace4, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -824,7 +956,8 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
 
   grid_wf_density(gwf, workspace1);
   rgrid_power(workspace1, workspace1, 0.5);
-  rgrid_fd_laplace(workspace1, workspace2);
+  if(grid_analyze_method) rgrid_fft_laplace(workspace1, workspace2);
+  else rgrid_fd_laplace(workspace1, workspace2);
   rgrid_product(workspace1, workspace2, workspace1);
   return -(HBAR * HBAR / (2.0 * gwf->mass)) * rgrid_integral(workspace1);
 }

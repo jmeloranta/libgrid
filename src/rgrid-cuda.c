@@ -1072,3 +1072,68 @@ EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value
 
   return 0;
 }
+
+/*
+ * Multiply grid by coordinate x.
+ *
+ * grid = grid for the operation (rgrid *; output).
+ *
+ */
+
+EXPORT char rgrid_cuda_multiply_by_x(rgrid *grid) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
+
+  rgrid_cuda_multiply_by_xW(cuda_block_address(grid->value), grid->x0, grid->step, grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}
+
+
+/*
+ * Multiply grid by coordinate x.
+ *
+ * grid = grid for the operation (rgrid *; output).
+ *
+ */
+
+EXPORT char rgrid_cuda_multiply_by_y(rgrid *grid) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
+
+  rgrid_cuda_multiply_by_yW(cuda_block_address(grid->value), grid->y0, grid->step, grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}
+
+
+/*
+ * Multiply grid by coordinate z.
+ *
+ * grid = grid for the operation (rgrid *; output).
+ *
+ */
+
+EXPORT char rgrid_cuda_multiply_by_z(rgrid *grid) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
+
+  rgrid_cuda_multiply_by_zW(cuda_block_address(grid->value), grid->z0, grid->step, grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}
