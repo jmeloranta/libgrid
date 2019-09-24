@@ -89,6 +89,11 @@ extern "C" void grid_cuda_wf_propagate_potentialW(gpu_mem_block *grid, gpu_mem_b
   SETUP_VARIABLES(grid);  
   cudaXtDesc *GRID = grid->gpu_info->descriptor, *POT = pot->gpu_info->descriptor;
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || pot->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): propagate_potential wrong subformat.\n");
+    abort();
+  }
+
   c.x =  time_step.y / HBAR;
   c.y = -time_step.x / HBAR;
 
@@ -154,6 +159,11 @@ extern "C" void grid_cuda_wf_densityW(gpu_mem_block *grid, gpu_mem_block *dens, 
   SETUP_VARIABLES_REAL(grid);  
   cudaXtDesc *GRID = grid->gpu_info->descriptor, *DENS = dens->gpu_info->descriptor;
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_density wrong subformat.\n");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     grid_cuda_wf_density_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (CUREAL *) DENS->data[i], nnx1, ny, nz, nzz);
@@ -211,6 +221,11 @@ extern "C" void grid_cuda_wf_absorb_potentialW(gpu_mem_block *gwf, gpu_mem_block
   INT segx = 0, segy = 0;
   SETUP_VARIABLES_SEG(gwf);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *POT = pot->gpu_info->descriptor;
+
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || pot->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): absorb_potential wrong subformat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GWF->GPUs[i]);

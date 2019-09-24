@@ -66,6 +66,11 @@ extern "C" void grid_cuda_wf_velocity_xW(gpu_mem_block *gwf, gpu_mem_block *vx, 
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VX = vx->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_velocity_x wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -74,6 +79,7 @@ extern "C" void grid_cuda_wf_velocity_xW(gpu_mem_block *gwf, gpu_mem_block *vx, 
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_velocity_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VX->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
+  vx->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -125,6 +131,11 @@ extern "C" void grid_cuda_wf_velocity_yW(gpu_mem_block *gwf, gpu_mem_block *vy, 
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VY = vy->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_velocity_y wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -133,6 +144,7 @@ extern "C" void grid_cuda_wf_velocity_yW(gpu_mem_block *gwf, gpu_mem_block *vy, 
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_velocity_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VY->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
+  vy->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -184,6 +196,11 @@ extern "C" void grid_cuda_wf_velocity_zW(gpu_mem_block *gwf, gpu_mem_block *vz, 
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VZ = vz->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_velocity_z wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -192,6 +209,7 @@ extern "C" void grid_cuda_wf_velocity_zW(gpu_mem_block *gwf, gpu_mem_block *vz, 
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_velocity_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) VZ->data[0], inv_delta, cutoff, nx, ny, nz, nz2);
 
+  vz->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -232,6 +250,11 @@ extern "C" void grid_cuda_wf_fft_velocity_setupW(gpu_mem_block *gwf, gpu_mem_blo
   SETUP_VARIABLES(gwf);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *VELOC = veloc->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_fft_velocity_setup wrong subformat.\n");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GWF->GPUs[i]);
     grid_cuda_wf_fft_velocity_setup_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GWF->data[i], (CUREAL *) VELOC->data[i], c, nnx1, ny, nz, nzz);
@@ -242,6 +265,7 @@ extern "C" void grid_cuda_wf_fft_velocity_setupW(gpu_mem_block *gwf, gpu_mem_blo
     grid_cuda_wf_fft_velocity_setup_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GWF->data[i], (CUREAL *) VELOC->data[i], c, nnx2, ny, nz, nzz);
   }
 
+  veloc->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -289,6 +313,11 @@ extern "C" void grid_cuda_wf_probability_flux_xW(gpu_mem_block *gwf, gpu_mem_blo
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *FLUX = flux->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_probability_flux_x wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -297,6 +326,7 @@ extern "C" void grid_cuda_wf_probability_flux_xW(gpu_mem_block *gwf, gpu_mem_blo
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_probability_flux_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
+  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -344,6 +374,11 @@ extern "C" void grid_cuda_wf_probability_flux_yW(gpu_mem_block *gwf, gpu_mem_blo
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *FLUX = flux->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_probability_flux_y wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -352,6 +387,7 @@ extern "C" void grid_cuda_wf_probability_flux_yW(gpu_mem_block *gwf, gpu_mem_blo
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_probability_flux_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
+  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -399,6 +435,11 @@ extern "C" void grid_cuda_wf_probability_flux_zW(gpu_mem_block *gwf, gpu_mem_blo
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *FLUX = flux->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_probability_flux_z wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -407,6 +448,7 @@ extern "C" void grid_cuda_wf_probability_flux_zW(gpu_mem_block *gwf, gpu_mem_blo
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_probability_flux_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) FLUX->data[0], inv_delta, nx, ny, nz, nz2);
 
+  flux->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -471,6 +513,11 @@ extern "C" void grid_cuda_wf_lxW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WORKSPACE = workspace->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_lx wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -479,6 +526,7 @@ extern "C" void grid_cuda_wf_lxW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_lx_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, ny/2, nz/2, y0, z0, step);
 
+  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -543,6 +591,11 @@ extern "C" void grid_cuda_wf_lyW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WORKSPACE = workspace->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_ly wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -551,6 +604,7 @@ extern "C" void grid_cuda_wf_lyW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_ly_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, nx/2, nz/2, x0, z0, step);
 
+  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
 
@@ -615,6 +669,11 @@ extern "C" void grid_cuda_wf_lzW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WORKSPACE = workspace->gpu_info->descriptor;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_lz wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -623,5 +682,6 @@ extern "C" void grid_cuda_wf_lzW(gpu_mem_block *gwf, gpu_mem_block *workspace, C
   cudaSetDevice(GWF->GPUs[0]);
   grid_cuda_wf_lz_gpu<<<blocks,threads>>>((CUCOMPLEX *) GWF->data[0], (CUREAL *) WORKSPACE->data[0], inv_delta, nx, ny, nz, nzz, nx/2, ny/2, x0, y0, step);
 
+  workspace->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   cuda_error_check();
 }
