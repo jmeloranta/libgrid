@@ -69,6 +69,11 @@ extern "C" void cgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_convolute source grids must have INPLACE_SHUFFLED subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_fft_convolute_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], norm, nnx1, nny1, nz);
@@ -79,6 +84,7 @@ extern "C" void cgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
     cgrid_cuda_fft_convolute_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], norm, nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   cuda_error_check();
 }
 
@@ -129,6 +135,7 @@ extern "C" void cgrid_cuda_abs_powerW(gpu_mem_block *dst, gpu_mem_block *src, CU
     cgrid_cuda_abs_power_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], exponent, nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -177,6 +184,7 @@ extern "C" void cgrid_cuda_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL
     cgrid_cuda_power_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], exponent, nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -260,6 +268,11 @@ extern "C" void cgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): sum source grids must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_sum_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx1, nny1, nz);
@@ -270,6 +283,7 @@ extern "C" void cgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem
     cgrid_cuda_sum_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -307,6 +321,11 @@ extern "C" void cgrid_cuda_differenceW(gpu_mem_block *dst, gpu_mem_block *src1, 
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): difference source grids must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_difference_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx1, nny1, nz);
@@ -317,6 +336,7 @@ extern "C" void cgrid_cuda_differenceW(gpu_mem_block *dst, gpu_mem_block *src1, 
     cgrid_cuda_difference_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -354,6 +374,11 @@ extern "C" void cgrid_cuda_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): product source grids must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx1, nny1, nz);
@@ -364,6 +389,7 @@ extern "C" void cgrid_cuda_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu
     cgrid_cuda_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -401,6 +427,11 @@ extern "C" void cgrid_cuda_conjugate_productW(gpu_mem_block *dst, gpu_mem_block 
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): conjugate_product source grids must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_conjugate_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx1, nny1, nz);
@@ -411,6 +442,7 @@ extern "C" void cgrid_cuda_conjugate_productW(gpu_mem_block *dst, gpu_mem_block 
     cgrid_cuda_conjugate_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -450,6 +482,11 @@ extern "C" void cgrid_cuda_divisionW(gpu_mem_block *dst, gpu_mem_block *src1, gp
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): division source grids must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_division_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx1, nny1, nz);
@@ -460,6 +497,7 @@ extern "C" void cgrid_cuda_divisionW(gpu_mem_block *dst, gpu_mem_block *src1, gp
     cgrid_cuda_division_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -501,6 +539,11 @@ extern "C" void cgrid_cuda_division_epsW(gpu_mem_block *dst, gpu_mem_block *src1
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): division source grids must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_division_eps_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], eps, nnx1, nny1, nz);
@@ -511,6 +554,7 @@ extern "C" void cgrid_cuda_division_epsW(gpu_mem_block *dst, gpu_mem_block *src1
     cgrid_cuda_division_eps_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], eps, nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src1->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -688,6 +732,11 @@ extern "C" void cgrid_cuda_add_scaledW(gpu_mem_block *dst, CUCOMPLEX d, gpu_mem_
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC = src->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != dst->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): add_scaled source/destination must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_add_scaled_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], d, (CUCOMPLEX *) SRC->data[i], nnx1, nny1, nz);
@@ -735,6 +784,11 @@ extern "C" void cgrid_cuda_add_scaled_productW(gpu_mem_block *dst, CUCOMPLEX d, 
 
   SETUP_VARIABLES(dst);
   cudaXtDesc *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
+
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat || src1->gpu_info->subFormat != dst->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): add_scaled_product source/destination must have the same subformat.");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -1132,6 +1186,11 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(gpu_mem_block *grid, g
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
+  if(src->gpu_info->subFormat != grid->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): integral_of_conjugate_product source/destination must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
@@ -1212,6 +1271,11 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(gpu_mem_block *grida, gpu_mem
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
+  if(grida->gpu_info->subFormat != gridb->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): grid_expectation_value source/destination must have the same subformat.");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRIDA->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
@@ -1283,6 +1347,7 @@ extern "C" void cgrid_cuda_fd_gradient_xW(gpu_mem_block *src, gpu_mem_block *dst
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1330,6 +1395,7 @@ extern "C" void cgrid_cuda_fd_gradient_yW(gpu_mem_block *src, gpu_mem_block *dst
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1377,6 +1443,7 @@ extern "C" void cgrid_cuda_fd_gradient_zW(gpu_mem_block *src, gpu_mem_block *dst
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1429,6 +1496,7 @@ extern "C" void cgrid_cuda_fd_laplaceW(gpu_mem_block *src, gpu_mem_block *dst, C
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1476,6 +1544,7 @@ extern "C" void cgrid_cuda_fd_laplace_xW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_x_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1523,6 +1592,7 @@ extern "C" void cgrid_cuda_fd_laplace_yW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_y_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1570,6 +1640,7 @@ extern "C" void cgrid_cuda_fd_laplace_zW(gpu_mem_block *src, gpu_mem_block *dst,
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_laplace_z_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1620,6 +1691,11 @@ extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(gpu_mem_block *src, gpu_mem
               (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
   cudaXtDesc *SRC = src->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
 
+  if(src->gpu_info->subFormat != dst->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): fd_gradient_dot_gradient source/destination must have the same subformat.");
+    abort();
+  }
+
   if(DST->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");
     abort();
@@ -1628,6 +1704,7 @@ extern "C" void cgrid_cuda_fd_gradient_dot_gradientW(gpu_mem_block *src, gpu_mem
   cudaSetDevice(DST->GPUs[0]);
   cgrid_cuda_fd_gradient_dot_gradient_gpu<<<blocks,threads>>>((CUCOMPLEX *) SRC->data[0], (CUCOMPLEX *) DST->data[0], inv_delta2, bc, nx, ny, nz);
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1674,6 +1751,7 @@ extern "C" void cgrid_cuda_conjugateW(gpu_mem_block *dst, gpu_mem_block *src, IN
     cgrid_cuda_conjugate_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, nny2, nz);
   }
 
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
   cuda_error_check();
 }
 
@@ -1717,6 +1795,11 @@ extern "C" void cgrid_cuda_fft_gradient_xW(gpu_mem_block *dst, CUREAL norm, CURE
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
   INT nx2 = nx / 2;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_gradient_x wrong subFormat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -1773,6 +1856,11 @@ extern "C" void cgrid_cuda_fft_gradient_yW(gpu_mem_block *dst, CUREAL norm, CURE
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
   INT ny2 = ny / 2, segx = 0, segy = 0;  // segx unused
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_gradient_y wrong subFormat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -1833,6 +1921,11 @@ extern "C" void cgrid_cuda_fft_gradient_zW(gpu_mem_block *dst, CUREAL norm, CURE
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
   INT nz2 = nz / 2;
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_gradient_z wrong subFormat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -1901,6 +1994,11 @@ extern "C" void cgrid_cuda_fft_laplaceW(gpu_mem_block *dst, CUREAL norm, CUREAL 
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
   INT nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, segx = 0, segy = 0; // segx not used
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_laplace wrong subFormat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -1999,6 +2097,11 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CU
   INT nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, segx = 0, segy = 0; // segx not used
   int s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_laplace_expectation_value wrong subFormat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
@@ -2223,6 +2326,11 @@ extern "C" void cgrid_cuda_poissonW(gpu_mem_block *grid, CUREAL norm, CUREAL ste
   
   CUREAL ilx = 2.0 * M_PI / ((CUREAL) nx), ily = 2.0 * M_PI / ((CUREAL) ny), ilz = 2.0 * M_PI / ((CUREAL) nz);
   INT segx = 0, segy = 0; // segx not used
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): poisson wrong subFormat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);

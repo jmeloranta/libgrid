@@ -309,7 +309,7 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
 
   cgrid *grid = gwf->grid;
 
-  // TODO: This should be done better...
+  // TODO: This should be done better... use real grid perhaps
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   grid_real_to_complex_re(gwf->cworkspace, potential);
 
@@ -453,13 +453,12 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
       }
-      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
+      if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       grid_wf_propagate_kinetic_fft(gwf, half_time);    
       cgrid_copy(gwf->cworkspace, potential);
-      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
-      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);
+      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
@@ -478,34 +477,32 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
       }
-      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
+      if(!gwf->cworkspace3) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);    
       cgrid_copy(gwf->cworkspace, potential);
-      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
-      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential); // watch out: this routine uses workspace and workspace2
+      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
-      break;
-    case WF_4TH_ORDER_CN:
-      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
-      grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
-      grid_wf_propagate_kinetic_cn(gwf, half_time);
-      cgrid_copy(gwf->cworkspace, potential);
-      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace2, potential);
-      cgrid_add_scaled(gwf->cworkspace, (1.0/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace2);
-      grid_wf_propagate_potential(gwf, two_thirds_time, gwf->cworkspace, 0.0);
-      grid_wf_propagate_kinetic_cn(gwf, half_time);
-      grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
       break;
     case WF_2ND_ORDER_CN:
       grid_wf_propagate_potential(gwf, half_time, potential, 0.0);
       grid_wf_propagate_kinetic_cn(gwf, time);
       grid_wf_propagate_potential(gwf, half_time, potential, 0.0);
       break;        
+    case WF_4TH_ORDER_CN:
+      if(!gwf->cworkspace2) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
+      grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
+      grid_wf_propagate_kinetic_cn(gwf, half_time);
+      cgrid_copy(gwf->cworkspace, potential);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);
+      cgrid_add_scaled(gwf->cworkspace, (1.0/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
+      grid_wf_propagate_potential(gwf, two_thirds_time, gwf->cworkspace, 0.0);
+      grid_wf_propagate_kinetic_cn(gwf, half_time);
+      grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
+      break;
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
       abort();

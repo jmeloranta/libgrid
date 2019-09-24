@@ -347,7 +347,6 @@ extern "C" void rgrid_cuda_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem
   }
 
   dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
-
   cuda_error_check();
 }
 
@@ -2002,7 +2001,6 @@ extern "C" void rgrid_cuda_abs_rotW(gpu_mem_block *rot, gpu_mem_block *fx, gpu_m
                                              inv_delta, bc, nx, ny, nz, nzz);
 
   rot->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
-
   cuda_error_check();
 }
 
