@@ -148,6 +148,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, ny2 = ny / 2;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk3->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_cn_x wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
     abort();
@@ -302,6 +307,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, nx2 = nx / 2;
 
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk3->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_cn_y wrong subformat.\n");
+    abort();
+  }
+
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
     abort();
@@ -452,6 +462,11 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3->gpu_info->descriptor;
   CUCOMPLEX c, c2;
   INT nyz = ny * nz, nxy = nx * ny;
+
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk3->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_cn_z wrong subformat.\n");
+    abort();
+  }
 
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               

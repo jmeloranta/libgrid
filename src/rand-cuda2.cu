@@ -107,6 +107,11 @@ extern "C" void rgrid_cuda_random_uniformW(gpu_mem_block *grid, CUREAL scale, IN
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
 
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgird(cuda): random_uniform wrong subformat.\n");
+    abort();
+  }
+
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     rgrid_cuda_random_uniform_gpu<<<blocks1,threads>>>((CUREAL *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, ny, nz, nzz);
@@ -156,6 +161,11 @@ extern "C" void rgrid_cuda_random_normalW(gpu_mem_block *grid, CUREAL scale, INT
 
   SETUP_VARIABLES_REAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgird(cuda): random_normal wrong subformat.\n");
+    abort();
+  }
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
