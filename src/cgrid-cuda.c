@@ -623,33 +623,33 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 }
 
 /*
- * Calculate the expectation value over a grid: int gridb grida gridb = int grida gridb^2
+ * Calculate the expectation value over a grid: int opgrid dgrid^2
  *
- * grida = grid A (cgrid *; input).
- * gridb = grid B (cgrid *; input).
+ * dgrid  = grid providing the density (cgrid *; input).
+ * opgrid = grid for the operator (cgrid *; input).
  * value = result of integration (REAL complex *; output).
  *
  */
 
-EXPORT char cgrid_cuda_grid_expectation_value(cgrid *grida, cgrid *gridb, REAL complex *value) {
+EXPORT char cgrid_cuda_grid_expectation_value(cgrid *dgrid, cgrid *opgrid, REAL complex *value) {
 
-  REAL step = grida->step;
+  REAL step = dgrid->step;
   CUCOMPLEX tmp;
 
-  if(grida->host_lock || gridb->host_lock) {
-    cuda_remove_block(grida->value, 1);
-    cuda_remove_block(gridb->value, 1);
+  if(dgrid->host_lock || opgrid->host_lock) {
+    cuda_remove_block(dgrid->value, 1);
+    cuda_remove_block(opgrid->value, 1);
     return -1;
   }
 
-  if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
+  if(cuda_two_block_policy(dgrid->value, dgrid->grid_len, dgrid->cufft_handle, dgrid->id, 1, opgrid->value, opgrid->grid_len, opgrid->cufft_handle, opgrid->id, 1) < 0) return -1;
 
-  cgrid_cuda_grid_expectation_valueW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, &tmp);
+  cgrid_cuda_grid_expectation_valueW(cuda_block_address(dgrid->value), cuda_block_address(opgrid->value), dgrid->nx, dgrid->ny, dgrid->nz, &tmp);
   *value = tmp.x + I * tmp.y;
 
-  if(gridb->nx != 1) *value *= step;
-  if(gridb->ny != 1) *value *= step;
-  if(gridb->nz != 1) *value *= step;
+  if(dgrid->nx != 1) *value *= step;
+  if(dgrid->ny != 1) *value *= step;
+  if(dgrid->nz != 1) *value *= step;
 
   return 0;
 }

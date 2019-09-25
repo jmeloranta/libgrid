@@ -1607,36 +1607,37 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 
 /*
  * Calculate the expectation value of a grid over a grid.
- * (int grida gridb grida = int gridb grida^2).
+ * (int opgrid dgrid^2).
  *
- * grida = grid giving the probability (grida^2) (rgrid *; input).
- * gridb = grid to be averaged (rgrid *; input).
+ * dgrid  = grid giving the probability density (dgrid^2) (rgrid *; input).
+ * opgrid = grid to be averaged (rgrid *; input).
  *
  * Returns the average value (REAL *).
  *
  */
 
-EXPORT REAL rgrid_grid_expectation_value(rgrid *grida, rgrid *gridb) {
+EXPORT REAL rgrid_grid_expectation_value(rgrid *dgrid, rgrid *opgrid) {
 
-  INT i, j, k, nx = grida->nx, ny = grida->ny, nz = grida->nz;
-  REAL sum, step = grida->step, tmp;
+  INT i, j, k, nx = opgrid->nx, ny = opgrid->ny, nz = opgrid->nz;
+  REAL sum, step = opgrid->step, tmp;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_grid_expectation_value(grida, gridb, &sum)) return sum;
+  if(cuda_status() && !rgrid_cuda_grid_expectation_value(dgrid, opgrid, &sum)) return sum;
 #endif
 
   sum = 0.0;
-#pragma omp parallel for firstprivate(nx,ny,nz,grida,gridb) private(i,j,k,tmp) reduction(+:sum) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,dgrid,opgrid) private(i,j,k,tmp) reduction(+:sum) default(none) schedule(runtime)
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++) {
-        tmp = rgrid_value_at_index(grida, i, j, k);
-	sum += tmp * tmp * rgrid_value_at_index(gridb, i, j, k);
+        tmp = rgrid_value_at_index(dgrid, i, j, k);
+	sum += tmp * tmp * rgrid_value_at_index(opgrid, i, j, k);
       }
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
   if(nz != 1) sum *= step;
+
   return sum;
 }
  

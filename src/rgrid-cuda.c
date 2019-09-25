@@ -552,30 +552,30 @@ EXPORT char rgrid_cuda_integral_of_product(rgrid *src1, rgrid *src2, REAL *value
 
 /*
  * Calculate the expectation value of a grid over a grid.
- * (int src2 src1 src2 = int src1 src2^2).
+ * (int opgrid dgrid^2).
  *
- * src1  = first grid for integration (rgrid *; input).
- * src2  = second grid for integration (rgrid *; input).
- * value = integral value (REAL *; output).
+ * dgrid   = first grid for integration (rgrid *; input).
+ * opgrid  = second grid for integration (rgrid *; input).
+ * value   = integral value (REAL *; output).
  *
  */
 
-EXPORT char rgrid_cuda_grid_expectation_value(rgrid *src1, rgrid *src2, REAL *value) {
+EXPORT char rgrid_cuda_grid_expectation_value(rgrid *dgrid, rgrid *opgrid, REAL *value) {
 
-  if(src1->host_lock || src2->host_lock) {
-    cuda_remove_block(src1->value, 1);
-    cuda_remove_block(src2->value, 1);
+  if(dgrid->host_lock || opgrid->host_lock) {
+    cuda_remove_block(dgrid->value, 1);
+    cuda_remove_block(opgrid->value, 1);
     return -1;
   }
 
-  if(cuda_two_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1) < 0)
+  if(cuda_two_block_policy(opgrid->value, opgrid->grid_len, opgrid->cufft_handle_r2c, opgrid->id, 1, dgrid->value, dgrid->grid_len, dgrid->cufft_handle_r2c, dgrid->id, 1) < 0)
     return -1;
 
-  rgrid_cuda_grid_expectation_valueW(cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz, value);
+  rgrid_cuda_grid_expectation_valueW(cuda_block_address(dgrid->value), cuda_block_address(opgrid->value), dgrid->nx, dgrid->ny, dgrid->nz, value);
 
-  if(src1->nx != 1) *value *= src1->step;
-  if(src1->ny != 1) *value *= src1->step;
-  if(src1->nz != 1) *value *= src1->step;
+  if(dgrid->nx != 1) *value *= dgrid->step;
+  if(dgrid->ny != 1) *value *= dgrid->step;
+  if(dgrid->nz != 1) *value *= dgrid->step;
 
   return 0;
 }
@@ -799,7 +799,6 @@ EXPORT char rgrid_cuda_multiply_by_y(rgrid *grid) {
 
   return 0;
 }
-
 
 /*
  * Multiply grid by coordinate z.

@@ -1223,11 +1223,11 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(gpu_mem_block *grid, g
 }
 
 /*
- * Integrate A * |B|^2.
+ * Integrate opgrid * |dgrid|^2.
  *
  */
 
-__global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b, CUCOMPLEX *blocks, INT nx, INT ny, INT nz) {
+__global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *dgrid, CUCOMPLEX *opgrid, CUCOMPLEX *blocks, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
   CUREAL tmp;
@@ -1243,8 +1243,8 @@ __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b
 
   idx = (i * ny + j) * nz + k;
   idx2 = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
-  tmp = b[idx].x * b[idx].x + b[idx].y * b[idx].y;
-  els[idx2] = els[idx2] + (a[idx] * tmp);
+  tmp = dgrid[idx].x * dgrid[idx].x + dgrid[idx].y * dgrid[idx].y;
+  els[idx2] = els[idx2] + (opgrid[idx] * tmp);
   __syncthreads();
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
@@ -1256,10 +1256,10 @@ __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b
 }
 
 /*
- * Integral A * |B|^2.
+ * Integral opgrid * |dgrid|^2.
  *
- * grida    = Source 1 (A) for operation (gpu_mem_block *; input).
- * gridb    = Source 2 (B) for operation (gpu_mem_block *; input).
+ * dgrid    = grid for density (gpu_mem_block *; input).
+ * opgrid   = grid for operator  (gpu_mem_block *; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
@@ -1267,32 +1267,32 @@ __global__ void cgrid_cuda_grid_expectation_value_gpu(CUCOMPLEX *a, CUCOMPLEX *b
  *
  */
 
-extern "C" void cgrid_cuda_grid_expectation_valueW(gpu_mem_block *grida, gpu_mem_block *gridb, INT nx, INT ny, INT nz, CUCOMPLEX *value) {
+extern "C" void cgrid_cuda_grid_expectation_valueW(gpu_mem_block *dgrid, gpu_mem_block *opgrid, INT nx, INT ny, INT nz, CUCOMPLEX *value) {
 
-  SETUP_VARIABLES(grida);
-  cudaXtDesc *GRIDA = grida->gpu_info->descriptor, *GRIDB = gridb->gpu_info->descriptor;
+  SETUP_VARIABLES(dgrid);
+  cudaXtDesc *DGRID = dgrid->gpu_info->descriptor, *OPGRID = opgrid->gpu_info->descriptor;
   CUCOMPLEX tmp;
   INT s = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK, b31 = blocks1.x * blocks1.y * blocks1.z, b32 = blocks2.x * blocks2.y * blocks2.z;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
 
-  if(grida->gpu_info->subFormat != gridb->gpu_info->subFormat) {
-    fprintf(stderr, "libgrid(cuda): grid_expectation_value source/destination must have the same subformat.");
+  if(dgrid->gpu_info->subFormat != opgrid->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): grid_expectation_value sources must have the same subformat.");
     abort();
   }
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(GRIDA->GPUs[i]);
+    cudaSetDevice(DGRID->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
     // Blocks, Threads, dynamic memory size
-    cgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRIDA->data[i], (CUCOMPLEX *) GRIDB->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
+    cgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DGRID->data[i], (CUCOMPLEX *) OPGRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(GRIDA->GPUs[i]);
+    cudaSetDevice(DGRID->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
     // Blocks, Threads, dynamic memory size
-    cgrid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRIDA->data[i], (CUCOMPLEX *) GRIDB->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
+    cgrid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DGRID->data[i], (CUCOMPLEX *) OPGRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
   }
 

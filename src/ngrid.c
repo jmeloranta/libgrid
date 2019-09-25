@@ -319,3 +319,37 @@ EXPORT void grid_complex_re_to_real(rgrid *dest, cgrid *source) {
       dst[ijnz2 + k] = CREAL(src[ijnz + k]);
   }
 }
+
+/*
+ * Calculate the expectation value of a grid over a grid.
+ * (int opgrid |dgrid|^2).
+ *
+ * dgrid  = grid giving the probability (cgrid *; input).
+ * opgrid = grid to be averaged (rgrid *; input).
+ *
+ * Returns the average value (REAL *).
+ *
+ */
+
+EXPORT REAL grid_grid_expectation_value(cgrid *dgrid, rgrid *opgrid) {
+
+  INT i, j, k, nx = dgrid->nx, ny = dgrid->ny, nz = dgrid->nz;
+  REAL sum, step = dgrid->step;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_grid_expectation_value(dgrid, opgrid, &sum)) return sum;
+#endif
+
+  sum = 0.0;
+#pragma omp parallel for firstprivate(nx,ny,nz,dgrid,opgrid) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
+  for (i = 0; i < nx; i++)
+    for (j = 0; j < ny; j++)
+      for (k = 0; k < nz; k++)
+	sum += sqnorm(cgrid_value_at_index(dgrid, i, j, k)) * rgrid_value_at_index(opgrid, i, j, k);
+
+  if(nx != 1) sum *= step;
+  if(ny != 1) sum *= step;
+  if(nz != 1) sum *= step;
+
+  return sum;
+}

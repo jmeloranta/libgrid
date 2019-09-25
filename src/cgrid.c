@@ -1676,33 +1676,34 @@ EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gri
 
 /*
  * Calculate the expectation value of a grid over a grid.
- * (int gridb^* grida gridb = int gridb |grida|^2).
+ * (int opgrid |dgrid|^2).
  *
- * grida = grid giving the probability (|grida|^2) (cgrid *; input).
- * gridb = grid to be averaged (cgrid *; input).
+ * dgrid  = grid giving the probability (cgrid *; input).
+ * opgrid = grid to be averaged (cgrid *; input).
  *
  * Returns the average value (REAL complex).
  *
  */
 
-EXPORT REAL complex cgrid_grid_expectation_value(cgrid *grida, cgrid *gridb) {
+EXPORT REAL complex cgrid_grid_expectation_value(cgrid *dgrid, cgrid *opgrid) {
 
-  INT i, j, k, nx = grida->nx, ny = grida->ny , nz = grida->nz;
-  REAL complex sum = 0.0, step = grida->step;
+  INT i, j, k, nx = dgrid->nx, ny = dgrid->ny , nz = dgrid->nz;
+  REAL complex sum = 0.0, step = dgrid->step;
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_grid_expectation_value(grida, gridb, &sum)) return sum;
+  if(cuda_status() && !cgrid_cuda_grid_expectation_value(dgrid, opgrid, &sum)) return sum;
 #endif
   
-#pragma omp parallel for firstprivate(nx,ny,nz,grida,gridb) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,dgrid,opgrid) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++)
-	sum += sqnorm(cgrid_value_at_index(grida, i, j, k)) * cgrid_value_at_index(gridb, i, j, k);
+	sum += sqnorm(cgrid_value_at_index(dgrid, i, j, k)) * cgrid_value_at_index(opgrid, i, j, k);
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
   if(nz != 1) sum *= step;
+
   return sum;
 }
  

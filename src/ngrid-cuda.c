@@ -205,3 +205,33 @@ EXPORT char grid_cuda_complex_re_to_real(rgrid *dst, cgrid *src) {
   grid_cuda_complex_re_to_realW(cuda_block_address(dst->value), cuda_block_address(src->value), src->nx, src->ny, src->nz);
   return 0;
 }
+
+/*
+ * Calculate the expectation value of a grid over a grid.
+ * (int opgrid dgrid^2).
+ *
+ * dgrid   = first grid for integration (cgrid *; input).
+ * opgrid  = second grid for integration (rgrid *; input).
+ * value   = integral value (REAL *; output).
+ *
+ */
+
+EXPORT char grid_cuda_grid_expectation_value(cgrid *dgrid, rgrid *opgrid, REAL *value) {
+
+  if(dgrid->host_lock || opgrid->host_lock) {
+    cuda_remove_block(dgrid->value, 1);
+    cuda_remove_block(opgrid->value, 1);
+    return -1;
+  }
+
+  if(cuda_two_block_policy(opgrid->value, opgrid->grid_len, opgrid->cufft_handle_r2c, opgrid->id, 1, dgrid->value, dgrid->grid_len, dgrid->cufft_handle, dgrid->id, 1) < 0)
+    return -1;
+
+  grid_cuda_grid_expectation_valueW(cuda_block_address(dgrid->value), cuda_block_address(opgrid->value), dgrid->nx, dgrid->ny, dgrid->nz, value);
+
+  if(dgrid->nx != 1) *value *= dgrid->step;
+  if(dgrid->ny != 1) *value *= dgrid->step;
+  if(dgrid->nz != 1) *value *= dgrid->step;
+
+  return 0;
+}

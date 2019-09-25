@@ -307,13 +307,7 @@ EXPORT REAL grid_wf_kinetic_energy(wf *gwf) {
 
 EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
 
-  cgrid *grid = gwf->grid;
-
-  // TODO: This should be done better... use real grid perhaps
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  grid_real_to_complex_re(gwf->cworkspace, potential);
-
-  return CREAL(cgrid_grid_expectation_value(gwf->grid, gwf->cworkspace));
+  return grid_grid_expectation_value(gwf->grid, potential);
 }
 
 /*
