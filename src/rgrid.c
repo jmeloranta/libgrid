@@ -20,6 +20,20 @@
 
 extern char grid_analyze_method;
 
+
+#ifdef USE_CUDA
+static char rgrid_bc_conv(rgrid *grid) {
+
+  if(grid->value_outside == RGRID_DIRICHLET_BOUNDARY) return 0;
+  else if(grid->value_outside == RGRID_NEUMANN_BOUNDARY) return 1;
+  else if(grid->value_outside == RGRID_PERIODIC_BOUNDARY) return 2;
+  else {
+    fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
+    abort();
+  }
+}
+#endif
+
 /*
  * Local subroutine for rotating grid around z axis.
  *
@@ -36,19 +50,6 @@ static REAL rgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
 
   return rgrid_value(grid, xp, yp, z);
 }
-
-#ifdef USE_CUDA
-static char rgrid_bc_conv(rgrid *grid) {
-
-  if(grid->value_outside == RGRID_DIRICHLET_BOUNDARY) return 0;
-  else if(grid->value_outside == RGRID_NEUMANN_BOUNDARY) return 1;
-  else if(grid->value_outside == RGRID_PERIODIC_BOUNDARY) return 2;
-  else {
-    fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
-    abort();
-  }
-}
-#endif
 
 /*
  * Allocate real grid.
@@ -162,6 +163,16 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   grid->flag = 0;
 #ifdef USE_CUDA
   grid->host_lock = 0;
+#endif
+
+#ifdef USE_CUDA
+  if(cuda_ngpus() > 1) {
+    if(grid_analyze_method == -1) fprintf(stderr, "libgrid: More than one GPU requested - using FFT for grid analysis.\n");
+    grid_analyze_method = 1; // FFT is required for multi-GPU
+  }
+  else grid_analyze_method = 0; // Default to finite difference
+#else
+  grid_analyze_method = 0; // Default to finite difference  
 #endif
 
   return grid;
@@ -1747,313 +1758,6 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
   return sum;
 }
 
-/* 
- * Differentiate a grid with respect to x (central difference).
- *
- * grid     = grid to be differentiated (rgrid *; input).
- * gradient = differentiated grid output (rgrid *; output).
- * 
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_gradient_x(rgrid *grid, rgrid *gradient) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta = 1.0 / (2.0 * grid->step), *lvalue = gradient->value;
-  
-  if(grid == gradient) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_x().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_x(grid, gradient, inv_delta, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i + 1, j, k) - rgrid_value_at_index(grid, i - 1, j, k));
-  }
-}
-
-/* 
- * Differentiate a grid with respect to y.
- *
- * grid     = grid to be differentiated (rgrid *; input).
- * gradient = differentiated grid output (rgrid *; output).
- * 
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_gradient_y(rgrid *grid, rgrid *gradient) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta = 1.0 / (2.0 * grid->step), *lvalue = gradient->value;
-  
-  if(grid == gradient) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_y().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_y(grid, gradient, inv_delta, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i, j + 1, k) - rgrid_value_at_index(grid, i, j - 1, k));
-  }
-}
-
-/* 
- * Differentiate a grid with respect to z.
- *
- * grid     = grid to be differentiated (rgrid *; input).
- * gradient = differentiated grid output (rgrid *; output).
- * 
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_gradient_z(rgrid *grid, rgrid *gradient) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta = 1.0 / (2.0 * grid->step), *lvalue = gradient->value;
-  
-  if(grid == gradient) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_z().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_z(grid, gradient, inv_delta, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(grid, i, j, k + 1) - rgrid_value_at_index(grid, i, j, k - 1));
-  }
-}
- 
-/*
- * Calculate gradient of a grid.
- *
- * grid       = grid to be differentiated (rgrid *; input).
- * gradient_x = x component grid for the operation (rgrid *; output).
- * gradient_y = y component grid for the operation (rgrid *; output).
- * gradient_z = z component grid for the operation (rgrid *; output).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_gradient(rgrid *grid, rgrid *gradient_x, rgrid *gradient_y, rgrid *gradient_z) {
-
-  rgrid_fd_gradient_x(grid, gradient_x);
-  rgrid_fd_gradient_y(grid, gradient_y);
-  rgrid_fd_gradient_z(grid, gradient_z);
-}
-
-/*
- * Calculate laplacian of the grid.
- *
- * grid    = source grid (rgrid *; input).
- * laplace = output grid for the operation (rgrid *; output).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_laplace(rgrid *grid, rgrid *laplace) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplace->value;
-  
-  if(grid == laplace) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace(grid, laplace, inv_delta2, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-6.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k + 1)
-				       + rgrid_value_at_index(grid, i, j, k - 1) + rgrid_value_at_index(grid, i, j + 1, k) 
-				       + rgrid_value_at_index(grid, i, j - 1, k) + rgrid_value_at_index(grid, i + 1, j, k)
-				       + rgrid_value_at_index(grid, i - 1, j, k));
-  }
-}
-
-/*
- * Calculate vector laplacian of the grid (x component). This is the second derivative with respect to x.
- *
- * grid     = source grid (rgrid *; input).
- * laplacex = output grid for the operation (rgrid *; output).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_laplace_x(rgrid *grid, rgrid *laplacex) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplacex->value;
-  
-  if(grid == laplacex) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace_x().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace_x(grid, laplacex, inv_delta2, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i + 1, j, k) 
-                                        + rgrid_value_at_index(grid, i - 1, j, k));
-  }
-}
-
-/*
- * Calculate vector laplacian of the grid (y component). This is the second derivative with respect to y.
- *
- * grid     = source grid (rgrid *; input).
- * laplacey = output grid for the operation (rgrid *; output).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_laplace_y(rgrid *grid, rgrid *laplacey) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplacey->value;
-  
-  if(grid == laplacey) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace_y().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace_y(grid, laplacey, inv_delta2, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j + 1, k) 
-                                        + rgrid_value_at_index(grid, i, j - 1, k));
-  }
-}
-
-/*
- * Calculate vector laplacian of the grid (z component). This is the second derivative with respect to z.
- *
- * grid     = source grid (rgrid *; input).
- * laplacez = output grid for the operation (rgrid *; output).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_fd_laplace_z(rgrid *grid, rgrid *laplacez) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_delta2 = 1.0 / (grid->step * grid->step), *lvalue = laplacez->value;
-  
-  if(grid == laplacez) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_laplace_z().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_laplace_z(grid, laplacez, inv_delta2, rgrid_bc_conv(grid))) return;
-#endif
-
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta2,grid) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++)
-      lvalue[ijnz + k] = inv_delta2 * (-2.0 * rgrid_value_at_index(grid, i, j, k) + rgrid_value_at_index(grid, i, j, k + 1) 
-                                       + rgrid_value_at_index(grid, i, j, k - 1));
-  }
-}
-
-/*
- * Calculate dot product of the gradient of the grid.
- *
- * grid          = source grid for the operation (rgrid *; input).
- * grad_dot_grad = destination grid (rgrid *; output).
- *
- * No return value.
- *
- * Note: grid and grad_dot_grad may not be the same grid.
- *
- */
-
-EXPORT void rgrid_fd_gradient_dot_gradient(rgrid *grid, rgrid *grad_dot_grad) {
-
-  INT i, j, k, ij, ijnz, ny = grid->ny, nz = grid->nz, nxy = grid->nx * grid->ny, nzz = grid->nz2;
-  REAL inv_2delta2 = 1.0 / (2.0 * grid->step * 2.0 * grid->step), *gvalue = grad_dot_grad->value, tmp;
-  
-  if(grid == grad_dot_grad) {
-    fprintf(stderr, "libgrid: source and destination must be different in rgrid_fd_gradient_dot_gradient().\n");
-    abort();
-  }
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fd_gradient_dot_gradient(grid, grad_dot_grad, inv_2delta2, rgrid_bc_conv(grid))) return;
-#endif
-
-/*  grad f(x,y,z) dot grad f(x,y,z) = [ |f(+,0,0) - f(-,0,0)|^2 + |f(0,+,0) - f(0,-,0)|^2 + |f(0,0,+) - f(0,0,-)|^2 ] / (2h)^2 */
-#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,gvalue,inv_2delta2,grid) private(ij,ijnz,i,j,k,tmp) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nzz;
-    i = ij / ny;
-    j = ij % ny;
-    for(k = 0; k < nz; k++) {
-      tmp = rgrid_value_at_index(grid, i, j, k + 1) - rgrid_value_at_index(grid, i, j, k - 1); tmp *= tmp;
-      gvalue[ijnz + k] = tmp;
-      tmp = rgrid_value_at_index(grid, i, j + 1, k) - rgrid_value_at_index(grid, i, j - 1, k); tmp *= tmp;
-      gvalue[ijnz + k] += tmp;
-      tmp = rgrid_value_at_index(grid, i + 1, j, k) - rgrid_value_at_index(grid, i - 1, j, k); tmp *= tmp;
-      gvalue[ijnz + k] += tmp;
-      gvalue[ijnz + k] *= inv_2delta2;
-    }
-  }
-}
-
 /*
  * Print the grid into file (ASCII format).
  *
@@ -2983,7 +2687,9 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
     rgrid_div(wx, vx, vy, vz);
     rgrid_fft(wx);
     rgrid_poisson(wx);
-    rgrid_fft_gradient(wx, ux, uy, uz);
+    rgrid_fft_gradient_x(wx, ux);
+    rgrid_fft_gradient_y(wx, uy);
+    rgrid_fft_gradient_z(wx, uz);
     rgrid_inverse_fft(ux);
     rgrid_inverse_fft(uy);
     rgrid_inverse_fft(uz);
@@ -2993,7 +2699,9 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
   } else { /* FD */
     rgrid_div(wx, vx, vy, vz);
     rgrid_poisson(wx);
-    rgrid_fd_gradient(wx, ux, uy, uz);
+    rgrid_fd_gradient_x(wx, ux);
+    rgrid_fd_gradient_y(wx, uy);
+    rgrid_fd_gradient_z(wx, uz);
     rgrid_difference(wx, vx, ux);
     rgrid_difference(wy, vy, uy);
     rgrid_difference(wz, vz, uz);
@@ -3029,14 +2737,18 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
     rgrid_div(workspace, vx, vy, vz);
     rgrid_fft(workspace);
     rgrid_poisson(workspace);
-    rgrid_fft_gradient(workspace, vx, vy, vz);
+    rgrid_fft_gradient_x(workspace, vx);
+    rgrid_fft_gradient_y(workspace, vy);
+    rgrid_fft_gradient_z(workspace, vz);
     rgrid_inverse_fft(vx);
     rgrid_inverse_fft(vy);
     rgrid_inverse_fft(vz);
   } else { /* FD */
     rgrid_div(workspace, vx, vy, vz);
     rgrid_poisson(workspace);
-    rgrid_fd_gradient(workspace, vx, vy, vz);
+    rgrid_fd_gradient_x(workspace, vx);
+    rgrid_fd_gradient_y(workspace, vy);
+    rgrid_fd_gradient_z(workspace, vz);
   }
 }
 
@@ -3297,306 +3009,6 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
         ave /= (REAL) pts;
         rgrid_value_to_index(dest, i, j, k, ave);
       }
-}
-
-/*
- * Differentiate real grid in the Fourier space along x.
- *
- * grid       = grid to be differentiated (in Fourier space) (rgrid *; input).
- * gradient_x = output grid (rgrid *; output).
- *
- * No return value.
- *
- * Note: input and output grids may be the same.
- *
- */
-
-EXPORT void rgrid_fft_gradient_x(rgrid *grid, rgrid *gradient_x) {
-
-  INT i, k, ij, ijnz, nx, ny, nz, nxy, nx2;
-  REAL kx0 = grid->kx0;
-  REAL kx, step, norm, lx;
-  REAL complex *gxvalue = (REAL complex *) gradient_x->value;
-  
-  if (gradient_x != grid) rgrid_copy(gradient_x, grid);
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fft_gradient_x(gradient_x)) return;
-#endif
-
-  /* f'(x) = iF[ i kx F[f(x)] ] */  
-  nx = grid->nx;
-  ny = grid->ny;
-  nz = grid->nz2 / 2;
-  nxy = nx * ny;
-  step = grid->step;
-  norm = grid->fft_norm;
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  nx2 = nx / 2;
-
-#pragma omp parallel for firstprivate(nx2,norm,nx,ny,nz,nxy,step,gxvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    ijnz = ij * nz;
-    if(i < nx2) 
-      kx = ((REAL) i) * lx - kx0;
-    else
-      kx = -((REAL) (nx - i)) * lx - kx0;
-    for(k = 0; k < nz; k++)	  
-      gxvalue[ijnz + k] *= (kx * norm) * I;
-  } 
-}
-
-/*
- * Differentiate real grid in the Fourier space along y.
- *
- * grid       = grid to be differentiated (in Fourier space) (rgrid *; input).
- * gradient_y = output grid (rgrid *; output).
- *
- * No return value.
- *
- * Note: input and output grids may be the same.
- *
- */
-
-EXPORT void rgrid_fft_gradient_y(rgrid *grid, rgrid *gradient_y) {
-
-  INT j, k, ij, ijnz, nx, ny, nz, nxy, ny2;
-  REAL ky0 = grid->ky0;
-  REAL ky, step, norm, ly;
-  REAL complex *gyvalue = (REAL complex *) gradient_y->value;
-  
-  if (gradient_y != grid) rgrid_copy(gradient_y, grid);
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fft_gradient_y(gradient_y)) return;
-#endif
-
-  /* f'(x) = iF[ i kx F[f(x)] ] */  
-  nx = grid->nx;
-  ny = grid->ny;
-  nz = grid->nz2 / 2;
-  nxy = nx * ny;
-  step = grid->step;
-  norm = grid->fft_norm;
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  ny2 = ny / 2;
-
-#pragma omp parallel for firstprivate(ny2,norm,nx,ny,nz,nxy,step,gyvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    j = ij % ny;
-    ijnz = ij * nz;
-    if(j < ny2) 
-      ky = ((REAL) j) * ly - ky0;
-    else
-      ky = -((REAL) (ny - j)) * ly - ky0;
-    for(k = 0; k < nz; k++)	  
-      gyvalue[ijnz + k] *= (ky * norm) * I;
-  } 
-}
-
-/*
- * Differentiate real grid in the Fourier space along z.
- *
- * grid       = grid to be differentiated (in Fourier space) (rgrid *; input).
- * gradient_z = output grid (rgrid *; output).
- *
- * No return value.
- *
- * Note: input and output grids may be the same.
- *
- */
-
-EXPORT void rgrid_fft_gradient_z(rgrid *grid, rgrid *gradient_z) {
-
-  INT k, ij, ijnz, nx, ny, nxy, nz, nz2;
-  REAL kz0 = grid->kz0;
-  REAL kz, step, norm, lz;
-  REAL complex *gzvalue = (REAL complex *) gradient_z->value;
-  
-  if (gradient_z != grid) rgrid_copy(gradient_z, grid);
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fft_gradient_z(gradient_z)) return;
-#endif
-
-  /* f'(x) = iF[ i kx F[f(x)] ] */  
-  nx = grid->nx;
-  ny = grid->ny;
-  nz = grid->nz2 / 2;
-  nxy = nx * ny;
-  step = grid->step;
-  norm = grid->fft_norm;
-  lz = M_PI / (((REAL) nz - 1) * step);
-  nz2 = nz / 2;
-
-#pragma omp parallel for firstprivate(nz2,norm,nx,ny,nz,nxy,step,gzvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    ijnz = ij * nz;
-    for(k = 0; k < nz; k++) {
-      if(k < nz2) 
-        kz = ((REAL) k) * lz - kz0;
-      else
-        kz = -((REAL) (nz - k)) * lz - kz0;
-      gzvalue[ijnz + k] *= (kz * norm) * I;
-    }
-  } 
-}
-
-/*
- * Calculate gradient of a grid (in Fourier space).
- *
- * grid       = grid to be differentiated (rgrid *; input).
- * gradient_x = x output grid (rgrid *; output).
- * gradient_y = y output grid (rgrid *; output).
- * gradient_z = z output grid (rgrid *; output).
- *
- * No return value.
- *
- * Note: input/output grids may be the same.
- *
- */
-
-EXPORT void rgrid_fft_gradient(rgrid *grid, rgrid *gradient_x, rgrid *gradient_y, rgrid *gradient_z) {
-
-  rgrid_fft_gradient_x(grid, gradient_x);
-  rgrid_fft_gradient_y(grid, gradient_y);
-  rgrid_fft_gradient_z(grid, gradient_z);
-}
-
-/* 
- * Calculate second derivative of a grid (in Fourier space).
- *
- * grid    = grid to be differentiated (rgrid *; input).
- * laplace = output grid (rgrid *; output).
- *
- * No return value.
- *
- * Note: input/output grids may be the same.
- *
- */
-
-EXPORT void rgrid_fft_laplace(rgrid *grid, rgrid *laplace)  {
-
-  INT i, j, k, ij, ijnz, nx, ny, nxy, nz;
-  INT nx2, ny2, nz2;
-  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
-  REAL kx, ky, kz, lx, ly, lz, step, norm;
-  REAL complex *lvalue = (REAL complex *) laplace->value;
-  
-  if (grid != laplace) rgrid_copy(laplace, grid);
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fft_laplace(laplace)) return;
-#endif
-
-  /* f''(x) = iF[ -k^2 F[f(x)] ] */
-  nx = grid->nx;
-  ny = grid->ny;
-  nz = grid->nz2 / 2;
-  nx2 = nx / 2;
-  ny2 = ny / 2;
-  nz2 = nz / 2;
-  nxy = nx * ny;
-  step = grid->step;
-  norm = grid->fft_norm;  
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = M_PI / (((REAL) nz - 1) * step);
-  
-#pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-  for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    j = ij % ny;
-    ijnz = ij * nz;
-    
-    if(i < nx2) 
-      kx = ((REAL) i) * lx - kx0;
-    else
-      kx = -((REAL) (nx - i)) * lx - kx0;
-    if(j < ny2) 
-      ky = ((REAL) j) * ly - ky0;
-    else
-      ky = -((REAL) (ny - j)) * ly - ky0;
-      
-    for(k = 0; k < nz; k++) {
-      if(k < nz2) 
-        kz = ((REAL) k) * lz - kz0;
-      else
-        kz = -((REAL) (nz - k)) * lz - kz0;        
-      lvalue[ijnz + k] *= -(kx * kx + ky * ky + kz * kz) * norm;
-    }
-  }
-}
-
-/*
- * Calculate expectation value of laplace operator in the Fourier space (int grid^* grid'').
- *
- * grid    = source grid for the operation (in Fourier space) (rgrid *; input).
- * laplace = laplacian of the grid (input) (rgrid *; output).
- *
- * Returns the expectation value (REAL).
- *
- */
-
-EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
-
-  INT i, j, k, ij, ijnz, nx, ny, nxy, nz;
-  INT nx2, ny2, nz2;
-  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
-  REAL kx, ky, kz, lx, ly, lz, step, norm, sum = 0.0, ssum;
-  REAL complex *lvalue = (REAL complex *) laplace->value;
-  
-  if (grid != laplace) rgrid_copy(laplace, grid);
-
-#ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_fft_laplace_expectation_value(laplace, &sum)) return sum;
-#endif
-
-  /* f''(x) = iF[ -k^2 F[f(x)] ] */
-  nx = grid->nx;
-  ny = grid->ny;
-  nz = grid->nz2 / 2;
-  nx2 = nx / 2;
-  ny2 = ny / 2;
-  nz2 = nz / 2;
-  nxy = nx * ny;
-  step = grid->step;
-  norm = grid->fft_norm;  
-  if(nx != 1) norm *= step;
-  if(ny != 1) norm *= step;
-  if(nz != 1) norm *= step;
-
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = M_PI / (((REAL) nz - 1) * step);
-  
-#pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(ssum,i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime) reduction(+:sum)
-  for(ij = 0; ij < nxy; ij++) {
-    i = ij / ny;
-    j = ij % ny;
-    ijnz = ij * nz;
-    
-    if(i < nx2) 
-      kx = ((REAL) i) * lx - kx0;
-    else
-      kx = -((REAL) (nx - i)) * lx - kx0;
-    if(j < ny2) 
-      ky = ((REAL) j) * ly - ky0;
-    else
-      ky = -((REAL) (ny - j)) * ly - ky0;
-      
-    ssum = 0.0;
-    for(k = 0; k < nz; k++) {
-      if(k < nz2) 
-        kz = ((REAL) k) * lz - kz0;
-      else
-        kz = -((REAL) (nz - k)) * lz - kz0;        
-      ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
-    }
-    sum += ssum;
-  }
-  return sum * norm;
 }
 
 /*

@@ -373,7 +373,9 @@ EXPORT void grid_wf_square_of_potential_gradient(wf *gwf, cgrid *sq_grad_pot, cg
 
   cgrid_copy(sq_grad_pot, potential);
   cgrid_fft(sq_grad_pot);
-  cgrid_fft_gradient(sq_grad_pot, cworkspace, cworkspace2, sq_grad_pot);  // hack" sq_grad_pot gets overwritten last in cgrid_fft_gradient
+  cgrid_fft_gradient_x(sq_grad_pot, cworkspace);
+  cgrid_fft_gradient_y(sq_grad_pot, cworkspace2);
+  cgrid_fft_gradient_z(sq_grad_pot, sq_grad_pot);
   
   cgrid_inverse_fft(sq_grad_pot);
   cgrid_inverse_fft(cworkspace);

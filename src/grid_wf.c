@@ -6,8 +6,6 @@
 #include "grid.h"
 #include "private.h"
 
-extern char grid_analyze_method;
-
 /*
  * Allocate wavefunction.
  *
@@ -118,13 +116,6 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->cworkspace2 = NULL;
   gwf->cworkspace3 = NULL;
   gwf->ts_func = NULL;
-
-#ifdef USE_CUDA
-  if(cuda_ngpus() > 1) grid_analyze_method = 1; // FFT is required for multi-GPU
-  else grid_analyze_method = 0; // Default to finite difference
-#else
-  grid_analyze_method = 0; // Default to finite difference  
-#endif
 
   return gwf;
 }

@@ -7,7 +7,21 @@
 #include "au.h"
 #include "private.h"
 
-char grid_analyze_method = 0; // 0 = FD and 1 = FFT
+char grid_analyze_method = -1; // 0 = FD and 1 = FFT, -1 = not set
+
+/*
+ * Function to switch between FD and FFT based routines.
+ *
+ * method = 0: Finite difference (FD) or 1 = FFT (char; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_analyze_method(char method) {
+
+  grid_analyze_method = method;
+}
 
 /*
  * Generic frontend for calculating velocity. This may use FD or FFT
