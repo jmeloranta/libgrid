@@ -45,9 +45,6 @@
 /* get rid of the identifier used for extracting prototypes */
 #define EXPORT
 
-/* this is the multi-GPU version (calling of some functions has changed; e.g., poisson) */
-#define GRID_MGPU
-
 /* Formatting strings */
 
 #if defined(SINGLE_PREC)
