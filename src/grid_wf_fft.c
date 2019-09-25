@@ -99,7 +99,6 @@ EXPORT void grid_wf_momentum(wf *gwf, rgrid *momentum_x, rgrid *momentum_y, rgri
   grid_wf_momentum_z(gwf, momentum_z);
 }
 
-
 /*
  * Auxiliary routine for calculating the energy (FFT).
  * Users should rather call grid_wf_energy().
