@@ -13,8 +13,6 @@
 
 extern char grid_analyze_method;
 
-#define FFT_BOUNDARY_TEST(X) (X == CGRID_FFT_EEE_BOUNDARY || X == CGRID_FFT_OEE_BOUNDARY || X == CGRID_FFT_EOE_BOUNDARY || X == CGRID_FFT_EEO_BOUNDARY || X == CGRID_FFT_OOE_BOUNDARY || X == CGRID_FFT_EOO_BOUNDARY || X == CGRID_FFT_OEO_BOUNDARY || X == CGRID_FFT_OOO_BOUNDARY)
-
 #ifdef USE_CUDA
 static char cgrid_bc_conv(cgrid *grid) {
 
@@ -98,10 +96,7 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   /* X-Y plane rotation frequency */
   grid->omega = 0.0;
 
-  if(FFT_BOUNDARY_TEST(value_outside))
-    grid->fft_norm = 1.0 / (REAL) (2 * grid->nx * 2 * grid->ny * 2 * grid->nz);
-  else
-    grid->fft_norm = 1.0 / (REAL) (grid->nx * grid->ny * grid->nz);
+  grid->fft_norm = 1.0 / (REAL) (grid->nx * grid->ny * grid->nz);
 
   // Account for the correct dimensionality of the grid
   grid->fft_norm2 = grid->fft_norm;
@@ -124,7 +119,7 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
     grid->outside_params_ptr = &grid->default_outside_params;
   }
   
-  grid->plan = grid->iplan = grid->implan = grid->iimplan = NULL; // No need to set these up yet
+  grid->plan = grid->iplan = NULL; // No need to set these up yet
 #ifdef USE_CUDA
   if(cuda_status())
     cgrid_cufft_alloc(grid); // We have to allocate these for cuda.c to work
@@ -193,7 +188,7 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 #ifdef USE_CUDA
   cgrid_cufft_alloc(ngrid); // We have to allocate these for cuda.c to work
 #endif
-  ngrid->plan = ngrid->iplan = ngrid->implan = ngrid->iimplan = NULL;
+  ngrid->plan = ngrid->iplan = NULL;
   ngrid->flag = 0;
 
   return ngrid;
@@ -2472,58 +2467,40 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
   nxy = nx * ny;
   step = grid->step;
   
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
-    lx = M_PI / ((REAL) nx) * step;
-    ly = M_PI / ((REAL) ny) * step;
-    lz = M_PI / ((REAL) nz) * step;
-#pragma omp parallel for firstprivate(func,farg,nx,ny,nz,nxy,step,value,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
-      kx = ((REAL) i) * lx - kx0;
-      ky = ((REAL) j) * ly - ky0;
-      for(k = 0; k < nz; k++) {
-        kz = ((REAL) k) * lz - kz0;
-        value[ijnz + k] *= (*func)(farg, kx, ky, kz);
-      }
-    }    
-  } else {
-    lx = 2.0 * M_PI / ((REAL) nx) * step;
-    ly = 2.0 * M_PI / ((REAL) ny) * step;
-    lz = 2.0 * M_PI / ((REAL) nz) * step;
-    nx2 = nx / 2;
-    ny2 = ny / 2;
-    nz2 = nz / 2;
+  lx = 2.0 * M_PI / ((REAL) nx) * step;
+  ly = 2.0 * M_PI / ((REAL) ny) * step;
+  lz = 2.0 * M_PI / ((REAL) nz) * step;
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nz2 = nz / 2;
 #pragma omp parallel for firstprivate(nx2,ny2,nz2,func,farg,nx,ny,nz,nxy,step,value,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      if (i <= nx2)
-        kx =((REAL) i) * lx - kx0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    if (i <= nx2)
+      kx =((REAL) i) * lx - kx0;
+    else 
+      kx = ((REAL) (i - nx)) * lx - kx0;
+      
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else 
+      ky = ((REAL) (j - ny)) * ly - ky0;
+    
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0;
       else 
-        kx = ((REAL) (i - nx)) * lx - kx0;
-      
-      if (j <= ny2)
-        ky = ((REAL) j) * ly - ky0;
-      else 
-        ky = ((REAL) (j - ny)) * ly - ky0;
-      
-      for(k = 0; k < nz; k++) {
-        if (k <= nz2)
-          kz = ((REAL) k) * lz - kz0;
-        else 
-          kz = ((REAL) (k - nz)) * lz - kz0;
-        
-        value[ijnz + k] *= (*func)(farg, kx, ky, kz);
-      }
+        kz = ((REAL) (k - nz)) * lz - kz0;
+       
+      value[ijnz + k] *= (*func)(farg, kx, ky, kz);
     }
   }
 }

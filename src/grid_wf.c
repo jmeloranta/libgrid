@@ -45,7 +45,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   wf *gwf;
   REAL complex (*value_outside)(struct cgrid_struct *grid, INT i, INT j, INT k);
   
-  if(boundary < WF_DIRICHLET_BOUNDARY || boundary > WF_FFT_OOO_BOUNDARY) {
+  if(boundary < WF_DIRICHLET_BOUNDARY || boundary > WF_PERIODIC_BOUNDARY) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Unknown boundary condition.\n");
     return 0;
   }
@@ -75,30 +75,6 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
       break;
     case WF_PERIODIC_BOUNDARY:
       value_outside = CGRID_PERIODIC_BOUNDARY;
-      break;
-    case WF_FFT_EEE_BOUNDARY:
-      value_outside = CGRID_FFT_EEE_BOUNDARY;
-      break;
-    case WF_FFT_OEE_BOUNDARY:
-      value_outside = CGRID_FFT_OEE_BOUNDARY;
-      break;
-    case WF_FFT_EOE_BOUNDARY:
-      value_outside = CGRID_FFT_EOE_BOUNDARY;
-      break;
-    case WF_FFT_EEO_BOUNDARY:
-      value_outside = CGRID_FFT_EEO_BOUNDARY;
-      break;
-    case WF_FFT_OOE_BOUNDARY:
-      value_outside = CGRID_FFT_OOE_BOUNDARY;
-      break;
-    case WF_FFT_EOO_BOUNDARY:
-      value_outside = CGRID_FFT_EOO_BOUNDARY;
-      break;
-    case WF_FFT_OEO_BOUNDARY:
-      value_outside = CGRID_FFT_OEO_BOUNDARY;
-      break;
-    case WF_FFT_OOO_BOUNDARY:
-      value_outside = CGRID_FFT_OOO_BOUNDARY;
       break;
   }
   

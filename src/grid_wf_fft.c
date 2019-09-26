@@ -177,72 +177,47 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
   /* f(x) = ifft[fft[f(x)]] / N */
   norm = gwf->grid->fft_norm;
 
-  if(gwf->boundary == WF_NEUMANN_BOUNDARY  ||
-     gwf->boundary == WF_VORTEX_X_BOUNDARY ||
-     gwf->boundary == WF_VORTEX_Y_BOUNDARY ||
-     gwf->boundary == WF_VORTEX_Z_BOUNDARY) {
-    lx = M_PI / (((REAL) nx) * step);
-    ly = M_PI / (((REAL) ny) * step);
-    lz = M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,lx,ly,lz,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
-      
-      kx = ((REAL) i) * lx - kx0;
-      ky = ((REAL) j) * ly - ky0;
-      
-      for(k = 0; k < nz; k++) {
-        kz = ((REAL) k) * lz - kz0;
-        
-        /* psi(k, t+dt) = psi(k, t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */	  
-        value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
-      }
-    }
-  } else {
-    lx = 2.0 * M_PI / (((REAL) nx) * step);
-    ly = 2.0 * M_PI / (((REAL) ny) * step);
-    lz = 2.0 * M_PI / (((REAL) nz) * step);
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = 2.0 * M_PI / (((REAL) nz) * step);
 #pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * if i <= N/2, k = 2pi i / L
-       * else k = 2pi (i - N) / L
-       *
-       * 2nd derivative (laplacian):
-       * multiply by -k^2
-       *
-       * first derivative (not used here):
-       * multiply by I * k and by zero for i = n/2.
-       *
-       */
+    /* 
+     * if i <= N/2, k = 2pi i / L
+     * else k = 2pi (i - N) / L
+     *
+     * 2nd derivative (laplacian):
+     * multiply by -k^2
+     *
+     * first derivative (not used here):
+     * multiply by I * k and by zero for i = n/2.
+     *
+     */
 
-      if (i <= nx2)
-        kx = ((REAL) i) * lx - kx0;
+    if (i <= nx2)
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = ((REAL) (i - nx)) * lx - kx0;
+
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = ((REAL) (j - ny)) * ly - ky0;
+
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0; 
       else
-        kx = ((REAL) (i - nx)) * lx - kx0;
-
-      if (j <= ny2)
-        ky = ((REAL) j) * ly - ky0;
-      else
-        ky = ((REAL) (j - ny)) * ly - ky0;
-
-      for(k = 0; k < nz; k++) {
-        if (k <= nz2)
-          kz = ((REAL) k) * lz - kz0; 
-        else
-          kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz - kz0;
         
-        /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-        value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
-      }
-    } 
-  }
+      /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
+      value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
+    }
+  } 
   
   cgrid_fftw_inv(gwf->grid);
 }
@@ -276,76 +251,49 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   /* f(x) = ifft[fft[f(x)]] / N */
   norm = gwf->grid->fft_norm;
 
-  if(gwf->boundary == WF_NEUMANN_BOUNDARY  ||
-     gwf->boundary == WF_VORTEX_X_BOUNDARY ||
-     gwf->boundary == WF_VORTEX_Y_BOUNDARY ||
-     gwf->boundary == WF_VORTEX_Z_BOUNDARY) {
-    lx = M_PI / (((REAL) nx) * step);
-    ly = M_PI / (((REAL) ny) * step);
-    lz = M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,lx,ly,lz,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz,tmp) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
-      
-      kx = ((REAL) i) * lx - kx0;
-      ky = ((REAL) j) * ly - ky0;
-      
-      for(k = 0; k < nz; k++) {
-        kz = ((REAL) k) * lz - kz0;
-        
-        /* psi(k, t+dt) = psi(k, t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */	  
-        /* exp ~ (1 + 0.5 * x) / (1 - 0.5 * x) */
-        tmp = 0.5 * time_mass * (kx * kx + ky * ky + kz * kz);
-        value[ijnz + k] *= norm * (1.0 + tmp) / (1.0 - tmp);
-      }
-    }
-  } else {
-    lx = 2.0 * M_PI / (((REAL) nx) * step);
-    ly = 2.0 * M_PI / (((REAL) ny) * step);
-    lz = 2.0 * M_PI / (((REAL) nz) * step);
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = 2.0 * M_PI / (((REAL) nz) * step);
 #pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz,tmp) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * if i <= N/2, k = 2pi i / L
-       * else k = 2pi (i - N) / L
-       *
-       * 2nd derivative (laplacian):
-       * multiply by -k^2
-       *
-       * first derivative (not used here):
-       * multiply by I * k and by zero for i = n/2.
-       *
-       */
+    /* 
+     * if i <= N/2, k = 2pi i / L
+     * else k = 2pi (i - N) / L
+     *
+     * 2nd derivative (laplacian):
+     * multiply by -k^2
+     *
+     * first derivative (not used here):
+     * multiply by I * k and by zero for i = n/2.
+     *
+     */
 
-      if (i <= nx2)
-        kx = ((REAL) i) * lx - kx0;
+    if (i <= nx2)
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = ((REAL) (i - nx)) * lx - kx0;
+
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = ((REAL) (j - ny)) * ly - ky0;
+
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0; 
       else
-        kx = ((REAL) (i - nx)) * lx - kx0;
-
-      if (j <= ny2)
-        ky = ((REAL) j) * ly - ky0;
-      else
-        ky = ((REAL) (j - ny)) * ly - ky0;
-
-      for(k = 0; k < nz; k++) {
-        if (k <= nz2)
-          kz = ((REAL) k) * lz - kz0; 
-        else
-          kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz - kz0;
         
-        /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-        /* exp ~ (1 + 0.5 * x) / (1 - 0.5 * x) */
-        tmp = 0.5 * time_mass * (kx * kx + ky * ky + kz * kz);
-        value[ijnz + k] *= norm * (1.0 + tmp) / (1.0 - tmp);
-      }
-    } 
-  }
+      /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
+      /* exp ~ (1 + 0.5 * x) / (1 - 0.5 * x) */
+      tmp = 0.5 * time_mass * (kx * kx + ky * ky + kz * kz);
+      value[ijnz + k] *= norm * (1.0 + tmp) / (1.0 - tmp);
+    }
+  } 
   
   cgrid_fftw_inv(gwf->grid);
 }

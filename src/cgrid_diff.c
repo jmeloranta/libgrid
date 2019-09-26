@@ -13,8 +13,6 @@
 
 extern char grid_analyze_method;
 
-#define FFT_BOUNDARY_TEST(X) (X == CGRID_FFT_EEE_BOUNDARY || X == CGRID_FFT_OEE_BOUNDARY || X == CGRID_FFT_EOE_BOUNDARY || X == CGRID_FFT_EEO_BOUNDARY || X == CGRID_FFT_OOE_BOUNDARY || X == CGRID_FFT_EOO_BOUNDARY || X == CGRID_FFT_OEO_BOUNDARY || X == CGRID_FFT_OOO_BOUNDARY)
-
 #ifdef USE_CUDA
 static char cgrid_bc_conv(cgrid *grid) {
 
@@ -502,34 +500,23 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
   
   if (gradient_x != grid) cgrid_copy(gradient_x, grid);
 
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
 #pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue,kx0) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      ijnz = ij * nz;
-      kx = M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
-      for(k = 0; k < nz; k++)	  
-	gxvalue[ijnz + k] *= (kx * norm) * I;
-    }
-  } else {
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue,kx0) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      if (i <= nx / 2)
-	kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
-      else 
-	kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    if (i <= nx / 2)
+      kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
+    else 
+      kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
       
-      for(k = 0; k < nz; k++)	  
-	gxvalue[ijnz + k] *= (kx * norm) * I;
-    }
+    for(k = 0; k < nz; k++)	  
+      gxvalue[ijnz + k] *= (kx * norm) * I;
   }
 }
 
@@ -567,34 +554,24 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
   
   if (gradient_y != grid)
     cgrid_copy(gradient_y, grid);
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
+
 #pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue,ky0) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      j = ij % ny;
-      ijnz = ij * nz;
-        ky = M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
-      for(k = 0; k < nz; k++)	  
-        gyvalue[ijnz + k] *= ky * norm * I;
-    }
-  } else {
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue,ky0) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      if (j <= ny / 2)
-        ky = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
-      else 
-        ky = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - ky0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    if (j <= ny / 2)
+      ky = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
+    else 
+      ky = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - ky0;
       
-      for(k = 0; k < nz; k++)	  
-        gyvalue[ijnz + k] *= ky * norm * I;
-    }
+    for(k = 0; k < nz; k++)	  
+      gyvalue[ijnz + k] *= ky * norm * I;
   }
 }
 
@@ -632,39 +609,26 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
   
   if(gradient_z != grid) cgrid_copy(gradient_z, grid);
 
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
 #pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue,kz0) private(ij,ijnz,k,kz,lz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
       
-      lz = ((REAL) nz) * step;
-      for(k = 0; k < nz; k++) {
-        kz = M_PI * ((REAL) k) / lz - kz0;
-        gzvalue[ijnz + k] *= kz * norm * I;
-      }
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+      
+    lz = ((REAL) nz) * step;
+    for(k = 0; k < nz; k++) {
+      if (k <= nz / 2)
+        kz = 2.0 * M_PI * ((REAL) k) / lz - kz0;
+      else 
+        kz = 2.0 * M_PI * ((REAL) (k - nz)) / lz - kz0;
+       
+      gzvalue[ijnz + k] *= kz * norm * I;
     }
-  } else {
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue,kz0) private(ij,ijnz,k,kz,lz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      ijnz = ij * nz;
-      
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      
-      lz = ((REAL) nz) * step;
-      for(k = 0; k < nz; k++) {
-        if (k <= nz / 2)
-          kz = 2.0 * M_PI * ((REAL) k) / lz - kz0;
-        else 
-          kz = 2.0 * M_PI * ((REAL) (k - nz)) / lz - kz0;
-        
-        gzvalue[ijnz + k] *= kz * norm * I;
-      }
-    }    
-  }
+  }    
 }
 
 /* 
@@ -701,60 +665,40 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
   
   if (grid != laplace) cgrid_copy(laplace, grid);
   
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
-    lx = M_PI / (((REAL) nx) * step);
-    ly = M_PI / (((REAL) ny) * step);
-    lz = M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
-      
-      kx = ((REAL) i) * lx - kx0;
-      ky = ((REAL) j) * ly - ky0;
-
-      for(k = 0; k < nz; k++) {
-        kz = ((REAL) k) * lz - kz0;
-        lvalue[ijnz + k] *= (-kx * kx -ky * ky -kz * kz) * norm;
-      }
-    }    
-  } else {
-    lx = 2.0 * M_PI / ((REAL) nx) * step;
-    ly = 2.0 * M_PI / ((REAL) ny) * step;
-    lz = 2.0 * M_PI / ((REAL) nz) * step;
-    nx2 = nx / 2;
-    ny2 = ny / 2;
-    nz2 = nz / 2;
+  lx = 2.0 * M_PI / ((REAL) nx) * step;
+  ly = 2.0 * M_PI / ((REAL) ny) * step;
+  lz = 2.0 * M_PI / ((REAL) nz) * step;
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nz2 = nz / 2;
 #pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      if (i <= nx2)
-        kx = ((REAL) i) * lx - kx0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    if (i <= nx2)
+      kx = ((REAL) i) * lx - kx0;
+    else 
+      kx = ((REAL) (i - nx)) * lx - kx0;
+      
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else 
+      ky = ((REAL) (j - ny)) * ly - ky0;
+      
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0;
       else 
-        kx = ((REAL) (i - nx)) * lx - kx0;
-      
-      if (j <= ny2)
-        ky = ((REAL) j) * ly - ky0;
-      else 
-        ky = ((REAL) (j - ny)) * ly - ky0;
-      
-      for(k = 0; k < nz; k++) {
-        if (k <= nz2)
-          kz = ((REAL) k) * lz - kz0;
-        else 
-          kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz - kz0;
         
-        lvalue[ijnz + k] *= -(kx * kx + ky * ky + kz * kz) * norm;
-      }
+      lvalue[ijnz + k] *= -(kx * kx + ky * ky + kz * kz) * norm;
     }
   }
 }
@@ -793,39 +737,25 @@ EXPORT void cgrid_fft_laplace_x(cgrid *grid, cgrid *laplace)  {
   
   if (grid != laplace) cgrid_copy(laplace, grid);
   
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
-    lx = M_PI / (((REAL) nx) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      ijnz = ij * nz;
-
-      kx = ((REAL) i) * lx - kx0;
-      
-      for(k = 0; k < nz; k++)
-        lvalue[ijnz + k] *= -kx * kx * norm;
-    }    
-  } else {
-    lx = 2.0 * M_PI / ((REAL) nx) * step;
-    nx2 = nx / 2;
+  lx = 2.0 * M_PI / ((REAL) nx) * step;
+  nx2 = nx / 2;
 #pragma omp parallel for firstprivate(nx2,norm,nx,ny,nz,nxy,step,lvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      if (i <= nx2)
-        kx = ((REAL) i) * lx - kx0;
-      else 
-        kx = ((REAL) (i - nx)) * lx - kx0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    if (i <= nx2)
+      kx = ((REAL) i) * lx - kx0;
+    else 
+      kx = ((REAL) (i - nx)) * lx - kx0;
       
-      for(k = 0; k < nz; k++)
-        lvalue[ijnz + k] *= -kx * kx * norm;
-    }
+    for(k = 0; k < nz; k++)
+      lvalue[ijnz + k] *= -kx * kx * norm;
   }
 }
 
@@ -863,40 +793,26 @@ EXPORT void cgrid_fft_laplace_y(cgrid *grid, cgrid *laplace)  {
   
   if (grid != laplace) cgrid_copy(laplace, grid);
   
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
-    ly = M_PI / (((REAL) ny) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      j = ij % ny;
-      ijnz = ij * nz;
-      
-      ky = ((REAL) j) * ly - ky0;
-
-      for(k = 0; k < nz; k++)
-        lvalue[ijnz + k] *= -ky * ky * norm;
-    }    
-  } else {
-    ly = 2.0 * M_PI / ((REAL) ny) * step;
-    ny2 = ny / 2;
+  ly = 2.0 * M_PI / ((REAL) ny) * step;
+  ny2 = ny / 2;
 #pragma omp parallel for firstprivate(ny2,norm,nx,ny,nz,nxy,step,lvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
       
-      if (j <= ny2)
-        ky = ((REAL) j) * ly - ky0;
-      else 
-        ky = ((REAL) (j - ny)) * ly - ky0;
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else 
+      ky = ((REAL) (j - ny)) * ly - ky0;
       
-      for(k = 0; k < nz; k++)
-        lvalue[ijnz + k] *= -ky * ky * norm;
-    }
+    for(k = 0; k < nz; k++)
+      lvalue[ijnz + k] *= -ky * ky * norm;
   }
 }
 
@@ -934,36 +850,24 @@ EXPORT void cgrid_fft_laplace_z(cgrid *grid, cgrid *laplace)  {
   
   if (grid != laplace) cgrid_copy(laplace, grid);
   
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
-    lz = M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      ijnz = ij * nz;
-      for(k = 0; k < nz; k++) {
-        kz = ((REAL) k) * lz - kz0;
-        lvalue[ijnz + k] *= -kz * kz * norm;
-      }
-    }    
-  } else {
-    lz = 2.0 * M_PI / ((REAL) nz) * step;
-    nz2 = nz / 2;
+  lz = 2.0 * M_PI / ((REAL) nz) * step;
+  nz2 = nz / 2;
 #pragma omp parallel for firstprivate(nz2,norm,nx,ny,nz,nxy,step,lvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      for(k = 0; k < nz; k++) {
-        if (k <= nz2)
-          kz = ((REAL) k) * lz - kz0;
-        else 
-          kz = ((REAL) (k - nz)) * lz - kz0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0;
+      else 
+        kz = ((REAL) (k - nz)) * lz - kz0;
         
-        lvalue[ijnz + k] *= -kz * kz * norm;
-      }
+      lvalue[ijnz + k] *= -kz * kz * norm;
     }
   }
 }
@@ -985,7 +889,6 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   REAL kx, ky, kz, lx, ly, lz, step, norm, sum = 0.0, ssum;
   REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL complex *lvalue = laplace->value;
-  REAL aux;
 
   if(grid != laplace) cgrid_copy(laplace, grid);
 
@@ -1007,75 +910,47 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   if(ny != 1) norm *= step;
   if(nz != 1) norm *= step;
   
-  if(FFT_BOUNDARY_TEST(grid->value_outside)) {
-    lx = M_PI / (((REAL) nx) * step);
-    ly = M_PI / (((REAL) ny) * step);
-    lz = M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz,ssum,aux) reduction(+:sum) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
-      
-      kx = ((REAL) i) * lx - kx0;
-      ky = ((REAL) j) * ly - ky0;
-      
-      ssum = 0.0;
-      
-      for(k = 0; k < nz; k++) {
-        kz = ((REAL) k) * lz - kz0;
-        /* Manual fixing of boundaries: the symmetry points (i=0 or i=nx-1 etc) have 1/2 the weigth in the integral */
-        aux = -(kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
-        if(i==0 || i==nx-1) aux *= 0.5;
-        if(j==0 || j==ny-1) aux *= 0.5;
-        if(k==0 || k==nz-1) aux *= 0.5;
-        ssum += aux;
-      }
-      sum += ssum;
-    }
-  } else {
-    lx = 2.0 * M_PI / ((REAL) nx) * step;
-    ly = 2.0 * M_PI / ((REAL) ny) * step;
-    lz = 2.0 * M_PI / ((REAL) nz) * step;
-    nx2 = nx / 2;
-    ny2 = ny / 2;
-    nz2 = nz / 2;
+  lx = 2.0 * M_PI / ((REAL) nx) * step;
+  ly = 2.0 * M_PI / ((REAL) ny) * step;
+  lz = 2.0 * M_PI / ((REAL) nz) * step;
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nz2 = nz / 2;
 #pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz,ssum) reduction(+:sum) default(none) schedule(runtime)
-    for(ij = 0; ij < nxy; ij++) {
-      i = ij / ny;
-      j = ij % ny;
-      ijnz = ij * nz;
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nz;
       
-      /* 
-       * k = 2 pi n / L 
-       * if k < n/2, k = k
-       * else k = -k
-       */
-      if (i <= nx2)
-	kx = ((REAL) i) * lx - kx0;
+    /* 
+     * k = 2 pi n / L 
+     * if k < n/2, k = k
+     * else k = -k
+     */
+    if (i <= nx2)
+      kx = ((REAL) i) * lx - kx0;
+    else 
+      kx = ((REAL) (i - nx)) * lx - kx0;
+      
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else 
+      ky = ((REAL) (j - ny)) * ly - ky0;
+      
+    ssum = 0.0;
+      
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0;
       else 
-	kx = ((REAL) (i - nx)) * lx - kx0;
-      
-      if (j <= ny2)
-	ky = ((REAL) j) * ly - ky0;
-      else 
-	ky = ((REAL) (j - ny)) * ly - ky0;
-      
-      ssum = 0.0;
-      
-      for(k = 0; k < nz; k++) {
-	if (k <= nz2)
-	  kz = ((REAL) k) * lz - kz0;
-	else 
-	  kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz - kz0;
 	
-	ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
-      }
-      
-      sum += ssum;
+      ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
     }
+
+    sum += ssum;
   }
-  
+
   return sum * norm;
 }
 

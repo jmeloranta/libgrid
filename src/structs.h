@@ -30,11 +30,11 @@ typedef struct cgrid_struct { /* complex grid data type */
   void *outside_params_ptr;
   REAL complex default_outside_params;
 #if defined(SINGLE_PREC)
-  fftwf_plan plan, iplan, implan, iimplan;
+  fftwf_plan plan, iplan;
 #elif defined(DOUBLE_PREC)
-  fftw_plan plan, iplan, implan, iimplan;
+  fftw_plan plan, iplan;
 #elif defined(QUAD_PREC)
-  fftwl_plan plan, iplan, implan, iimplan;
+  fftwl_plan plan, iplan;
 #endif
 #ifdef USE_CUDA
   cufftHandle cufft_handle;  /* CUFFT plan handle */
