@@ -44,6 +44,8 @@ static char rgrid_bc_conv(rgrid *grid) {
  * 
  * No return value.
  *
+ * TODO: Could have another version that leaves the result in the Fourier space.
+ *
  */
 
 EXPORT void rgrid_gradient(rgrid *grid, rgrid *gradx, rgrid *grady, rgrid *gradz) {
@@ -879,4 +881,218 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
     sum += ssum;
   }
   return sum * norm;
+}
+
+/*
+ * Solve Poisson equation: Laplace f = u subject to periodic boundaries (in Fourier space)
+ * Uses finite difference for Laplacian (7 point) and FFT.
+ *
+ * grid = On entry function u specified over grid (input) 
+ *        and function f (output) on exit (rgrid *; input/output).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_poisson(rgrid *grid) {
+
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz, idx;
+  REAL step = grid->step, step2 = step * step, ilx, ily;
+  REAL norm = grid->fft_norm, ilz, kx, ky, kz;
+  REAL complex *val = (REAL complex *) grid->value;
+
+  if(grid->value_outside != RGRID_PERIODIC_BOUNDARY) {
+    fprintf(stderr, "libgrid: Only periodic boundary Poisson solver implemented.\n");
+    abort();
+  }
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_poisson(grid)) return;
+#endif
+  /* the folllowing is in Fourier space -> k = 0, nz */
+  nz = grid->nz2 / 2; // nz2 = 2 * (nz/2 + 1)
+  ilx = 2.0 * M_PI / ((REAL) nx);
+  ily = 2.0 * M_PI / ((REAL) ny);
+  ilz = M_PI / ((REAL) nz);  // TODO: why not nz-1 like everywhere else?
+#pragma omp parallel for firstprivate(val, nx, ny, nz, grid, ilx, ily, ilz, step2, norm) private(i, j, k, kx, ky, kz, idx) default(none) schedule(runtime)
+  for(i = 0; i < nx; i++) {
+    kx = COS(ilx * (REAL) i);
+    for(j = 0; j < ny; j++) {
+      ky = COS(ily * (REAL) j);
+      for(k = 0; k < nz; k++) {
+	kz = COS(ilz * (REAL) k);
+	idx = (i * ny + j) * nz + k;
+	if(i || j || k)
+	  val[idx] = val[idx] * norm * step2 / (2.0 * (kx + ky + kz - 3.0));
+	else
+	  val[idx] = 0.0;
+      }
+    }
+  }
+}
+
+/*
+ * Calculate divergence of a vector field.
+ *
+ * div     = result (rgrid *; output).
+ * fx      = x component of the field (rgrid *; input).
+ * fy      = y component of the field (rgrid *; input).
+ * fz      = z component of the field (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
+
+  INT i, j, k, ij, ijnz, ny = div->ny, nz = div->nz, nxy = div->nx * div->ny, nzz = div->nz2;
+  REAL inv_delta = 1.0 / (2.0 * div->step);
+  REAL *lvalue = div->value;
+  
+  if(div == fx || div == fy || div == fz) {
+    fprintf(stderr, "libgrid: Destination grid must be different from input grids in rgrid_div().\n");
+    abort();
+  }
+
+#ifdef USE_CUDA
+  cuda_remove_block(lvalue, 0);
+  cuda_remove_block(fx->value, 1);
+  cuda_remove_block(fy->value, 1);
+  cuda_remove_block(fz->value, 1);
+#endif
+#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++)
+      lvalue[ijnz + k] = inv_delta * (rgrid_value_at_index(fx, i+1, j, k) - rgrid_value_at_index(fx, i-1, j, k)
+	+ rgrid_value_at_index(fy, i, j+1, k) - rgrid_value_at_index(fy, i, j-1, k)
+        + rgrid_value_at_index(fz, i, j, k+1) - rgrid_value_at_index(fz, i, j, k-1));
+  }
+}
+
+/*
+ * Calculate rot (curl; \Nabla\times) of a vector field f = (fx, fy, fz).
+ *
+ * rotx = x component of rot (rgrid *; output). If NULL, not computed (fx not accessed and may also be NULL).
+ * roty = y component of rot (rgrid *; output). If NULL, not computed (fy not accessed and may also be NULL).
+ * rotz = z component of rot (rgrid *; output). If NULL, not computed (fz not accessed and may also be NULL).
+ * fx   = x component of the field (rgrid *; input).
+ * fy   = y component of the field (rgrid *; input).
+ * fz   = z component of the field (rgrid *; input).
+ *
+ * TODO: CUDA implementation missing.
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_rot(rgrid *rotx, rgrid *roty, rgrid *rotz, rgrid *fx, rgrid *fy, rgrid *fz) {
+
+  INT i, j, k, ij, ijnz, ny, nz, nxy, nzz;
+  REAL inv_delta;
+  REAL *lvaluex, *lvaluey, *lvaluez;
+
+  if(rotx == NULL && roty == NULL && rotz == NULL) return; /* Nothing to do */
+
+  if(rotx || rotz) {
+    ny = fy->ny;
+    nz = fy->nz;
+    nxy = fy->nx * fy->ny;
+    nzz = fy->nz2;
+    inv_delta = 1.0 / (2.0 * fy->step);
+  } else {
+    ny = fx->ny;
+    nz = fx->nz;
+    nxy = fx->nx * fx->ny;
+    nzz = fx->nz2;
+    inv_delta = 1.0 / (2.0 * fx->step);
+  }
+
+  if(rotx) lvaluex = rotx->value;
+  else lvaluex = NULL;
+  if(roty) lvaluey = roty->value;
+  else lvaluey = NULL;
+  if(rotz) lvaluez = rotz->value;
+  else lvaluez = NULL;
+  
+#ifdef USE_CUDA
+  /* This operation is carried out on the CPU rather than GPU (usually large grids, so they won't fit in GPU memory) */
+  if(lvaluex) cuda_remove_block(lvaluex, 0);
+  if(lvaluey) cuda_remove_block(lvaluey, 0);
+  if(lvaluez) cuda_remove_block(lvaluez, 0);
+  if(roty || rotz) cuda_remove_block(fx->value, 1);
+  if(rotx || rotz) cuda_remove_block(fy->value, 1);
+  if(rotx || roty) cuda_remove_block(fz->value, 1);
+#endif
+#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvaluex,lvaluey,lvaluez,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      /* x: (d/dy) fz - (d/dz) fy (no access to fx) */
+      if(lvaluex)
+        lvaluex[ijnz + k] = inv_delta * ((rgrid_value_at_index(fz, i, j+1, k) - rgrid_value_at_index(fz, i, j-1, k))
+				      - (rgrid_value_at_index(fy, i, j, k+1) - rgrid_value_at_index(fy, i, j, k-1)));
+      /* y: (d/dz) fx - (d/dx) fz (no access to fy) */
+      if(lvaluey)
+        lvaluey[ijnz + k] = inv_delta * ((rgrid_value_at_index(fx, i, j, k+1) - rgrid_value_at_index(fx, i, j, k-1))
+				      - (rgrid_value_at_index(fz, i+1, j, k) - rgrid_value_at_index(fz, i-1, j, k)));
+      /* z: (d/dx) fy - (d/dy) fx (no acess to fz) */
+      if(lvaluez)
+        lvaluez[ijnz + k] = inv_delta * ((rgrid_value_at_index(fy, i+1, j, k) - rgrid_value_at_index(fy, i-1, j, k))
+    				      - (rgrid_value_at_index(fx, i, j+1, k) - rgrid_value_at_index(fx, i, j-1, k)));
+    }
+  }
+}
+
+/*
+ * Calculate |rot| (|curl|; |\Nabla\times|) of a vector field (i.e., magnitude).
+ *
+ * rot  = magnitude of rot (rgrid *; output).
+ * fx   = x component of the field (rgrid *; input).
+ * fy   = y component of the field (rgrid *; input).
+ * fz   = z component of the field (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz) {
+
+  INT i, j, k, ij, ijnz, ny = rot->ny, nz = rot->nz, nxy = rot->nx * rot->ny, nzz = rot->nz2;
+  REAL inv_delta = 1.0 / (2.0 * rot->step);
+  REAL *lvalue = rot->value, tmp;
+  
+  if(rot == fx || rot == fy || rot == fz) {
+    fprintf(stderr, "libgrid: Source and destination grids must be different in rgrid_abs_rot().\n");
+    abort();
+  }
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_abs_rot(rot, fx, fy, fz, inv_delta, rgrid_bc_conv(rot))) return;
+#endif
+
+#pragma omp parallel for firstprivate(ny,nz,nzz,nxy,lvalue,inv_delta,fx,fy,fz) private(ij,ijnz,i,j,k,tmp) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      /* x: (d/dy) fz - (d/dz) fy */
+      tmp = inv_delta * ((rgrid_value_at_index(fz, i, j+1, k) - rgrid_value_at_index(fz, i, j-1, k))
+				      - (rgrid_value_at_index(fy, i, j, k+1) - rgrid_value_at_index(fy, i, j, k-1)));
+      lvalue[ijnz + k] = tmp * tmp;
+      /* y: (d/dz) fx - (d/dx) fz */
+      tmp = inv_delta * ((rgrid_value_at_index(fx, i, j, k+1) - rgrid_value_at_index(fx, i, j, k-1))
+				      - (rgrid_value_at_index(fz, i+1, j, k) - rgrid_value_at_index(fz, i-1, j, k)));
+      lvalue[ijnz + k] += tmp * tmp;
+      /* z: (d/dx) fy - (d/dy) fx */
+      tmp = inv_delta * ((rgrid_value_at_index(fy, i+1, j, k) - rgrid_value_at_index(fy, i-1, j, k))
+				      - (rgrid_value_at_index(fx, i, j+1, k) - rgrid_value_at_index(fx, i, j-1, k)));
+      lvalue[ijnz + k] += tmp * tmp;
+      lvalue[ijnz + k] = SQRT(lvalue[ijnz + k]);
+    }
+  }
 }

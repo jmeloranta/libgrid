@@ -1,6 +1,8 @@
 /*
  * Constants to convert from/to atomic units.
  *
+ * Last reviewed: 26 Sep 2019.
+ *
  */
 
 #ifndef __ATOMIC_UNITS__

@@ -1,10 +1,12 @@
  /*
  * Routines for complex grids.
  *
- * Nx is major index and Nz is minor index (varies most rapidly).
+ * NX is major index and NZ is minor index (varies most rapidly).
  *
  * For 2-D grids use: (1, NY, NZ)
  * For 1-D grids use: (1, 1, NZ)
+ *
+ * Last reviewed: 26 Sep 2019.
  *
  */
 
@@ -29,11 +31,11 @@ static char cgrid_bc_conv(cgrid *grid) {
 /*
  * Allocate complex grid.
  *
- * nx                 = number of points on the grid along x (INT).
- * ny                 = number of points on the grid along y (INT).
- * nz                 = number of points on the grid along z (INT).
- * step               = spatial step length on the grid (REAL).
- * value_outside      = condition for accessing boundary points:
+ * nx                 = number of points on the grid along x (INT; input).
+ * ny                 = number of points on the grid along y (INT; input).
+ * nz                 = number of points on the grid along z (INT; input).
+ * step               = spatial step length on the grid (REAL; input).
+ * value_outside      = condition for accessing boundary points (input):
  *                      CGRID_DIRICHLET_BOUNDARY: Dirichlet boundary
  *                      or CGRID_NEUMANN_BOUNDARY: Neumann boundary
  *                      or CGRID_PERIODIC_BOUNDARY: Periodic boundary
@@ -49,7 +51,7 @@ static char cgrid_bc_conv(cgrid *grid) {
  *                         grid index as parameters to provide boundary access.
  * outside_params_ptr = pointer for passing parameters for the given boundary
  *                      access function. Use 0 to with the predefined boundary
- *                      functions (void *).
+ *                      functions (void *; input).
  * id                 = String ID describing the grid (char *; input).
  *
  * Return value: pointer to the allocated grid (cgrid *). Returns NULL on
@@ -96,9 +98,10 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   /* X-Y plane rotation frequency */
   grid->omega = 0.0;
 
+  /* FFT norm */
   grid->fft_norm = 1.0 / (REAL) (grid->nx * grid->ny * grid->nz);
 
-  // Account for the correct dimensionality of the grid
+  /* FFT integral norm */
   grid->fft_norm2 = grid->fft_norm;
   if(grid->nx > 1) grid->fft_norm2 *= grid->step;
   if(grid->ny > 1) grid->fft_norm2 *= grid->step;
@@ -118,46 +121,51 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
     grid->default_outside_params = 0.0;
     grid->outside_params_ptr = &grid->default_outside_params;
   }
-  
-  grid->plan = grid->iplan = NULL; // No need to set these up yet
+
+  /* Forward and inverse plans - not allocated yet */  
+  grid->plan = grid->iplan = NULL;
+
 #ifdef USE_CUDA
   if(cuda_status())
     cgrid_cufft_alloc(grid); // We have to allocate these for cuda.c to work
 #endif
   
 #ifdef USE_CUDA
+  /* Allocate CUDA memory for reduction */
   cgrid_cuda_init(sizeof(REAL complex) 
      * ((((size_t) nx) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK)
      * ((((size_t) ny) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK) 
-     * ((((size_t) nz) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK));  // reduction along blocks
+     * ((((size_t) nz) + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK));
 #endif
   
+  /* Initialize the grid values to zero */
   for(i = 0; i < nx * ny * nz; i++)
     grid->value[i] = 0.0;
 
+  /* Mark the grid as unclaimed (not in use exclusively) */
   grid->flag = 0;
+
 #ifdef USE_CUDA
+  /* By default the grid is not locked into host memory */
   grid->host_lock = 0;
 #endif
 
 #ifdef USE_CUDA
   if(cuda_ngpus() > 1) {
     if(grid_analyze_method == -1) fprintf(stderr, "libgrid: More than one GPU requested - using FFT for grid analysis.\n");
-    grid_analyze_method = 1; // FFT is required for multi-GPU
-  }
-  else grid_analyze_method = 0; // Default to finite difference
-#else
-  grid_analyze_method = 0; // Default to finite difference  
+    grid_analyze_method = 1; // FFT-based differentiation is required for multi-GPU
+  } else
 #endif
+    grid_analyze_method = 0; // Default to using finite difference for analysis
 
   return grid;
 }
 
 /*
- * "Clone" a complex grid with the parameters idential to the given grid (except new grid->value is allocated).
+ * "Clone" a complex grid with the parameters identical to the given grid (except new grid->value is allocated and new id is used).
  *
  * grid = Grid to be cloned (cgrid *; input).
- * id   = ID string describing the grid (char *; input);
+ * id   = ID string describing the new grid (char *; input);
  *
  * Returns pointer to the new grid (rgrid *).
  *
@@ -171,6 +179,7 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
     fprintf(stderr, "libgrid: Out of memory in cgrid_clone().\n");
     abort();
   }
+
   bcopy((void *) grid, (void *) ngrid, sizeof(cgrid));
   strcpy(ngrid->id, id);
 
@@ -181,23 +190,34 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 #elif defined(QUAD_PREC)
   if (!(ngrid->value = (REAL complex *) fftwl_malloc(ngrid->grid_len))) {
 #endif
-    fprintf(stderr, "libgrid: Error in cgrid_clone(). Could not allocate memory for ngrid->value.\n");
+    fprintf(stderr, "libgrid: Error in cgrid_clone(). Could not allocate memory for grid.\n");
     free(ngrid);
-    return NULL;
+    abort();
   }
+
 #ifdef USE_CUDA
-  cgrid_cufft_alloc(ngrid); // We have to allocate these for cuda.c to work
+  /* Make CUFFT plan */
+  cgrid_cufft_alloc(ngrid);
 #endif
+
+  /* No need to do FFTW plans yet */
   ngrid->plan = ngrid->iplan = NULL;
+
+#ifdef USE_CUDA
+  /* Clear host lock */
+  ngrid->host_lock = 0;
+#endif
+
+  /* Mark as not claimed */
   ngrid->flag = 0;
 
   return ngrid;
 }
 
 /*
- * Claim grid (simple locking system for the workspace model).
+ * Claim grid (simple locking system when using the workspace model).
  *
- * grid = Grid to be claimed (cgrid *).
+ * grid = Grid to be claimed (cgrid *; input).
  *
  * No return value.
  *
@@ -219,7 +239,7 @@ EXPORT void cgrid_claim(cgrid *grid) {
 /*
  * Release grid (simple locking system for the workspace model).
  *
- * grid = Grid to be claimed (cgrid *).
+ * grid = Grid to be claimed (cgrid *; input).
  *
  * No return value.
  *
@@ -363,7 +383,8 @@ EXPORT void cgrid_write(cgrid *grid, FILE *out) {
 }
 
 /* 
- * Read complex grid from disk in binary format.
+ * Read complex grid from disk in binary format. If the grids are of different sizes,
+ * this will automatically interpolate the data.
  *
  * grid = grid to be read (cgrid *; input).
  * in   = file handle for reading the file (FILE * as defined in stdio.h; input).
@@ -378,7 +399,7 @@ EXPORT cgrid *cgrid_read(cgrid *grid, FILE *in) {
   REAL step;
   
 #ifdef USE_CUDA
-  if(grid) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
+  if(grid) cuda_remove_block(grid->value, 0);
 #endif
   fread(&nx, sizeof(INT), 1, in);
   fread(&ny, sizeof(INT), 1, in);
@@ -414,7 +435,7 @@ EXPORT cgrid *cgrid_read(cgrid *grid, FILE *in) {
 /*
  * Write complex grid to disk including cuts along x, y, and z axes.
  *
- * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
+ * basename = Base filename where suffixes .x, .y, .z, and .grd are appended (char *; input).
  * grid     = Grid to be written to disk (cgrid *; input).
  * 
  * No return value.
@@ -493,12 +514,10 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
 /*
  * Write complex (momentum space) grid to disk including cuts along x, y, and z axes.
  *
- * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
+ * basename = Base filename where suffixes .x, .y, .z, and .grd are added (char *; input).
  * grid     = Grid to be written to disk (cgrid *; input).
  * 
  * No return value.
- *
- * See also cgrid_write().
  *
  */
 
@@ -582,7 +601,7 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
  * Read in a grid from a binary file (.grd).
  *
  * grid = grid where the data is placed (cgrid *, output).
- * file = filename for the file (char *, input). Note: the .grd extension must be given.
+ * file = filename for the file (char *, input). Note: the .grd extension must be included.
  *
  * No return value.
  *
@@ -603,39 +622,39 @@ EXPORT void cgrid_read_grid(cgrid *grid, char *file) {
 /*
  * Copy grid from one grid to another.
  *
- * copy = destination grid (cgrid *; input).
- * grid = source grid (cgrid *; input).
+ * dst = destination grid (cgrid *; input).
+ * src = source grid (cgrid *; input).
  *
  * No return value.
  *
  */
 
-EXPORT void cgrid_copy(cgrid *copy, cgrid *grid) {
+EXPORT void cgrid_copy(cgrid *dst, cgrid *src) {
 
-  INT i, nx = grid->nx, nyz = grid->ny * grid->nz;
+  INT i, nx = src->nx, nyz = src->ny * src->nz;
   size_t bytes = ((size_t) nyz) * sizeof(REAL complex);
-  REAL complex *gvalue = grid->value;
-  REAL complex *cvalue = copy->value;
+  REAL complex *svalue = src->value;
+  REAL complex *dvalue = dst->value;
 
-  copy->nx = grid->nx;
-  copy->ny = grid->ny;
-  copy->nz = grid->nz;
-  copy->step = grid->step;
-  
-  copy->x0 = grid->x0;
-  copy->y0 = grid->y0;
-  copy->z0 = grid->z0;
-  copy->kx0 = grid->kx0;
-  copy->ky0 = grid->ky0;
-  copy->kz0 = grid->kz0;
+  if(src->nx != dst->nx || src->ny != dst->ny || src->nz != dst->nz) {
+    fprintf(stderr, "libgrid: Different grid dimensions in cgrid_copy.\n");
+    abort();
+  }
+  dst->step = src->step;  
+  dst->x0 = src->x0;
+  dst->y0 = src->y0;
+  dst->z0 = src->z0;
+  dst->kx0 = src->kx0;
+  dst->ky0 = src->ky0;
+  dst->kz0 = src->kz0;
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_copy(copy, grid)) return;
+  if(cuda_status() && !cgrid_cuda_copy(dst, src)) return;
 #endif
   
-#pragma omp parallel for firstprivate(nx,nyz,bytes,gvalue,cvalue) private(i) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,nyz,bytes,svalue,dvalue) private(i) default(none) schedule(runtime)
   for(i = 0; i < nx; i++)
-    memmove(&cvalue[i*nyz], &gvalue[i*nyz], bytes);
+    bcopy(&svalue[i * nyz], &dvalue[i * nyz], bytes);
 }
 
 /*

@@ -1,6 +1,8 @@
 /*
  * Complex grid (cgrid) boundary conditions.
  *
+ * Laset reviewed: 26 Sep 2019.
+ *
  */
 
 #include "grid.h"

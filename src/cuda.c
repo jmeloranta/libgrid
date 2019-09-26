@@ -423,27 +423,19 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
 #ifdef CUDA_DEBUG
   fprintf(stderr, "cuda: removed (%s).\n", ptr->id);
 #endif
-  for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++)
+  for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++) {
     total_alloc -= ptr->gpu_info->descriptor->size[i];
-  if(use_ngpus == 1 || ptr->cufft_handle == -1) {
-    for(i = 0; i < ptr->gpu_info->descriptor->nGPUs; i++) {
-      if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): Error removing block (setdevice).\n");
-        cuda_error_check();
-        return 0;
-      }    
-      cudaFree(ptr->gpu_info->descriptor->data[i]);
-    }
-    cuda_error_check();
-    free(ptr->gpu_info->descriptor);
-    free(ptr->gpu_info);
-  } else {
-    cufftResult status;
-    if((status = cufftXtFree(ptr->gpu_info)) != CUFFT_SUCCESS) {
-      fprintf(stderr, "libgrid(cuda): Failed to free memory.\n");
-      cufft_error_check(status);
-    }
+    if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): Error removing block (setdevice).\n");
+      cuda_error_check();
+      return 0;
+    }    
+    cudaFree(ptr->gpu_info->descriptor->data[i]);
   }
+  cuda_error_check();
+  free(ptr->gpu_info->descriptor);
+  free(ptr->gpu_info);
+
   if(prev) prev->next = ptr->next;
   else gpu_blocks_head = ptr->next;
   free(ptr);
