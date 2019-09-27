@@ -288,6 +288,63 @@ extern "C" void grid_cuda_product_normW(gpu_mem_block *dst, gpu_mem_block *src1,
 }
 
 /*
+ * Divide real grid with sqnorm of complex grid:
+ *
+ * dst = src1 / (|src2|^2 + eps)
+ *
+ */
+
+__global__ void grid_cuda_division_norm_gpu(CUREAL *dst, CUREAL *src1, CUCOMPLEX *src2, CUREAL eps, INT nx, INT ny, INT nz, INT nzz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
+
+  dst[idx2] = src1[idx2] / (CUCSQNORM(src2[idx]) + eps);
+}
+
+/*
+ * Division src1 with sqnorm of src2.
+ *
+ * dst     = Destination for operation (gpu_mem_block *; output).
+ * src1    = Source for operation 1 (gpu_mem_block *; input).
+ * src2    = Source for operation 2 (gpu_mem_block *; input).
+ * eps     = Epsilon for division (REAL; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void grid_cuda_division_normW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, REAL eps, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES(src2);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+  INT nzz = 2 * (nz / 2 + 1);
+
+  if(src1->gpu_info->subFormat != src2->gpu_info->subFormat) {
+    fprintf(stderr, "libgrid(cuda): product_norm source grids must have the same subformat.");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_division_norm_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], eps, nnx1, nny1, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_division_norm_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], eps, nnx2, nny2, nz, nzz);
+  }
+
+  cuda_error_check();
+}
+
+/*
  * Product dst(complex) and src(real).
  *
  * dst = dst * src(real).

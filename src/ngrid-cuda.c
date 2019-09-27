@@ -109,7 +109,6 @@ EXPORT char grid_cuda_add_real_to_complex_im(cgrid *dst, rgrid *src) {
   return 0;
 }
 
-
 /*
  * Product of real grid with sqnorm of complex grid.
  *
@@ -132,6 +131,33 @@ EXPORT char grid_cuda_product_norm(rgrid *dst, rgrid *src1, cgrid *src2) {
                              dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
 
   grid_cuda_product_normW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+
+  return 0;
+}
+
+/*
+ * Divide real grid with sqnorm of complex grid.
+ *
+ * dst  = Destination grid (rgrid *; output).
+ * src1 = Source grid 1 (rgrid *; input).
+ * src2 = Source grid 2 (cgrid *; input).
+ * eps  = Epsilon for division (REAL; input).
+ *
+ */
+
+EXPORT char grid_cuda_division_norm(rgrid *dst, rgrid *src1, cgrid *src2, REAL eps) {
+
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_r2c, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1,
+                             dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
+
+  grid_cuda_division_normW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), eps, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }

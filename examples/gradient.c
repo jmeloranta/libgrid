@@ -10,9 +10,9 @@
 #include <omp.h>
 
 /* Grid dimensions */
-#define NX 256
-#define NY 256
-#define NZ 256
+#define NX 128
+#define NY 128
+#define NZ 128
 
 /* Spatial step length of the grid */
 #define STEP 0.5
@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
   rgrid *grad_x, *grad_y, *grad_z;  /* Pointers for gradient components */
 
   grid_threads_init(0);  /* Use all available cores */
+  grid_wf_analyze_method(1); // FFT:1 FD:0 
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA

@@ -10,9 +10,9 @@
 #include <grid/au.h>
 
 /* Grid dimensions */
-#define NX 256
-#define NY 256
-#define NZ 256
+#define NX 128
+#define NY 128
+#define NZ 128
 #define STEP 0.2
 
 #define RHO0 (0.0218360 * GRID_AUTOANG * GRID_AUTOANG * GRID_AUTOANG)
@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
   
   /* Initialize with all available OpenMP threads */
   grid_threads_init(0);
+  grid_wf_analyze_method(1); // FFT:1 FD:0 
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA

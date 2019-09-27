@@ -184,9 +184,9 @@ EXPORT void grid_add_real_to_complex_im(cgrid *dest, rgrid *source) {
 /*
  * Multiply real grid with square norm of complex grid: dest = src1 * |src2|^2
  *
- * dst  = Destination grid (cgrid *; output).
+ * dst   = Destination grid (rgrid *; output).
  * src1  = Source grid 1 (rgrid *; input).
- * src2  = Source grid 2 (rgrid *; input).
+ * src2  = Source grid 2 (cgrid *; input).
  * 
  * No return value.
  *
@@ -212,7 +212,43 @@ EXPORT void grid_product_norm(rgrid *dst, rgrid *src1, cgrid *src2) {
     ijnz = ij * nz;
     ijnz2 = ij * nzz;
     for(k = 0; k < nz; k++)
-      dvalue[ijnz + k] = s1value[ijnz2 + k] * sqnorm(s2value[ijnz + k]);
+      dvalue[ijnz2 + k] = s1value[ijnz2 + k] * sqnorm(s2value[ijnz + k]);
+  }
+}
+
+/*
+ * Divide real grid with square norm of complex grid: dest = src1 / (|src2|^2 + eps)
+ *
+ * dst   = Destination grid (rgrid *; output).
+ * src1  = Source grid 1 (rgrid *; input).
+ * src2  = Source grid 2 (cgrid *; input).
+ * eps   = Epsilon to add when dividing (REAL; input).
+ * 
+ * No return value.
+ *
+ */
+
+EXPORT void grid_division_norm(rgrid *dst, rgrid *src1, cgrid *src2, REAL eps) {
+  
+  INT ij, k, nz = dst->nz, nxy = dst->nx * dst->ny, ijnz, ijnz2, nzz = dst->nz2;
+  REAL *s1value = src1->value, *dvalue = dst->value;
+  REAL complex *s2value = src2->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_division_norm(dst, src1, src2, eps)) return;
+#endif
+
+  dst->nx = src1->nx;
+  dst->ny = src1->ny;
+  dst->nz = src1->nz;
+  dst->step = src1->step;
+  
+#pragma omp parallel for firstprivate(nxy,nz,nzz,dvalue,s1value,s2value,eps) private(ij,ijnz,ijnz2,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    ijnz2 = ij * nzz;
+    for(k = 0; k < nz; k++)
+      dvalue[ijnz2 + k] = s1value[ijnz2 + k] / (sqnorm(s2value[ijnz + k]) + eps);
   }
 }
 
