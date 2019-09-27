@@ -391,7 +391,7 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   else 
     kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step) - kx0;
 
-  b[idx] = b[idx] * kx * norm;     // multiply by I * kx * norm
+  b[idx] = b[idx] * CUMAKE(0.0, kx * norm);     // multiply by I * kx * norm
 }
 
 /*
@@ -452,7 +452,7 @@ __global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   else 
     ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step) - ky0;
 
-  b[idx] = b[idx] * ky * norm;    // multiply by I * ky * norm
+  b[idx] = b[idx] * CUMAKE(0.0, ky * norm);    // multiply by I * ky * norm
 }
 
 /*
@@ -517,7 +517,7 @@ __global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   else 
     kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step) - kz0;
 
-  b[idx] = b[idx] * kz * norm;   // multiply by I * kz * norm
+  b[idx] = b[idx] * CUMAKE(0.0, kz * norm);   // multiply by I * kz * norm
 }
 
 /*

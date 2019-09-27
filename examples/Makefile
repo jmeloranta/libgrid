@@ -1,7 +1,7 @@
 
 include ../make.conf
 
-all: fft cfft spherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson
+all: fft cfft spherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson cgradient
 
 decomp: decomp.o
 	$(CC) $(CFLAGS) -o decomp decomp.o $(LDFLAGS)
@@ -26,6 +26,9 @@ wavepacket: wavepacket.o
 
 gradient: gradient.o
 	$(CC) $(CFLAGS) -o gradient gradient.o $(LDFLAGS)
+
+cgradient: cgradient.o
+	$(CC) $(CFLAGS) -o cgradient cgradient.o $(LDFLAGS)
 
 veloc: veloc.o
 	$(CC) $(CFLAGS) -o veloc veloc.o $(LDFLAGS)

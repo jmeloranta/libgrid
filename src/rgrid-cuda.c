@@ -698,7 +698,7 @@ EXPORT char rgrid_cuda_threshold_clear(rgrid *dst, rgrid *src, REAL ul, REAL ll,
     return -1;
   }
 
-  if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0, src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1) < 0)
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
     return -1;
 
   rgrid_cuda_threshold_clearW(cuda_block_address(dst->value), cuda_block_address(src->value), ul, ll, uval, lval, src->nx, src->ny, src->nz);

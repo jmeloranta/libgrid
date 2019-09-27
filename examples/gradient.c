@@ -15,12 +15,15 @@
 #define NZ 128
 
 /* Spatial step length of the grid */
-#define STEP 0.5
+#define STEP 0.2
 
 /* wave vectors top be mapped onto grid */
-#define KX 1.0
+#define KX (2.0 * 2.0 * M_PI / (NX * STEP))
 #define KY 1.0
 #define KZ 1.0
+#define AMP 1E-3
+
+#define RHO0 (0.0218360 * GRID_AUTOANG * GRID_AUTOANG * GRID_AUTOANG)
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
@@ -31,7 +34,7 @@ int gpus[NGPUS] = {0};
 /* Function returning standing wave in x, y, and z directions */
 REAL func(void *NA, REAL x, REAL y, REAL z) {
 
-  return COS(x * 2.0 * M_PI * KX / (NX * STEP)) + COS(y * 2.0 * M_PI * KY / (NY * STEP)) + COS(z * 2.0 * M_PI * KZ / (NZ * STEP));
+  return SQRT(RHO0) + AMP * (REAL) CEXP(I * (KX * x + KY * y + KZ * z));
 }
 
 int main(int argc, char **argv) {

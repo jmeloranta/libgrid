@@ -31,7 +31,7 @@
 int gpus[NGPUS] = {0};
 #endif
 
-EXPORT REAL complex planewave(void *arg, REAL x, REAL y, REAL z) {
+REAL complex planewave(void *arg, REAL x, REAL y, REAL z) {
 
   return SQRT(RHO0) + AMP * CEXP(I * (KX * x + KY * y + KZ * z));
 }

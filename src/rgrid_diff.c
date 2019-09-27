@@ -51,12 +51,10 @@ static char rgrid_bc_conv(rgrid *grid) {
 EXPORT void rgrid_gradient(rgrid *grid, rgrid *gradx, rgrid *grady, rgrid *gradz) {
 
   if(grid_analyze_method) {
-    rgrid_copy(gradx, grid);
-    rgrid_fft(gradx);
-    rgrid_copy(grady, gradx);
-    rgrid_copy(gradz, gradx);
-    rgrid_fft_gradient_x(gradx, gradx);
-    rgrid_fft_gradient_y(grady, grady);
+    rgrid_copy(gradz, grid);
+    rgrid_fft(gradz);
+    rgrid_fft_gradient_x(gradz, gradx);
+    rgrid_fft_gradient_y(gradz, grady);
     rgrid_fft_gradient_z(gradz, gradz);
     rgrid_inverse_fft(gradx);
     rgrid_inverse_fft(grady);

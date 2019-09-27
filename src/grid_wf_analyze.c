@@ -288,8 +288,6 @@ EXPORT void grid_wf_fd_probability_flux_z(wf *gwf, rgrid *flux_z) {
  *
  * No return value.
  *
- * TODO: This is probably not the best way to do this.
- *
  */
 
 EXPORT void grid_wf_fft_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {
@@ -315,10 +313,8 @@ EXPORT void grid_wf_fft_probability_flux_x(wf *gwf, rgrid *flux_x) {
 
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   cworkspace = gwf->cworkspace;
-  cgrid_copy(cworkspace, grid);
-  cgrid_fft(cworkspace);
-  cgrid_fft_gradient_x(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_copy(gwf->cworkspace, grid);
+  cgrid_gradient_x(cworkspace, cworkspace);
   cgrid_conjugate_product(cworkspace, grid, cworkspace);
   grid_complex_im_to_real(flux_x, cworkspace);  
   rgrid_multiply(flux_x, HBAR / gwf->mass);
@@ -341,9 +337,7 @@ EXPORT void grid_wf_fft_probability_flux_y(wf *gwf, rgrid *flux_y) {
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   cworkspace = gwf->cworkspace;
   cgrid_copy(cworkspace, grid);
-  cgrid_fft(cworkspace);
-  cgrid_fft_gradient_y(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_gradient_y(cworkspace, cworkspace);
   cgrid_conjugate_product(cworkspace, grid, cworkspace);
   grid_complex_im_to_real(flux_y, cworkspace);  
   rgrid_multiply(flux_y, HBAR / gwf->mass);
@@ -366,9 +360,7 @@ EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
   if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
   cworkspace = gwf->cworkspace;
   cgrid_copy(cworkspace, grid);
-  cgrid_fft(cworkspace);
-  cgrid_fft_gradient_z(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_gradient_z(cworkspace, cworkspace);
   cgrid_conjugate_product(cworkspace, grid, cworkspace);
   grid_complex_im_to_real(flux_z, cworkspace);  
   rgrid_multiply(flux_z, HBAR / gwf->mass);

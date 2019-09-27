@@ -42,12 +42,10 @@ static char cgrid_bc_conv(cgrid *grid) {
 EXPORT void cgrid_gradient(cgrid *grid, cgrid *gradx, cgrid *grady, cgrid *gradz) {
 
   if(grid_analyze_method) {
-    cgrid_copy(gradx, grid);
-    cgrid_fft(gradx);
-    cgrid_copy(grady, gradx);
-    cgrid_copy(gradz, gradx);
-    cgrid_fft_gradient_x(gradx, gradx);
-    cgrid_fft_gradient_y(grady, grady);
+    cgrid_copy(gradz, grid);
+    cgrid_fft(gradz);
+    cgrid_fft_gradient_x(gradz, gradx);
+    cgrid_fft_gradient_y(gradz, grady);
     cgrid_fft_gradient_z(gradz, gradz);
     cgrid_inverse_fft(gradx);
     cgrid_inverse_fft(grady);
@@ -121,7 +119,6 @@ EXPORT void cgrid_gradient_z(cgrid *grid, cgrid *gradient) {
     cgrid_inverse_fft(gradient);
   } else cgrid_fd_gradient_z(grid, gradient);
 }
-
 
 /*
  * Calculate laplacian of the grid.
@@ -494,8 +491,7 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
   ny = grid->ny;
   nz = grid->nz;
   nxy = nx * ny;
-  step = grid->step;
-  
+  step = grid->step;  
   norm = grid->fft_norm;
   
   if (gradient_x != grid) cgrid_copy(gradient_x, grid);
@@ -516,7 +512,7 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
       kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
       
     for(k = 0; k < nz; k++)	  
-      gxvalue[ijnz + k] *= (kx * norm) * I;
+      gxvalue[ijnz + k] *= kx * norm * I;
   }
 }
 
@@ -547,9 +543,7 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
   ny = grid->ny;
   nz = grid->nz;
   nxy = nx * ny;
-  step = grid->step;
-  
-  /* David: fft_norm */
+  step = grid->step;  
   norm = grid->fft_norm;
   
   if (gradient_y != grid)
@@ -603,8 +597,6 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
   nz = grid->nz;
   nxy = nx * ny;
   step = grid->step;
-  
-  /* David: fft_norm */
   norm = grid->fft_norm;
   
   if(gradient_z != grid) cgrid_copy(gradient_z, grid);
