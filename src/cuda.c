@@ -428,7 +428,6 @@ EXPORT int cuda_remove_block(void *host_mem, char copy) {
     if(cudaSetDevice(use_gpus[i]) != cudaSuccess) {
       fprintf(stderr, "libgrid(cuda): Error removing block (setdevice).\n");
       cuda_error_check();
-      return 0;
     }    
     cudaFree(ptr->gpu_info->descriptor->data[i]);
   }

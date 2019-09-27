@@ -597,8 +597,8 @@ EXPORT REAL rgrid_cuda_max(rgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
-  grid_cuda_maxW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
-  cuda_get_element(grid_gpu_mem, 0, 0, sizeof(REAL), value);
+  rgrid_cuda_maxW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
+
   return 0;
 }
 
@@ -619,8 +619,8 @@ EXPORT REAL rgrid_cuda_min(rgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
-  grid_cuda_minW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
-  cuda_get_element(grid_gpu_mem, 0, 0, sizeof(REAL), value);
+  rgrid_cuda_minW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, value);
+
   return 0;
 }
 

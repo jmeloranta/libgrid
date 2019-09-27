@@ -2193,12 +2193,13 @@ EXPORT void rgrid_rotate_z(rgrid *out, rgrid *in, REAL th) {
 
 EXPORT REAL rgrid_max(rgrid *grid) {
 
-  REAL max_val = rgrid_value_at_index(grid, 0, 0, 0);
+  REAL max_val;
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_max(grid, &max_val)) return max_val;
 #endif
+  max_val = rgrid_value_at_index(grid, 0, 0, 0);
 
 #pragma omp parallel for firstprivate(nx, ny, nz, grid) private(i, j, k) reduction(max: max_val) default(none) schedule(runtime)
   for(i = 0; i < nx; i++)
@@ -2220,12 +2221,13 @@ EXPORT REAL rgrid_max(rgrid *grid) {
 
 EXPORT REAL rgrid_min(rgrid *grid) {
 
-  REAL min_val = rgrid_value_at_index(grid, 0, 0, 0);
+  REAL min_val;
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz;
   
 #ifdef USE_CUDA
   if(cuda_status() && !rgrid_cuda_min(grid, &min_val)) return min_val;
 #endif
+  min_val = rgrid_value_at_index(grid, 0, 0, 0);
 
 #pragma omp parallel for firstprivate(nx, ny, nz, grid) private(i, j, k) reduction(min: min_val) default(none) schedule(runtime)
   for(i = 0; i < nx; i++)

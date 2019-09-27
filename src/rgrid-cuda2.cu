@@ -1371,9 +1371,10 @@ __global__ void rgrid_cuda_max_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT n
  *
  */
 
-extern "C" void grid_cuda_maxW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CUREAL *value) {
+extern "C" void rgrid_cuda_maxW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CUREAL *value) {
 
-  INT i, ngpu2 = grid->gpu_info->descriptor->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);  CUREAL tmp;
+  SETUP_VARIABLES_REAL(grid);
+  CUREAL tmp;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
 
@@ -1399,6 +1400,8 @@ extern "C" void grid_cuda_maxW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CURE
     else if(tmp > *value) *value = tmp;    
   }
 
+  // squash the compiler warning
+  threads.x *= 1;
   cuda_error_check();
 }
 
@@ -1432,9 +1435,9 @@ __global__ void rgrid_cuda_min_gpu(CUREAL *a, CUREAL *val, INT nx, INT ny, INT n
  *
  */
 
-extern "C" void grid_cuda_minW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CUREAL *value) {
+extern "C" void rgrid_cuda_minW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CUREAL *value) {
 
-  INT i, ngpu2 = grid->gpu_info->descriptor->nGPUs, ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, nzz = 2 * (nz / 2 + 1);
+  SETUP_VARIABLES_REAL(grid);
   CUREAL tmp;
   extern int cuda_get_element(void *, int, size_t, size_t, void *);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
@@ -1458,9 +1461,11 @@ extern "C" void grid_cuda_minW(gpu_mem_block *grid, INT nx, INT ny, INT nz, CURE
   for(i = 0; i < ngpu2; i++) {
     cuda_get_element(grid_gpu_mem, i, 0, sizeof(CUREAL), &tmp);
     if(i == 0) *value = tmp;
-    else if(tmp > *value) *value = tmp;    
+    else if(tmp < *value) *value = tmp;    
   }
 
+  // squash the compiler warning
+  threads.x *= 1;
   cuda_error_check();
 }
 
