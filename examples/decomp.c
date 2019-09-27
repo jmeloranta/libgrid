@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
   wrk5 = rgrid_clone(wrk1, "wrk5");
 
   /* Compute the incompressible part of K.E. & write output to file */
-  grid_wf_incomp_KE(gwf, bins, BINSTEP, NBINS, 0, wrk1, wrk2, wrk3, wrk4, wrk5); // 0 = finite difference
+  grid_wf_incomp_KE(gwf, bins, BINSTEP, NBINS, wrk1, wrk2, wrk3, wrk4, wrk5); // 0 = finite difference
   if(!(fp = fopen("incomp.dat", "w"))) {
     fprintf(stderr, "can't open incomp.dat\n");
     exit(1);
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   fclose(fp);  
 
   /* Compute the compressible part of K.E. & write output to file */
-  grid_wf_comp_KE(gwf, bins, BINSTEP, NBINS, 0, wrk1, wrk2, wrk3, wrk4); // 0 = finite difference
+  grid_wf_comp_KE(gwf, bins, BINSTEP, NBINS, wrk1, wrk2, wrk3, wrk4); // 0 = finite difference
   if(!(fp = fopen("comp.dat", "w"))) {
     fprintf(stderr, "can't open incomp.dat\n");
     exit(1);

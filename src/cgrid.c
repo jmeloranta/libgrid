@@ -150,13 +150,19 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   grid->host_lock = 0;
 #endif
 
+  if(grid_analyze_method == -1) {
 #ifdef USE_CUDA
-  if(cuda_ngpus() > 1) {
-    if(grid_analyze_method == -1) fprintf(stderr, "libgrid: More than one GPU requested - using FFT for grid analysis.\n");
-    grid_analyze_method = 1; // FFT-based differentiation is required for multi-GPU
-  } else
+    if(cuda_ngpus() > 1) {
+      fprintf(stderr, "libgrid: More than one GPU requested - using FFT for grid analysis.\n");
+      grid_analyze_method = 1; // FFT-based differentiation is required for multi-GPU
+    } else
 #endif
-    grid_analyze_method = 0; // Default to using finite difference for analysis
+      grid_analyze_method = 0; // Default to using finite difference for analysis
+  }
+  if(cuda_ngpus() > 1 && grid_analyze_method == 0) {
+    fprintf(stderr, "libgrid: Finite difference cannot be used with more than one GPU.\n");
+    abort();
+  }
 
   return grid;
 }

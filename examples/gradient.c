@@ -24,8 +24,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 2
-int gpus[NGPUS] = {1, 2};
+#define NGPUS 1
+int gpus[NGPUS] = {0};
 #endif
 
 /* Function returning standing wave in x, y, and z directions */
@@ -56,31 +56,14 @@ int main(int argc, char **argv) {
   /* Map the standing wave function onto the grid */
   rgrid_map(grid, &func, NULL);
 
-#if NGPUS == 1
-  rgrid_fd_gradient(grid, grad_x, grad_y, grad_z);
+  rgrid_gradient_x(grid, grad_x);
+  rgrid_gradient_y(grid, grad_y);
+  rgrid_gradient_z(grid, grad_z);
 
   /* Output the fd gradient */
-  rgrid_write_grid("fd_grad_x", grad_x);
-  rgrid_write_grid("fd_grad_y", grad_y);
-  rgrid_write_grid("fd_grad_z", grad_z);
-#endif
-
-  /* Perform FFT */
-  rgrid_fft(grid);
-
-  rgrid_fft_gradient_x(grid, grad_x);
-  rgrid_fft_gradient_y(grid, grad_y);
-  rgrid_fft_gradient_z(grid, grad_z);
-
-  /* Perform normalize inverse FFT */
-  rgrid_inverse_fft(grad_x);
-  rgrid_inverse_fft(grad_y);
-  rgrid_inverse_fft(grad_z);
-
-  /* Output the fd gradient */
-  rgrid_write_grid("fft_grad_x", grad_x);
-  rgrid_write_grid("fft_grad_y", grad_y);
-  rgrid_write_grid("fft_grad_z", grad_z);
+  rgrid_write_grid("grad_x", grad_x);
+  rgrid_write_grid("grad_y", grad_y);
+  rgrid_write_grid("grad_z", grad_z);
 
   /* If CUDA in use, output usage statistics */
 #ifdef USE_CUDA
