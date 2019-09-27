@@ -174,10 +174,13 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 #endif
       grid_analyze_method = 0; // Default to using finite difference for analysis
   }
+
+#ifdef USE_CUDA
   if(cuda_ngpus() > 1 && grid_analyze_method == 0) {
     fprintf(stderr, "libgrid: Finite difference cannot be used with more than one GPU.\n");
     abort();
   }
+#endif
 
   return grid;
 }
