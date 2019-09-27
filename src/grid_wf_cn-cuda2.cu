@@ -1,7 +1,10 @@
 /*
  * CUDA device code (REAL complex; cgrid).
  *
- * TODO: Should we use to BC routines rather than hard code the BCs below? (efficiency?)
+ * TODO: There are too many if's and switches below (performance). Branching can be expensive.
+ *       Perhaps use single source with preprocessor directives to generate code for each case
+ *       separately.
+ *       Can we use more local memory?
  *
  */
 
@@ -22,7 +25,30 @@ extern "C" void cuda_error_check();
 /*
  * Propagate wf using CN along X.
  *
- * if lz == 0, use constant time step given by tstep.
+ * nx    = Grid dimension along X (INT; input).
+ * ny    = Grid dimension along Y (INT; input).
+ * nz    = Grid dimension along Z (INT; input).
+ * nyz   = Precomputed ny * nz (INT; input).
+ * ny2   = Precomputed ny / 2 (INT; input).
+ * psi   = Wavefunction (CUCOMPLEX *; input/output).
+ * bc    = Boundary condition: WF_DIRICHLET_BOUNDARY, WF_NEUMANN_BOUNDARY, or WF_PERIODIC_BOUNDARY (char; input).
+ * wrk   = Workspace (CUCOMPLEX *; input).
+ * wrk2  = Workspace (CUCOMPLEX *; input).
+ * wrk3  = Workspace (CUCOMPLEX *; input).
+ * c     = Precomputed: i * 4 * mass * step^2 / HBAR (REAL; input).
+ * c2    = Precomputed: -i * step * kx0 (REAL; input);
+ * c3    = Precomputed: i * mass * omega * step / HBAR (REAL; input).
+ * step  = Spatial step length (REAL; input).
+ * y0    = Spatial offset along y (REAL; input).
+ * tstep = Time step length (REAL; input).
+ * lx    = Lower X index for absorbing boundary (INT; input).
+ * hx    = Upper X index for absorbing boundary (INT; input).
+ * ly    = Lower Y index for absorbing boundary (INT; input).
+ * hy    = Upper Y index for absorbing boundary (INT; input).
+ * lz    = Lower Z index for absorbing boundary (INT; input).
+ * hz    = Upper Z index for absorbing boundary (INT; input).
+ * 
+ * if lx == 0, use constant time step given by tstep.
  * else call grid_wf_absorb().
  *
  */
@@ -40,13 +66,14 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
   b = &wrk2[nx * tid];
   pwrk = &wrk3[nx * tid];
   y = ((REAL) (j - ny2)) * step - y0;    
+  tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(i = 1; i < nx - 1; i++) {
-    if(lz) {
+    if(lx) {
       tmp = grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz);
       tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-    } else tim = tstep;
+    }
     cp = c / tim;
     ind = i * nyz + tid;
     /* Left-hand side (+) */
@@ -60,10 +87,10 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
 
   // Boundary conditions
   ind = j * nz + k; // i = 0 - left boundary
-  if(lz) {
+  if(lx) {
     tmp = grid_cuda_wf_absorb(0, j, k, lx, hx, ly, hy, lz, hz);
     tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-  } else tim = tstep;
+  }
   cp = c / tim;
   /* Right-hand side (-) */
   switch(bc) {
@@ -84,10 +111,10 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
   d[0] = cp - 2.0;  // LHS: -2 diag elem from Laplacian (x C)
 
   ind = (nx - 1) * nyz + j * nz + k;  // i = nx - 1, right boundary
-  if(lz) {
+  if(lx) {
     tmp = grid_cuda_wf_absorb(nx-1, j, k, lx, hx, ly, hy, lz, hz);
     tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-  } else tim = tstep;
+  }
   cp = c / tim;
   /* Right-hand side (-) */
   switch(bc) {
@@ -180,8 +207,31 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
 /*
  * Propagate wf using CN along Y.
  *
- * if lz == 0, use constant time step given by tstep.
- * else call 
+ * nx    = Grid dimension along X (INT; input).
+ * ny    = Grid dimension along Y (INT; input).
+ * nz    = Grid dimension along Z (INT; input).
+ * nyz   = Precomputed ny * nz (INT; input).
+ * nx2   = Precomputed nx / 2 (INT; input).
+ * psi   = Wavefunction (CUCOMPLEX *; input/output).
+ * bc    = Boundary condition: WF_DIRICHLET_BOUNDARY, WF_NEUMANN_BOUNDARY, or WF_PERIODIC_BOUNDARY (char; input).
+ * wrk   = Workspace (CUCOMPLEX *; input).
+ * wrk2  = Workspace (CUCOMPLEX *; input).
+ * wrk3  = Workspace (CUCOMPLEX *; input).
+ * c     = Precomputed: i * 4 * mass * step^2 / HBAR (REAL; input).
+ * c2    = Precomputed: -i * step * ky0 (REAL; input);
+ * c3    = Precomputed: -i * mass * omega * step / HBAR (REAL; input).
+ * step  = Spatial step length (REAL; input).
+ * y0    = Spatial offset along y (REAL; input).
+ * tstep = Time step length (REAL; input).
+ * lx    = Lower X index for absorbing boundary (INT; input).
+ * hx    = Upper X index for absorbing boundary (INT; input).
+ * ly    = Lower Y index for absorbing boundary (INT; input).
+ * hy    = Upper Y index for absorbing boundary (INT; input).
+ * lz    = Lower Z index for absorbing boundary (INT; input).
+ * hz    = Upper Z index for absorbing boundary (INT; input).
+ *
+ * if ly == 0, use constant time step given by tstep.
+ * else call grid_wf_absorb().
  *
  */
 
@@ -198,13 +248,14 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
   d = &wrk[ny * tid];
   b = &wrk2[ny * tid];
   pwrk = &wrk3[ny * tid];
+  tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(j = 1; j < ny - 1; j++) {
-    if(lz) {
+    if(ly) {
       tmp = grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz);
       tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-    } else tim = tstep;
+    }
     cp = c / tim;
     ind = i * nyz + j * nz + k;
     /* Left-hand side (+) */
@@ -219,10 +270,10 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
   // Boundary conditions
  
   ind = i * nyz + k; // j = 0 - left boundary
-  if(lz) {
+  if(ly) {
     tmp = grid_cuda_wf_absorb(i, 0, k, lx, hx, ly, hy, lz, hz);
     tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-  } else tim = tstep;
+  }
   cp = c / tim;
   /* Right-hand side (-) */
   switch(bc) {
@@ -243,10 +294,10 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
   d[0] = cp - 2.0;  // -2 from Laplacian, cp = c / dt
 
   ind = i * nyz + (ny-1) * nz + k;  // j = ny - 1 - right boundary
-  if(lz) {
+  if(ly) {
     tmp = grid_cuda_wf_absorb(i, ny-1, k, lx, hx, ly, hy, lz, hz);
     tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-  } else tim = tstep;
+  }
   cp = c / tim;
   /* Right-hand side (-) */
   switch(bc) {
@@ -340,8 +391,29 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
 /*
  * Propagate wf using CN along Z.
  *
+ * nx    = Grid dimension along X (INT; input).
+ * ny    = Grid dimension along Y (INT; input).
+ * nz    = Grid dimension along Z (INT; input).
+ * nyz   = Precomputed ny * nz (INT; input).
+ * nxy   = Precomputed nx * ny (INT; input).
+ * psi   = Wavefunction (CUCOMPLEX *; input/output).
+ * bc    = Boundary condition: WF_DIRICHLET_BOUNDARY, WF_NEUMANN_BOUNDARY, or WF_PERIODIC_BOUNDARY (char; input).
+ * wrk   = Workspace (CUCOMPLEX *; input).
+ * wrk2  = Workspace (CUCOMPLEX *; input).
+ * wrk3  = Workspace (CUCOMPLEX *; input).
+ * c     = Precomputed: i * 4 * mass * step^2 / HBAR (REAL; input).
+ * c2    = Precomputed: -i * step * kz0 (REAL; input);
+ * step  = Spatial step length (REAL; input).
+ * tstep = Time step length (REAL; input).
+ * lx    = Lower X index for absorbing boundary (INT; input).
+ * hx    = Upper X index for absorbing boundary (INT; input).
+ * ly    = Lower Y index for absorbing boundary (INT; input).
+ * hy    = Upper Y index for absorbing boundary (INT; input).
+ * lz    = Lower Z index for absorbing boundary (INT; input).
+ * hz    = Upper Z index for absorbing boundary (INT; input).
+ *
  * if lz == 0, use constant time step given by tstep.
- * else call 
+ * else call grid_wf_absorb().
  *
  */
 
@@ -357,13 +429,14 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   d = &wrk[nz * tid];
   b = &wrk2[nz * tid];
   pwrk = &wrk3[nz * tid];
+  tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
   for(k = 1; k < nz - 1; k++) {
     if(lz) {
       tmp = grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz);
       tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-    } else tim = tstep;
+    }
     cp = c / tim;
     ind = i * nyz + j * nz + k;
     /* Left-hand side (+) */
@@ -381,7 +454,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   if(lz) {
     tmp = grid_cuda_wf_absorb(i, j, 0, lx, hx, ly, hy, lz, hz);
     tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-  } else tim = tstep;
+  }
   cp = c / tim;
   /* Right-hand side (-) */
   switch(bc) {
@@ -405,7 +478,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   if(lz) {
     tmp = grid_cuda_wf_absorb(i, j, nz-1, lx, hx, ly, hy, lz, hz);
     tim = CUMAKE((1.0 - tmp) * tstep.x, -tstep.x * tmp);
-  } else tim = tstep;
+  }
   cp = c / tim;
   switch(bc) {
     case WF_DIRICHLET_BOUNDARY:
