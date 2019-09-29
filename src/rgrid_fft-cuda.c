@@ -67,7 +67,6 @@ EXPORT int rgrid_cufft_fft(rgrid *grid) {
 
   if(block->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) fprintf(stderr, "libgrid(cuda): FFT with wrong subformat.\n");
 
-
 #ifdef SINGLE_PREC
   if(cuda_ngpus() == 1) {
     cudaSetDevice(block->gpu_info->descriptor->GPUs[0]);

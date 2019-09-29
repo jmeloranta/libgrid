@@ -6,5 +6,7 @@
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...
 - mem2gpu and gpu2mem/mem2gpu are missing suffled copy (not usually needed). For mem2gpu we need to track in which space we are so that we can upload the data to GPU in the correct subformat.
+- single precision version seems to crash after RFFT (libdft film.c) - so bug in single precision RFFT?
+- CN: Allocate wrk3 only when periodic BC is used.
 
 also fgrep TODO *.[ch] to find out more specific issues.

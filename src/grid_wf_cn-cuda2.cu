@@ -34,7 +34,7 @@ extern "C" void cuda_error_check();
  * bc    = Boundary condition: WF_DIRICHLET_BOUNDARY, WF_NEUMANN_BOUNDARY, or WF_PERIODIC_BOUNDARY (char; input).
  * wrk   = Workspace (CUCOMPLEX *; input).
  * wrk2  = Workspace (CUCOMPLEX *; input).
- * wrk3  = Workspace (CUCOMPLEX *; input).
+ * wrk3  = Workspace (CUCOMPLEX *; input). Not needed if BC = Neumann.
  * c     = Precomputed: i * 4 * mass * step^2 / HBAR (REAL; input).
  * c2    = Precomputed: -i * step * kx0 (REAL; input);
  * c3    = Precomputed: i * mass * omega * step / HBAR (REAL; input).
@@ -55,16 +55,17 @@ extern "C" void cuda_error_check();
 
 __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
-  INT i, k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
+  INT i, k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, tid, ind, ntid;
   CUREAL y, tmp;
   CUCOMPLEX *d, *b, *pwrk, cp, tim;
 
   if(j >= ny || k >= nz) return;
 
   tid = j * nz + k;
-  d = &wrk[nx * tid];
-  b = &wrk2[nx * tid];
-  pwrk = &wrk3[nx * tid];
+  ntid = nx * tid;
+  d = &wrk[ntid];
+  b = &wrk2[ntid];
+  pwrk = &wrk3[ntid];
   y = ((REAL) (j - ny2)) * step - y0;    
   tim = tstep;
 
@@ -156,7 +157,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
  * y0         = y0 grid spatial offset (REAL; input).
  * wrk        = Workspace (gpu_mem_block *; input).
  * wrk2       = Workspace (gpu_mem_block *; input).
- * wrk3       = Workspace (gpu_mem_block *; input).
+ * wrk3       = Workspace (gpu_mem_block *; input). Not needed if BC = Neumann.
  * lx         = Absorbing low boundary index x (INT; input).
  * hx         = Absorbing high boundary index x (INT; input).
  * ly         = Absorbing low boundary index y (INT; input).
@@ -216,7 +217,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
  * bc    = Boundary condition: WF_DIRICHLET_BOUNDARY, WF_NEUMANN_BOUNDARY, or WF_PERIODIC_BOUNDARY (char; input).
  * wrk   = Workspace (CUCOMPLEX *; input).
  * wrk2  = Workspace (CUCOMPLEX *; input).
- * wrk3  = Workspace (CUCOMPLEX *; input).
+ * wrk3  = Workspace (CUCOMPLEX *; input). Not needed if BC = Neumann.
  * c     = Precomputed: i * 4 * mass * step^2 / HBAR (REAL; input).
  * c2    = Precomputed: -i * step * ky0 (REAL; input);
  * c3    = Precomputed: -i * mass * omega * step / HBAR (REAL; input).
@@ -237,7 +238,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
 
 __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind, ntid;
   CUREAL x, tmp;
   CUCOMPLEX *d, *b, *pwrk, cp, tim;
 
@@ -245,9 +246,10 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
 
   x = ((REAL) (i - nx2)) * step - x0;    
   tid = i * nz + k;
-  d = &wrk[ny * tid];
-  b = &wrk2[ny * tid];
-  pwrk = &wrk3[ny * tid];
+  ntid = ny * tid;
+  d = &wrk[ntid];
+  b = &wrk2[ntid];
+  pwrk = &wrk3[ntid];
   tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
@@ -339,7 +341,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
  * x0         = x0 grid spatial offset (REAL; input).
  * wrk        = Workspace (gpu_mem_block *; scratch space).
  * wrk2       = Workspace (gpu_mem_block *; scratch space).
- * wrk3       = Workspace (gpu_mem_block *; scratch space).
+ * wrk3       = Workspace (gpu_mem_block *; scratch space). Not needed if BC = Neumann.
  * lx         = Absorbing low boundary index x (INT; input).
  * hx         = Absorbing high boundary index x (INT; input).
  * ly         = Absorbing low boundary index y (INT; input).
@@ -400,7 +402,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
  * bc    = Boundary condition: WF_DIRICHLET_BOUNDARY, WF_NEUMANN_BOUNDARY, or WF_PERIODIC_BOUNDARY (char; input).
  * wrk   = Workspace (CUCOMPLEX *; input).
  * wrk2  = Workspace (CUCOMPLEX *; input).
- * wrk3  = Workspace (CUCOMPLEX *; input).
+ * wrk3  = Workspace (CUCOMPLEX *; input). Not needed if BC = Neumann.
  * c     = Precomputed: i * 4 * mass * step^2 / HBAR (REAL; input).
  * c2    = Precomputed: -i * step * kz0 (REAL; input);
  * step  = Spatial step length (REAL; input).
@@ -419,16 +421,17 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
 
 __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
-  INT k, j = blockIdx.x * blockDim.x + threadIdx.x, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind;
+  INT k, j = blockIdx.x * blockDim.x + threadIdx.x, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind, ntid;
   CUREAL tmp;
   CUCOMPLEX *d, *b, *pwrk, cp, tim;
 
   if(i >= nx || j >= ny) return;
 
   tid = i * ny + j;
-  d = &wrk[nz * tid];
-  b = &wrk2[nz * tid];
-  pwrk = &wrk3[nz * tid];
+  ntid = nz * tid;
+  d = &wrk[ntid];
+  b = &wrk2[ntid];
+  pwrk = &wrk3[ntid];
   tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
@@ -517,7 +520,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
  * kz0        = base momentum along z (REAL; input).
  * wrk        = Workspace (gpu_mem_block *; scratch space).
  * wrk2       = Workspace (gpu_mem_block *; scratch space).
- * wrk3       = Workspace (gpu_mem_block *; scratch space).
+ * wrk3       = Workspace (gpu_mem_block *; scratch space). Not needed if BC = Neumann.
  * lx         = Absorbing low boundary index x (INT; input).
  * hx         = Absorbing high boundary index x (INT; input).
  * ly         = Absorbing low boundary index y (INT; input).
