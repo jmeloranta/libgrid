@@ -7,6 +7,9 @@
 /* Maximum number of GPUs */
 #define MAX_GPU 8
 
+/* Maximum number of physical GPUs in the system */
+#define MAX_PHYS_GPU 32
+
 /* Maximum number of CUFFT plans */
 #define MAX_PLANS 128
 

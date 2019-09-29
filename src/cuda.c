@@ -155,6 +155,10 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
 
   int i;
 
+  if(ngpus < 0 || ngpus >= MAX_GPU) {
+    fprintf(stderr, "libgrid(cuda): Number of GPUs requested too large (MAX_GPU).\n");
+    abort();
+  }
   if(!ngpus) {
     if(cudaGetDeviceCount(&ngpus) != cudaSuccess) {
       fprintf(stderr, "libgrid(cuda): Cannot get device count.\n");
@@ -172,7 +176,13 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
       fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
       abort();
     }
-    for(i = 0; i < ngpus; i++) use_gpus[i] = gpus[i];
+    for(i = 0; i < ngpus; i++) {
+      if(gpus[i] < 0 || gpus[i] >= MAX_PHYS_GPU) {  // Simultaneous GPU usage max is MAX_GPU but 32 is the max number of physical GPUs present
+        fprintf(stderr, "libgrid(cuda): Illegal value for GPU number (MAX_PHYS_GPU).\n");
+        abort();
+      }
+      use_gpus[i] = gpus[i];
+    }
   }
   use_ngpus = ngpus;
   fprintf(stderr, "libgrid(cuda): Initialized with %d GPU(s).\n", ngpus);
