@@ -10,9 +10,9 @@
 #include <omp.h>
 
 /* Grid dimensions */
-#define NX 1024
-#define NY 1024
-#define NZ 1024
+#define NX 128
+#define NY 128
+#define NZ 128
 
 /* Spatial step length of the grid */
 #define STEP 0.5

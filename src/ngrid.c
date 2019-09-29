@@ -389,3 +389,33 @@ EXPORT REAL grid_grid_expectation_value(cgrid *dgrid, rgrid *opgrid) {
 
   return sum;
 }
+
+/*
+ * Return current size of REAL complex.
+ *
+ */
+
+EXPORT char grid_sizeof_real_complex() {
+
+  return (char) sizeof(REAL complex);
+}
+
+/*
+ * Return current size of REAL.
+ *
+ */
+
+EXPORT char grid_sizeof_real() {
+
+  return (char) sizeof(REAL);
+}
+
+/*
+ * Return current size of INT.
+ *
+ */
+
+EXPORT char grid_sizeof_int() {
+
+  return (char) sizeof(INT);
+}
