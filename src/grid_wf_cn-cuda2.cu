@@ -65,7 +65,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, 
   ntid = nx * tid;
   d = &wrk[ntid];
   b = &wrk2[ntid];
-  pwrk = &wrk3[ntid];
+  if(wrk3) pwrk = &wrk3[ntid];
   y = ((REAL) (j - ny2)) * step - y0;    
   tim = tstep;
 
@@ -172,14 +172,17 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
               (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
-  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3->gpu_info->descriptor;
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3?wrk3->gpu_info->descriptor:NULL;
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, ny2 = ny / 2;
 
-  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk3->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_cn_x wrong subformat.\n");
     abort();
   }
+
+  wrk->gpu_info->subFormat = wrk2->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  if(wrk3) wrk3->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
@@ -199,8 +202,8 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
   c2 = CUMAKE(0.0, -step * kx0); // coeff for moving background
   c3 = CUMAKE(0.0, mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
-  grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, (CUCOMPLEX *) GWF->data[0], bc, (CUCOMPLEX *) WRK->data[0], (CUCOMPLEX *) WRK2->data[0], (CUCOMPLEX *) WRK3->data[0], 
-       c, c2, c3, step, y0, tstep, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_x_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, ny2, (CUCOMPLEX *) GWF->data[0], bc, (CUCOMPLEX *) WRK->data[0], (CUCOMPLEX *) WRK2->data[0], 
+    (CUCOMPLEX *) (WRK3?WRK3->data[0]:NULL), c, c2, c3, step, y0, tstep, lx, hx, ly, hy, lz, hz);
 
   cuda_error_check();
 }
@@ -249,7 +252,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, 
   ntid = ny * tid;
   d = &wrk[ntid];
   b = &wrk2[ntid];
-  pwrk = &wrk3[ntid];
+  if(wrk3) pwrk = &wrk3[ntid];
   tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
@@ -356,14 +359,17 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
               (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
-  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3->gpu_info->descriptor;
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3?wrk3->gpu_info->descriptor:NULL;
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, nx2 = nx / 2;
 
-  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk3->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_cn_y wrong subformat.\n");
     abort();
   }
+
+  wrk->gpu_info->subFormat = wrk2->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  if(wrk3) wrk3->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
@@ -384,8 +390,8 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
   c2 = CUMAKE(0.0, -step * ky0); // coeff for moving background
   c3 = CUMAKE(0.0, -mass * omega * step / HBAR); // coeff for rotating liquid around Z
 
-  grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, (CUCOMPLEX *) GWF->data[0], bc, (CUCOMPLEX *) WRK->data[0], (CUCOMPLEX *) WRK2->data[0], (CUCOMPLEX *) WRK3->data[0],
-         c, c2, c3, step, x0, tstep, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_y_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nx2, (CUCOMPLEX *) GWF->data[0], bc, (CUCOMPLEX *) WRK->data[0], (CUCOMPLEX *) WRK2->data[0],
+    (CUCOMPLEX *) (WRK3?WRK3->data[0]:NULL), c, c2, c3, step, x0, tstep, lx, hx, ly, hy, lz, hz);
 
   cuda_error_check();
 }
@@ -431,7 +437,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
   ntid = nz * tid;
   d = &wrk[ntid];
   b = &wrk2[ntid];
-  pwrk = &wrk3[ntid];
+  if(wrk3) pwrk = &wrk3[ntid];
   tim = tstep;
 
   /* create left-hand diagonal element (d) and right-hand vector (b) */
@@ -535,14 +541,17 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
               (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
-  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3->gpu_info->descriptor;
+  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3?wrk3->gpu_info->descriptor:NULL;
   CUCOMPLEX c, c2;
   INT nyz = ny * nz, nxy = nx * ny;
 
-  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wrk3->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): wf_propagate_kinetic_cn_z wrong subformat.\n");
     abort();
   }
+
+  wrk->gpu_info->subFormat = wrk2->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  if(wrk3) wrk3->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 
   if(GWF->nGPUs > 1) {
     fprintf(stderr, "libgrid(cuda): Non-local grid operations disabled for multi-GPU calculations.\n");                                                               
@@ -561,8 +570,8 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUC
   c = CUMAKE(0.0, 4.0 * mass * step * step / HBAR);
   c2 = CUMAKE(0.0, -step * kz0); // coeff for moving background
 
-  grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, (CUCOMPLEX *) GWF->data[0], bc, (CUCOMPLEX *) WRK->data[0], (CUCOMPLEX *) WRK2->data[0], (CUCOMPLEX *) WRK3->data[0],
-         c, c2, step, tstep, lx, hx, ly, hy, lz, hz);
+  grid_cuda_wf_propagate_kinetic_cn_z_gpu<<<blocks,threads>>>(nx, ny, nz, nyz, nxy, (CUCOMPLEX *) GWF->data[0], bc, (CUCOMPLEX *) WRK->data[0], (CUCOMPLEX *) WRK2->data[0], 
+    (CUCOMPLEX *) (WRK3?WRK3->data[0]:NULL), c, c2, step, tstep, lx, hx, ly, hy, lz, hz);
 
   cuda_error_check();
 }
