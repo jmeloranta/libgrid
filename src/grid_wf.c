@@ -213,7 +213,7 @@ EXPORT void grid_wf_free(wf *gwf) {
  * data        = Pointer to struct grid_abs holding values for specifying the absorbing region (void *; INPUT).
  *               This will specify amp, lx, hx, ly, hy, lz, hz.
  * 
- * Returns the scaling factor for imaginary time (value between 0 and 1.0).
+ * Returns the scaling factor for imaginary time. The value is between 0 (regular domain) and > 1.0 (in absorbing domain). 
  *
  */
 

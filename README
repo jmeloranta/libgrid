@@ -1,4 +1,5 @@
-CUDA (with multi GPU support) and openmp aware routines for Cartesian 1-D, 2-D, and 3-D grids.
+CUDA (with multi GPU support) and openmp aware routines for Cartesian 1-D, 2-D, and 3-D grids with
+focus on solving linear/non-linear Schrodinger equation.
 
 See documentation and license information under doc/ directory.
 

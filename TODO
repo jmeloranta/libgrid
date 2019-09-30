@@ -1,7 +1,7 @@
 - use malloc/free when moving blocks to/from GPU. This way the GPU node does not need as much memory (but we can use swap...)
 - write kernels in .h files that can be included by both openmp and cuda code.
 - try using local memory for derivatives in CUDA (avoid jumping in memory)
-- CUDA performance of Crank-Nicolson is poor... too complex kernels, parameter tuning?
+- CUDA performance of Crank-Nicolson is poor... too complex kernels. There are many if's but they don't diverge.
 - Poisson solver for other than periodic BC
 - Fortran support: iso_c_binding, interface / end interface.
 - CUDA: most things have periodic BCs hardwired...

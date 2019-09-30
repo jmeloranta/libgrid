@@ -205,7 +205,7 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 
 #ifdef USE_CUDA
   /* Make CUFFT plan */
-  cgrid_cufft_alloc(ngrid);
+  if(cuda_status()) cgrid_cufft_alloc(ngrid);
 #endif
 
   /* No need to do FFTW plans yet */
@@ -775,8 +775,9 @@ EXPORT void cgrid_constant(cgrid *grid, REAL complex c) {
  * Multiply grid by a function.
  *
  * grid = destination grid for the operation (cgrid *; input/output).
- * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL); input).
+ * func = function providing the mapping (REAL complex (*)(void *, REAL complex, REAL, REAL, REAL); input).
  *        The first argument (void *) is for external user specified data, next is the grid value,
+ *        the next argument is the value at the current grid point, 
  *        and x,y,z are the coordinates (REAL) where the function is evaluated.
  * farg = pointer to user specified data (void *; input).
  *
