@@ -39,14 +39,6 @@ static char cgrid_bc_conv(cgrid *grid) {
  *                      CGRID_DIRICHLET_BOUNDARY: Dirichlet boundary
  *                      or CGRID_NEUMANN_BOUNDARY: Neumann boundary
  *                      or CGRID_PERIODIC_BOUNDARY: Periodic boundary
- *                      or CGRID_FFT_EEE_BOUNDARY: Even/Even/Even boundary
- *                      or CGRID_FFT_OEE_BOUNDARY: Odd/Even/Even
- *                      or CGRID_FFT_EOE_BOUNDARY: Even/Odd/Even
- *                      or CGRID_FFT_EEO_BOUNDARY: Even/Even/Odd
- *                      or CGRID_FFT_OOE_BOUNDARY: Odd/Odd/Even
- *                      or CGRID_FFT_EOO_BOUNDARY: Even/Odd/Odd
- *                      or CGRID_FFT_OEO_BOUNDARY: Odd/Even/Odd
- *                      or CGRID_FFT_OOO_BOUNDARY: Odd/Odd/Odd
  *                      or user supplied function with pointer to grid and
  *                         grid index as parameters to provide boundary access.
  * outside_params_ptr = pointer for passing parameters for the given boundary

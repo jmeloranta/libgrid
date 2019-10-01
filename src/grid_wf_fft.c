@@ -149,13 +149,10 @@ EXPORT REAL grid_wf_kinetic_energy_fft(wf *gwf) {
 }
 
 /*
- * Auxiliary routine to propagate kinetic energy using FFT.
+ * Auxiliary routine to propagate kinetic energy using FFT. The wave function must be in reciprocal space.
  *
  * gwf  = wavefunction to be propagated (wf *).
  * time = time step (REAL complex).
- *
- * TODO: Dirichlet BC could be implemented using sin transformation and Neumann by cos transformation. This
- * would eliminate the current CN based routines completely. The FFT methods have the best accuracy (?).
  *
  * No return value.
  *
@@ -172,8 +169,6 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_fft(gwf, time_mass)) return;
 #endif
   
-  cgrid_fftw(gwf->grid);
-
   /* f(x) = ifft[fft[f(x)]] / N */
   norm = gwf->grid->fft_norm;
 
@@ -218,12 +213,10 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
       value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
     }
   } 
-  
-  cgrid_fftw_inv(gwf->grid);
 }
 
 /*
- * Auxiliary routine to propagate kinetic energy using CFFT (Cayley's form).
+ * Auxiliary routine to propagate kinetic energy using CFFT (Cayley's form). The wave function must be in the reciprocal space.
  *
  * gwf  = wavefunction to be propagated (wf *).
  * time = time step (REAL complex).
@@ -246,8 +239,6 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cfft(gwf, time_mass)) return;
 #endif
   
-  cgrid_fftw(gwf->grid);
-
   /* f(x) = ifft[fft[f(x)]] / N */
   norm = gwf->grid->fft_norm;
 
@@ -294,8 +285,6 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
       value[ijnz + k] *= norm * (1.0 + tmp) / (1.0 - tmp);
     }
   } 
-  
-  cgrid_fftw_inv(gwf->grid);
 }
 
 /*
