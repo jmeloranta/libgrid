@@ -11,12 +11,6 @@ typedef struct grid_timer_struct { /* wall clock timing structure */
   clock_t zero_clock;
 } grid_timer;
 
-struct grid_abs {
-  REAL complex amp;
-  REAL rho0;
-  INT data[6];
-};
-
 typedef struct cgrid_struct { /* complex grid data type */
   REAL complex *value;
   char id[32];
@@ -82,8 +76,8 @@ typedef struct wf_struct { /* wavefunction */
   cgrid *cworkspace;
   cgrid *cworkspace2;
   cgrid *cworkspace3;
-  REAL (*ts_func)(INT, INT, INT, void *);
-  struct grid_abs abs_data;
+  REAL (*ts_func)(INT, INT, INT, INT, INT, INT, INT, INT, INT);
+  INT lx, hx, ly, hy, lz, hz;  /* Abs boundary region indices */
 } wf;
 
 typedef struct rotation_struct {  /* structure for rotating grids */

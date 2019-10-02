@@ -18,8 +18,7 @@
 EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   cgrid *grid = gwf->grid;
-  struct grid_abs *ab = &(gwf->abs_data);
-  INT lx, hx, ly, hy, lz, hz;
+  INT lx = gwf->lx, hx = gwf->hx, ly = gwf->ly, hy = gwf->hy, lz = gwf->lz, hz = gwf->hz;
   CUCOMPLEX ts;
   
   if(grid->host_lock || workspace->host_lock || workspace2->host_lock || (workspace3 && workspace3->host_lock)) {
@@ -32,14 +31,8 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex tstep, cgr
 
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
-  } else {
-    lx = ab->data[0];
-    hx = ab->data[1];
-    ly = ab->data[2];
-    hy = ab->data[3];
-    lz = ab->data[4];
-    hz = ab->data[5];
   }
+
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
   
@@ -66,8 +59,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_x(wf *gwf, REAL complex tstep, cgr
 EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   cgrid *grid = gwf->grid;
-  struct grid_abs *ab = &(gwf->abs_data);
-  INT lx, hx, ly, hy, lz, hz;
+  INT lx = gwf->lx, hx = gwf->hx, ly = gwf->ly, hy = gwf->hy, lz = gwf->lz, hz = gwf->hz;
   CUCOMPLEX ts;
    
   if(grid->host_lock || workspace->host_lock || workspace2->host_lock || (workspace3 && workspace3->host_lock)) {
@@ -80,14 +72,8 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex tstep, cgr
 
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
-  } else {
-    lx = ab->data[0];
-    hx = ab->data[1];
-    ly = ab->data[2];
-    hy = ab->data[3];
-    lz = ab->data[4];
-    hz = ab->data[5];
   }
+
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
   
@@ -114,8 +100,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_y(wf *gwf, REAL complex tstep, cgr
 EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex tstep, cgrid *workspace, cgrid *workspace2, cgrid *workspace3) {
 
   cgrid *grid = gwf->grid;
-  struct grid_abs *ab = &(gwf->abs_data);
-  INT lx, hx, ly, hy, lz, hz;
+  INT lx = gwf->lx, hx = gwf->hx, ly = gwf->ly, hy = gwf->hy, lz = gwf->lz, hz = gwf->hz;
   CUCOMPLEX ts;
   
   if(grid->host_lock || workspace->host_lock || workspace2->host_lock || (workspace3 && workspace3->host_lock)) {
@@ -128,14 +113,8 @@ EXPORT char grid_cuda_wf_propagate_kinetic_cn_z(wf *gwf, REAL complex tstep, cgr
 
   if(!gwf->ts_func || gwf->ts_func != grid_wf_absorb) {
     lx = hx = ly = hy = lz = hz = 0;
-  } else {
-    lx = ab->data[0];
-    hx = ab->data[1];
-    ly = ab->data[2];
-    hy = ab->data[3];
-    lz = ab->data[4];
-    hz = ab->data[5];
   }
+
   ts.x = CREAL(tstep);
   ts.y = CIMAG(tstep);
   

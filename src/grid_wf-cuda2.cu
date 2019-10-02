@@ -19,7 +19,7 @@ extern cudaXtDesc *grid_gpu_mem_addr;
 extern "C" void cuda_error_check();
 
 /*
- * Potential energy propagation in real space (possibly with absorbing boundaries).
+ * Potential energy propagation in real space.
  *
  */
 
@@ -34,29 +34,18 @@ __global__ void grid_cuda_wf_propagate_potential_gpu1(CUCOMPLEX *dst, CUCOMPLEX 
 }
 
 /* abs using imag time */
-__global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *dst, CUCOMPLEX *pot, CUCOMPLEX c, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
+__global__ void grid_cuda_wf_propagate_potential_gpu2(CUCOMPLEX *dst, CUCOMPLEX *pot, CUCOMPLEX c, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz, INT seg) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, ii = i + seg;
   CUREAL tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  tmp = grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz);
+  tmp = grid_cuda_wf_absorb(ii, j, k, lx, hx, ly, hy, lz, hz);
   c.x = c.y * tmp;
   c.y *= 1.0 - tmp;
   dst[idx] = dst[idx] * CUCEXP(c * (cons + pot[idx]));
-}
-
-/* abs using complex potential */
-__global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *dst, CUCOMPLEX *pot, CUCOMPLEX c, CUCOMPLEX amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {  /* Exectutes at GPU */
-
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-
-  if(i >= nx || j >= ny || k >= nz) return;
-
-  idx = (i * ny + j) * nz + k;
-  dst[idx] = dst[idx] * CUCEXP(c * (cons + pot[idx] - CUMAKE(0.0, 1.0) * amp * grid_cuda_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz) * (CUCSQNORM(dst[idx]) - rho0)));
 }
 
 /*
@@ -65,9 +54,6 @@ __global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *dst, CUCOMPLEX 
  * wf       = Source/destination grid for operation (gpu_mem_block *; input/output).
  * pot      = Potential grid (gpu_mem_block *; input).
  * time_step= Time step length (CUCOMPLEX; input).
- * add_abs  = Add complex abs potential? (char; input).
- * amp      = Amplitude for complex boundary (CUCOMPLEX; input).
- * rho0     = Target value for |psi|^2 (REAL; input).
  * cons     = Constant to add to potential (REAL; input).
  * lx       = Lower bound for absorbing bc (INT; input).
  * hx       = Upper bound for absorbing bc (INT; input).
@@ -83,11 +69,12 @@ __global__ void grid_cuda_wf_propagate_potential_gpu3(CUCOMPLEX *dst, CUCOMPLEX 
  *
  */
 
-extern "C" void grid_cuda_wf_propagate_potentialW(gpu_mem_block *grid, gpu_mem_block *pot, CUCOMPLEX time_step, char add_abs, CUCOMPLEX amp, CUREAL rho0, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_wf_propagate_potentialW(gpu_mem_block *grid, gpu_mem_block *pot, CUCOMPLEX time_step, CUREAL cons, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
   CUCOMPLEX c;
-  SETUP_VARIABLES(grid);  
+  SETUP_VARIABLES_SEG(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor, *POT = pot->gpu_info->descriptor;
+  INT segx = 0, segy = 0;
 
   if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || pot->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): propagate_potential wrong subformat.\n");
@@ -99,28 +86,18 @@ extern "C" void grid_cuda_wf_propagate_potentialW(gpu_mem_block *grid, gpu_mem_b
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    if(lz) {
-      if(add_abs)
-        grid_cuda_wf_propagate_potential_gpu3<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, amp, rho0, cons, 
-           lx, hx, ly, hy, lz, hz, nnx1, nny1, nz);
-      else
-        grid_cuda_wf_propagate_potential_gpu2<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, 
-           lx, hx, ly, hy, lz, hz, nnx1, nny1, nz);
-    } else
-        grid_cuda_wf_propagate_potential_gpu1<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, nnx1, nny1, nz);
+    if(lz) grid_cuda_wf_propagate_potential_gpu2<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, lx, hx, ly, hy, lz, hz, nnx1, nny1, nz, segx);
+    else grid_cuda_wf_propagate_potential_gpu1<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, nnx1, nny1, nz);
+    segx += dsegx1;
+    segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    if(lz) {
-      if(add_abs) 
-        grid_cuda_wf_propagate_potential_gpu3<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, amp, rho0, cons, 
-           lx, hx, ly, hy, lz, hz, nnx2, nny1, nz);
-      else
-        grid_cuda_wf_propagate_potential_gpu2<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, 
-           lx, hx, ly, hy, lz, hz, nnx2, nny2, nz);
-    } else
-        grid_cuda_wf_propagate_potential_gpu1<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, nnx2, nny2, nz);
+    if(lz) grid_cuda_wf_propagate_potential_gpu2<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, lx, hx, ly, hy, lz, hz, nnx2, nny2, nz, segx);
+    else grid_cuda_wf_propagate_potential_gpu1<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) POT->data[i], c, cons, nnx2, nny2, nz);
+    segx += dsegx2;
+    segy += dsegy2;
   }
 
   cuda_error_check();
@@ -179,64 +156,63 @@ extern "C" void grid_cuda_wf_densityW(gpu_mem_block *grid, gpu_mem_block *dens, 
 }
 
 /*
- * Add complex absorbing potential.
+ * wf merging
  *
  */
 
-__global__ void grid_cuda_wf_absorb_potential_gpu(CUCOMPLEX *gwf, CUCOMPLEX *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz, INT seg) {
+__global__ void grid_cuda_wf_merge_gpu(CUCOMPLEX *dst, CUCOMPLEX *wfr, CUCOMPLEX *wfi, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz, INT seg) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, ii = i + seg;
-  REAL g, sq;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, ii = seg + i;
+  CUREAL alpha;
 
   if(i >= nx || j >= ny || k >= nz) return;
-  if((g = grid_cuda_wf_absorb(ii, j, k, lx, hx, ly, hy, lz, hz)) == 0.0) return;
 
-  idx = (i * ny + j) * nz + k;
+  idx = (i * ny + j) * nz + k;  // complex
 
-  sq = gwf[idx].x * gwf[idx].x + gwf[idx].y * gwf[idx].y - rho0;
-  pot[idx].y -= g * amp * sq;
+  alpha = grid_cuda_wf_absorb(ii, j, k, lx, hx, ly, hy, lz, hz);
+  dst[idx] = CUMAKE(1.0 - alpha, 0.0) * wfr[idx] + CUMAKE(alpha, 0.0) * wfi[idx];
 }
 
 /*
- * Complex absorbing potential.
+ * wf merging
  *
- * gwf      = wavefunction grid (gpu_mem_block *; input).
- * pot      = potential (gpu_mem_block *; output).
- * amp      = amplitude of the potential (CUREAL; input).
- * rho0     = rho0 background (CUREAL; input).
- * lx       = lower index for abs boundary (INT; input).
- * hx       = upper index for abs boundary (INT; input).
- * ly       = lower index for abs boundary (INT; input).
- * hy       = upper index for abs boundary (INT; input).
- * lz       = lower index for abs boundary (INT; input).
- * hz       = upper index for abs boundary (INT; input).
- * nx       = # of points along x (INT).
- * ny       = # of points along y (INT).
- * nz       = # of points along z (INT).
+ * wf    = Resulting wave functon (wf *; output).
+ * wfr   = Wave function from propagating in real time (wf *; input).
+ * wfi   = Wave function from propagating in imaginary time (wf *; input).
+ * lx    = lower bound for X (INT; input).
+ * hx    = lower bound for X (INT; input).
+ * ly    = lower bound for Y (INT; input).
+ * hy    = lower bound for Y (INT; input).
+ * lz    = lower bound for Z (INT; input).
+ * hz    = lower bound for Z (INT; input).
+ * nx    = Grid dimension X (INT; input).
+ * ny    = Grid dimension Y (INT; input).
+ * nz    = Grid dimension Z (INT; input).
  *
  */
 
-extern "C" void grid_cuda_wf_absorb_potentialW(gpu_mem_block *gwf, gpu_mem_block *pot, REAL amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_wf_mergeW(gpu_mem_block *dst, gpu_mem_block *wfr, gpu_mem_block *wfi, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz, INT nx, INT ny, INT nz) {
 
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  SETUP_VARIABLES_SEG(dst);  
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *WFR = wfr->gpu_info->descriptor, *WFI = wfi->gpu_info->descriptor;
   INT segx = 0, segy = 0;
-  SETUP_VARIABLES_SEG(gwf);
-  cudaXtDesc *GWF = gwf->gpu_info->descriptor, *POT = pot->gpu_info->descriptor;
 
-  if(gwf->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || pot->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
-    fprintf(stderr, "libgrid(cuda): absorb_potential wrong subformat.\n");
+  if(wfr->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || wfr->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): wf_merge wrong subformat.\n");
     abort();
   }
 
   for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(GWF->GPUs[i]);
-    grid_cuda_wf_absorb_potential_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GWF->data[i], (CUCOMPLEX *) POT->data[i], amp, rho0, lx, hx, ly, hy, lz, hz, nnx1, nny1, nz, segx);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_wf_merge_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) WFR->data[i], (CUCOMPLEX *) WFI->data[i], lx, hx, ly, hy, lz, hz, nnx1, nny1, nz, segx);
     segx += dsegx1;
     segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(GWF->GPUs[i]);
-    grid_cuda_wf_absorb_potential_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GWF->data[i], (CUCOMPLEX *) POT->data[i], amp, rho0, lx, hx, ly, hy, lz, hz, nnx2, nny2, nz, segx);
+    cudaSetDevice(DST->GPUs[i]);
+    grid_cuda_wf_merge_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) WFR->data[i], (CUCOMPLEX *) WFI->data[i], lx, hx, ly, hy, lz, hz, nnx2, nny2, nz, segx);
     segx += dsegx2;
     segy += dsegy2;
   }

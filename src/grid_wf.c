@@ -101,9 +101,6 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
  *
  * gwf  = wavefunction (wf *; input/output).
  * gwfp = predict wavefunction (wf *; input/output). Set to NULL if predict-correct not used.
- * amp  = amplitude for boundary damping (REAL complex; input). Use 0.0 to remove the boundary. Relative to the baseline value defined
- *        in src/defs.h. To get real penalty potential, use amp = I * value (real value corresponds to imaginary potential).
- * rho0 = desired value for |\psi|^2 at the boundary (complex potential only) (REAL; input).
  * lx   = lower bound index (x) for the boundary (INT; input).
  * hx   = upper bound index (x) for the boundary (INT; input).
  * ly   = lower bound index (y) for the boundary (INT; input).
@@ -111,46 +108,30 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
  * lz   = lower bound index (z) for the boundary (INT; input).
  * hz   = upper bound index (z) for the boundary (INT; input).
  *
+ * To clear boundaries, call with lx = hx = ly = hy = lz = hz = 0.
+ *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, REAL complex amp, REAL rho0, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
-  if(amp == 0.0) {
+  if(!lx && !hx && !ly && !hy && !lz && !hz) {
     gwf->ts_func = NULL;
-    if(gwfp) gwfp->ts_func = NULL;
+    gwf->lx = gwf->hx = gwf->ly = gwf->hy = gwf->lz = gwf->hz = 0;
+    if(gwfp) {
+      gwfp->ts_func = NULL;
+      gwfp->lx = gwf->hx = gwf->ly = gwf->hy = gwf->lz = gwf->hz = 0;
+    }
     return;
   }
 
-  if(gwf->propagator < WF_2ND_ORDER_CN) {
-    gwf->abs_data.amp = amp * GRID_ABS_BC_FFT;
-    gwf->abs_data.rho0 = rho0;
-  } else {
-    gwf->abs_data.amp = 1.0;  // not used
-    gwf->abs_data.rho0 = 0.0;
-  }
-  gwf->abs_data.data[0] = lx;
-  gwf->abs_data.data[1] = hx;
-  gwf->abs_data.data[2] = ly;
-  gwf->abs_data.data[3] = hy;
-  gwf->abs_data.data[4] = lz;
-  gwf->abs_data.data[5] = hz;
-  if(gwfp) {
-    if(gwfp->propagator < WF_2ND_ORDER_CN) {
-      gwfp->abs_data.amp = amp * GRID_ABS_BC_FFT;
-      gwfp->abs_data.rho0 = rho0;
-    } else {
-      gwfp->abs_data.amp = 1.0;
-      gwfp->abs_data.rho0 = 0.0;
-    }
-    gwfp->abs_data.data[0] = lx;
-    gwfp->abs_data.data[1] = hx;
-    gwfp->abs_data.data[2] = ly;
-    gwfp->abs_data.data[3] = hy;
-    gwfp->abs_data.data[4] = lz;
-    gwfp->abs_data.data[5] = hz;
-  }
+  gwf->lx = lx;
+  gwf->hx = hx;
+  gwf->ly = ly;
+  gwf->hy = hy;
+  gwf->lz = lz;
+  gwf->hz = hz;
 
   gwf->ts_func = &grid_wf_absorb;
   if(gwfp) gwfp->ts_func = &grid_wf_absorb;
@@ -217,11 +198,9 @@ EXPORT void grid_wf_free(wf *gwf) {
  *
  */
 
-EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, void *data) {
+EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   REAL t;
-  struct grid_abs *ab = (struct grid_abs *) data;
-  INT lx = ab->data[0], hx = ab->data[1], ly = ab->data[2], hy = ab->data[3], lz = ab->data[4], hz = ab->data[5];
 
   t = 0.0;
 
@@ -308,6 +287,10 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
   
   switch(gwfp->propagator) {
     case WF_2ND_ORDER_FFT:
+      if(gwf->ts_func) {
+        fprintf(stderr, "libgrid: Predict-correct not available for FFT absorbing BC.\n");
+        abort();
+      }
       if(gwfp->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
@@ -320,6 +303,10 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       /* continue with correct cycle */
       break;
     case WF_2ND_ORDER_CFFT:
+      if(gwf->ts_func) {
+        fprintf(stderr, "libgrid: Predict-correct not available for CFFT absorbing BC.\n");
+        abort();
+      }
       if(gwfp->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
@@ -331,17 +318,17 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       grid_wf_propagate_potential(gwfp, time, potential, cons);
       /* continue with correct cycle */
       break;
-    case WF_4TH_ORDER_FFT:
-    case WF_4TH_ORDER_CFFT:
-    case WF_4TH_ORDER_CN:
-      fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
-      abort();
     case WF_2ND_ORDER_CN:
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       cgrid_copy(gwfp->grid, gwf->grid);
       grid_wf_propagate_potential(gwfp, time, potential, 0.0);
       /* continue with correct cycle */
       break;        
+    case WF_4TH_ORDER_FFT:
+    case WF_4TH_ORDER_CFFT:
+    case WF_4TH_ORDER_CN:
+      fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
+      abort();
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
       abort();
@@ -413,33 +400,70 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
   REAL complex one_sixth_time = time / 6.0;
   REAL complex two_thirds_time = 2.0 * time / 3.0;
   cgrid *grid = gwf->grid;
+  REAL complex *gsave;
   REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0;
   REAL cons = -(HBAR * HBAR / (2.0 * gwf->mass)) * (kx0 * kx0 + ky0 * ky0 + kz0 * kz0);
-  
+  REAL (*save)(INT, INT, INT, INT, INT, INT, INT, INT, INT);
+
   switch(gwf->propagator) {
     case WF_2ND_ORDER_FFT:
       if(gwf->grid->omega != 0.0) {
-        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with CN.\n");
         abort();
       }
-      grid_wf_propagate_potential(gwf, half_time, potential, cons);
-      cgrid_fft(gwf->grid);
-      grid_wf_propagate_kinetic_fft(gwf, time);
-      cgrid_inverse_fft(gwf->grid);
-      grid_wf_propagate_potential(gwf, half_time, potential, cons);
+      if(gwf->ts_func) {
+        if(CIMAG(time) != 0.0) {
+          fprintf(stderr, "libgrid: FFT propagator absorbing BC can only be used with real time.\n");
+          abort();
+        }
+        save = gwf->ts_func;
+        gwf->ts_func = NULL;
+        if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
+        /* Real time step */
+        cgrid_copy(gwf->cworkspace, gwf->grid);
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_fft(gwf, time);
+        cgrid_inverse_fft(gwf->grid);
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        /* Imaginary time step */
+        gsave = gwf->grid->value;
+        gwf->grid->value = gwf->cworkspace->value;
+        grid_wf_propagate_potential(gwf, -I * half_time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_fft(gwf, -I * time);
+        cgrid_inverse_fft(gwf->grid);
+        grid_wf_propagate_potential(gwf, -I * half_time, potential, cons);
+        gwf->grid->value = gsave;
+        gwf->ts_func = save;
+        /* merge solutions according to the boundary function grid_wf_boundary() */
+        grid_wf_merge(gwf, gwf->grid, gwf->cworkspace);
+      } else {
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_fft(gwf, time);
+        cgrid_inverse_fft(gwf->grid);
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+      }
       break;
     case WF_4TH_ORDER_FFT:
-      if(gwf->grid->omega != 0.0) {
-        fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
+      if(gwf->ts_func) {
+        fprintf(stderr, "libgrid: 4th order propagator not available for FFT absorbing BC.\n");
         abort();
       }
+      if(gwf->grid->omega != 0.0) {
+        fprintf(stderr, "libgrid: omega != 0.0 allowed only with CN.\n");
+        abort();
+      }
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
+      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
       if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_fft(gwf, half_time);    
       cgrid_inverse_fft(gwf->grid);
       cgrid_copy(gwf->cworkspace, potential);
-      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);  // Uses cworkspace and cworkspace2 !
       cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       cgrid_fft(gwf->grid);
@@ -452,24 +476,59 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
       }
-      grid_wf_propagate_potential(gwf, half_time, potential, cons);
-      cgrid_fft(gwf->grid);
-      grid_wf_propagate_kinetic_cfft(gwf, time);
-      cgrid_inverse_fft(gwf->grid);
-      grid_wf_propagate_potential(gwf, half_time, potential, cons);
+      if(gwf->ts_func) {
+        if(CIMAG(time) != 0.0) {
+          fprintf(stderr, "libgrid: CFFT propagator absorbing BC can only be used with real time.\n");
+          abort();
+        }
+        save = gwf->ts_func;
+        gwf->ts_func = NULL;
+        if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
+        /* Real time step */
+        cgrid_copy(gwf->cworkspace, gwf->grid);
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_cfft(gwf, time);
+        cgrid_inverse_fft(gwf->grid);
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        /* Imaginary time step */
+        gsave = gwf->grid->value;
+        gwf->grid->value = gwf->cworkspace->value;
+        grid_wf_propagate_potential(gwf, -I * half_time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_cfft(gwf, -I * time);
+        cgrid_inverse_fft(gwf->grid);
+        grid_wf_propagate_potential(gwf, -I * half_time, potential, cons);
+        gwf->grid->value = gsave;
+        gwf->ts_func = save;
+        /* merge solutions according to the boundary function grid_wf_boundary() */
+        grid_wf_merge(gwf, gwf->grid, gwf->cworkspace);
+      } else {
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_cfft(gwf, time);
+        cgrid_inverse_fft(gwf->grid);
+        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+      }
       break;
     case WF_4TH_ORDER_CFFT:
+      if(gwf->ts_func) {
+        fprintf(stderr, "libgrid: 4th order propagator not available for FFT absorbing BC.\n");
+        abort();
+      }
       if(gwf->grid->omega != 0.0) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
       }
-      if(!gwf->cworkspace3) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
+      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
+      if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);    
       cgrid_inverse_fft(gwf->grid);
       cgrid_copy(gwf->cworkspace, potential);
-      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential); // watch out: this routine uses workspace and workspace2
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);   // Uses cworkspace and cworkspace2 !
       cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       cgrid_fft(gwf->grid);
@@ -483,11 +542,13 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_potential(gwf, half_time, potential, 0.0);
       break;        
     case WF_4TH_ORDER_CN:
-      if(!gwf->cworkspace2) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
+      if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
+      if(!gwf->cworkspace3) gwf->cworkspace3 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 3");
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       cgrid_copy(gwf->cworkspace, potential);
-      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);
+      grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);   // Uses cworkspace and cworkspace2 !
       cgrid_add_scaled(gwf->cworkspace, (1.0/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, gwf->cworkspace, 0.0);
       grid_wf_propagate_kinetic_cn(gwf, half_time);
@@ -515,11 +576,8 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
 
   INT i, j, ij, ijnz, k, ny = gwf->grid->ny, nxy = gwf->grid->nx * ny, nz = gwf->grid->nz;
   REAL complex c, *psi = gwf->grid->value, *pot = potential->value;
-  REAL (*time)(INT, INT, INT, void *) = gwf->ts_func, tmp;
-  struct grid_abs *privdata = &(gwf->abs_data);
-  char add_abs = 0;  
-  REAL rho0 = privdata->rho0;
-  REAL complex amp = privdata->amp;
+  REAL (*time)(INT, INT, INT, INT, INT, INT, INT, INT, INT) = gwf->ts_func, tmp;
+  INT lx = gwf->lx, hx = gwf->hx, ly = gwf->ly, hy = gwf->hy, lz = gwf->lz, hz = gwf->hz;
 
   if(!potential) return;
 #ifdef USE_CUDA
@@ -529,12 +587,9 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
   }
   if(cuda_status() && !grid_cuda_wf_propagate_potential(gwf, tstep, potential, cons)) return;
 #endif
-  if(gwf->propagator < WF_2ND_ORDER_CN) {
-    if(time) add_abs = 1;   /* abs potential for FFT */
-    time = NULL;            /* Imag time scheme disabled for FFT */
-  }
+  if(gwf->propagator < WF_2ND_ORDER_CN) time = NULL; /* Imag time scheme disabled for FFT */
 
-#pragma omp parallel for firstprivate(amp,cons,add_abs,rho0,ny,nz,nxy,psi,pot,time,tstep,privdata) private(tmp, i, j, k, ij, ijnz, c) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(cons,ny,nz,nxy,psi,pot,time,tstep,lx,hx,ly,hy,lz,hz) private(tmp, i, j, k, ij, ijnz, c) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -542,12 +597,10 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
     for(k = 0; k < nz; k++) {
       /* psi(t+dt) = exp(- i V dt / hbar) psi(t) */
       if(time) {
-        tmp = ((*time)(i, j, k, privdata));
+        tmp = ((*time)(i, j, k, lx, hx, ly, hy, lz, hz));
         c = -I * ((1.0 - tmp) * CREAL(tstep) - I * CREAL(tstep) * tmp) / HBAR;
       } else c = -I * tstep / HBAR;
-      if(add_abs) psi[ijnz + k] = psi[ijnz + k] * 
-         CEXP(c * (pot[ijnz + k] - I * amp * grid_wf_absorb(i, j, k, privdata) * (sqnorm(psi[ijnz + k]) - rho0)));
-      else psi[ijnz + k] = psi[ijnz + k] * CEXP(c * (cons + pot[ijnz + k]));
+      psi[ijnz + k] = psi[ijnz + k] * CEXP(c * (cons + pot[ijnz + k]));
     }
   }
 }
@@ -684,4 +737,47 @@ EXPORT inline REAL complex grid_wf_overlap(wf *gwfa, wf *gwfb) {
 EXPORT inline void grid_wf_print(wf *gwf, FILE *out) { 
 
   cgrid_print(gwf->grid, out); 
+}
+
+/*
+ * Merge two wavefunctions according to: wf = (1 - alpha(r)) wfr + alpha(r) wfi.
+ * alpha is computed by grid_wf_absorb().
+ *
+ * Used by FFT absorbing BC. Not to be called from user programs.
+ *
+ * wf    = Resulting wave functon (wf *; output).
+ * wfr   = Wave function (the grid only) from propagating in real time (cgrid *; input).
+ * wfi   = Wave function (the grid only) from propagating in imaginary time (cgrid *; input).
+ *
+ * No return value.
+ *
+ */ 
+
+EXPORT void grid_wf_merge(wf *dst, cgrid *wfr, cgrid *wfi) {
+
+  INT i, j, k, ij, ijnz, ny = dst->grid->ny, nz = dst->grid->nz, nxy = dst->grid->nx * ny;
+  REAL complex *dval, *rval, *ival;
+  REAL alpha;
+  INT lx = dst->lx, hx = dst->hx, ly = dst->ly, hy = dst->hy, lz = dst->lz, hz = dst->hz;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_merge(dst, wfr, wfi)) return;
+  cuda_remove_block(wfi->value, 1);
+  cuda_remove_block(wfr->value, 1);
+  cuda_remove_block(dst->grid->value, 0);
+#endif
+  dval = dst->grid->value;
+  rval = wfr->value;
+  ival = wfi->value;
+
+#pragma omp parallel for firstprivate(nxy,ny,nz,dval,rval,ival,lx,hx,ly,hy,lz,hz) private(ij,i,j,k,ijnz,alpha) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    i = ij / ny;
+    j = ij % ny;
+    for(k = 0; k < nz; k++) {
+      alpha = grid_wf_absorb(i, j, k, lx, hx, ly, hy, lz, hz);
+      dval[ijnz + k] = (1.0 - alpha) * rval[ijnz + k] + alpha * ival[ijnz + k];
+    }
+  }
 }

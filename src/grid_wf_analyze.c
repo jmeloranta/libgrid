@@ -7,7 +7,7 @@
 #include "au.h"
 #include "private.h"
 
-char grid_analyze_method = -1; // 0 = FD and 1 = FFT, -1 = not set
+char grid_analyze_method = (char) -1; // 0 = FD and 1 = FFT, -1 = not set
 
 /*
  * Function to switch between FD and FFT based routines.
