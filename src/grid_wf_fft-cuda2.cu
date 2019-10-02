@@ -114,7 +114,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL nor
 
   idx = (i * ny + j) * nz + k;
 
-  if((i >= il && i <= iu) || (jj >= jl && jj <= ju) || (k >= kl && k <= ku)) {
+  if((i > il && i < iu) || (jj > jl && jj < ju) || (k > kl && k < ku)) {
     b[idx] = CUMAKE(0.0, 0.0);
     return;
   }

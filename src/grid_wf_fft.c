@@ -278,7 +278,7 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
         kz = ((REAL) (k - nz)) * lz - kz0;
 
       /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-      if((i >= il && i <= iu) || (j >= jl && j <= ju) || (k >= kl && k <= ku)) value[ijnz + k] = 0.0;
+      if((i > il && i < iu) || (j > jl && j < ju) || (k > kl && k < ku)) value[ijnz + k] = 0.0;
       else value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
     }
   } 
