@@ -92,6 +92,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->cworkspace2 = NULL;
   gwf->cworkspace3 = NULL;
   gwf->ts_func = NULL;
+  gwf->kmax = 0.0; /* No cutoff by default */
 
   return gwf;
 }
@@ -781,3 +782,22 @@ EXPORT void grid_wf_merge(wf *dst, cgrid *wfr, cgrid *wfi) {
     }
   }
 }
+
+/*
+ * Set maximum |k| (wave vector) for grid_wf_propagate_kinetic_cfft().  Components outside this will be set to zero.
+ * This operation will take place in addition to the 2/3 aliasing. Often high k-components cause numerical instabilities
+ * when propagating kinetic energy with FFT. However, cutting things in k-space will cause ringing artifacts in the
+ * solution.
+ *
+ * wf   = Wave function (wf *; input).
+ * kmax = Maximum |k| value (REAL; input). Set to zero to disable.
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_set_kmax(wf *wf, REAL kmax) {
+
+  wf->kmax = kmax;
+}
+ 

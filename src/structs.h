@@ -73,6 +73,7 @@ typedef struct wf_struct { /* wavefunction */
   REAL norm;
   char boundary;
   char propagator;
+  REAL kmax;          /* k-space cutoff for propagating kinetic energy using FFT */
   cgrid *cworkspace;
   cgrid *cworkspace2;
   cgrid *cworkspace3;

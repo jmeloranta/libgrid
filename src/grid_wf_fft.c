@@ -230,7 +230,7 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   INT i, j, k, ij, ijnz, nx = gwf->grid->nx, ny = gwf->grid->ny, nz = gwf->grid->nz, nxy = nx * ny, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
   INT il = nx / 3, iu = 2 * il, jl = ny / 3, ju = 2 * jl, kl = nz / 3, ku = 2 * kl;
   REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step, norm;
-  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0;
+  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, kk, kmax2 = gwf->kmax * gwf->kmax;
   REAL complex *value = gwf->grid->value, time_mass = -I * time * HBAR / (gwf->mass * 2.0);
 
 #ifdef USE_CUDA
@@ -243,7 +243,7 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   lx = 2.0 * M_PI / (((REAL) nx) * step);
   ly = 2.0 * M_PI / (((REAL) ny) * step);
   lz = 2.0 * M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,il,iu,jl,ju,kl,ku) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,il,iu,jl,ju,kl,ku,kmax2) private(i,j,ij,ijnz,k,kx,ky,kz,kk) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -278,8 +278,9 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
         kz = ((REAL) (k - nz)) * lz - kz0;
 
       /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-      if((i > il && i < iu) || (j > jl && j < ju) || (k > kl && k < ku)) value[ijnz + k] = 0.0;
-      else value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
+      kk = kx * kx + ky * ky + kz * kz;
+      if((i > il && i < iu) || (j > jl && j < ju) || (k > kl && k < ku) || (kmax2 > 0.0 && kk > kmax2)) value[ijnz + k] = 0.0;
+      else value[ijnz + k] *= norm * CEXP(time_mass * kk);
     }
   } 
 }
