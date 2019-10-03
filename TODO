@@ -8,5 +8,6 @@
 - mem2gpu and gpu2mem/mem2gpu are missing suffled copy (not usually needed). For mem2gpu we need to track in which space we are so that we can upload the data to GPU in the correct subformat.
   This could also automatically shuffle data based on subformat in each libgrid routine.
 - FFT abs boundaries for predict-correct.
+- update manual - it is now quite out of date.
 
 also fgrep TODO *.[ch] to find out more specific issues.
