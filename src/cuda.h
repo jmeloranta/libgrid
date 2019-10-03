@@ -5,7 +5,7 @@
 #include <cufftXt.h>
 
 /* Maximum number of GPUs */
-#define MAX_GPU 8
+#define MAX_GPU 16
 
 /* Maximum number of physical GPUs in the system */
 #define MAX_PHYS_GPU 32

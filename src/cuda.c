@@ -155,7 +155,7 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
 
   int i;
 
-  if(ngpus < 0 || ngpus >= MAX_GPU) {
+  if(ngpus < 0 || ngpus > MAX_GPU) {
     fprintf(stderr, "libgrid(cuda): Number of GPUs requested too large (MAX_GPU).\n");
     abort();
   }
@@ -172,7 +172,7 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
     }
     for(i = 0; i < ngpus; i++) use_gpus[i] = i;
   } else {
-    if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) use_ngpus))) {
+    if(!(use_gpus = (int *) malloc(sizeof(int) * (size_t) ngpus))) {
       fprintf(stderr, "libgrid(cuda): Out of memory in cuda_alloc_gpus().\n");
       abort();
     }
