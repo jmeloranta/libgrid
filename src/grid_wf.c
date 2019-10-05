@@ -92,7 +92,8 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->cworkspace2 = NULL;
   gwf->cworkspace3 = NULL;
   gwf->ts_func = NULL;
-  gwf->kmax = 0.0; /* No cutoff by default */
+  gwf->kmax = 0.0;
+  gwf->kamp = 0.0; /* No cutoff by default */
 
   return gwf;
 }
@@ -782,14 +783,16 @@ EXPORT void grid_wf_merge(wf *dst, cgrid *wfr, cgrid *wfi) {
  * solution.
  *
  * wf   = Wave function (wf *; input).
- * kmax = Maximum |k| value (REAL; input). Set to zero to disable.
+ * kmax = Maximum |k| value (REAL; input). 
+ * kamp = Amount of real time to mix into the imaginary time component (REAL; input). Set to zero to disable.
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_set_kmax(wf *wf, REAL kmax) {
+EXPORT void grid_wf_set_kmax(wf *wf, REAL kmax, REAL kamp) {
 
   wf->kmax = kmax;
+  wf->kamp = kamp;
 }
  
