@@ -4,7 +4,8 @@
 
 CUDA = $(shell ./cuda-detect.sh)
 ifeq ($(CUDA),yes)
-CUDA_CC = $(shell ./get_cc.sh)
+CUDA_ARCH = $(shell ./get_arch.sh)
+CUDAHOST_CC = $(shell ./get_cc.sh)
 endif
 BRANCH = $(shell git branch -l | fgrep \* | cut -c3-)
 REV = $(shell git rev-parse $(BRANCH))
@@ -13,8 +14,9 @@ include ../make.conf
 
 all: proto.h
 ifeq ($(CUDA),yes)
-	echo "CUDA enabled for GPU architecture " $(CUDA_CC)
-	echo $(CUDA_CC) > cuda.arch
+	echo "CUDA enabled for GPU architecture " $(CUDA_ARCH)
+	echo $(CUDA_ARCH) > cuda.arch
+	echo $(CUDAHOST_CC) > cuda.hostcc
 endif
 	echo $(CUDA) > cuda.status
 	echo "#define VERSION \""$(BRANCH)-$(REV)"\"" > git-version.h
@@ -105,7 +107,8 @@ install:
 	cp *.h $(ROOT)/include/grid
 	-cp cuda.arch $(ROOT)/include/grid
 	-cp cuda.status $(ROOT)/include/grid
+	-cp cuda.hostcc $(ROOT)/include/grid
 	cp ../make.conf $(ROOT)/include/grid
 
 clean:
-	-rm libgrid.a *.o *~ proto.h ext-cuda/*.o git-version.h
+	-rm libgrid.a *.o *~ proto.h ext-cuda/*.o git-version.h cuda.arch cuda.status cuda.hostcc
