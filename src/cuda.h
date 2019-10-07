@@ -31,9 +31,10 @@ struct gpu_mem_block {
 typedef struct gpu_mem_block gpu_mem_block; 
 
 struct cufft_plan_data {
-  INT nx;       // grid dimension x
-  INT ny;       // grid dimension y
-  INT nz;       // grid dimension z
+  INT nx;        // grid dimension x
+  INT ny;        // grid dimension y
+  INT nz;        // grid dimension z (for real grids 2*(nz / 2 + 1)
+  size_t esize;  // number of bytes per element
 };
 
 typedef struct cufft_plan_data cufft_plan_data;

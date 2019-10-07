@@ -216,6 +216,102 @@ EXPORT size_t cuda_memory() {
 }
 
 /*
+ * Transform from unshuffled to shuffled storage format.
+ *
+ * block = Memory data for shuffle (gpu_mem_block *; input/output).
+ * 
+ * No return value.
+ *
+ * TODO: This is far from optimal - but then it should not be called that often.
+ *
+ */
+
+EXPORT void cuda_gpu_shuffle(gpu_mem_block *block) {
+
+  INT i, j, nx, ny, nz;
+  size_t esize, len, idxs, idxd;
+  cufft_plan_data *pdata;
+  unsigned char *src, *dst;
+
+  if(block->cufft_handle == -1) {
+    fprintf(stderr, "libgrid(cuda): gpu_shuffle called for non-cufft capable block.\n");
+    abort();
+  }
+  fprintf(stderr, "libgrid(cuda): Warning - exeuting GPU shuffle (UNTESTED & SLOW).\n");
+
+  pdata = &(grid_plan_data[block->cufft_handle]);
+  nx = pdata->nx;
+  ny = pdata->ny;
+  nz = pdata->nz;
+  esize = pdata->esize;
+
+  len = esize * (size_t) nx * (size_t) ny * (size_t) nz;
+  src = (unsigned char *) block->host_mem;
+  if(!(dst = (unsigned char *) malloc(len))) {
+    fprintf(stderr, "libgrid(cuda): Out of memory in gpu_shuffle.\n");
+    abort();
+  }
+  
+  // Swap (x,y) <-> (y,x) blocks using temporary storage. We could do in place but that is tricky and possibly very slow.
+  for (i = 0; i < nx; i++)
+    for (j = 0; j < ny; j++) {
+      idxs = (((size_t) i) * esize * ((size_t) ny) + ((size_t) j) * esize) * ((size_t) nz);
+      idxd = (((size_t) j) * esize * ((size_t) nx) + ((size_t) i) * esize) * ((size_t) nz);
+      bcopy(&src[idxs], &dst[idxd], esize * (size_t) nz);
+    }
+  bcopy(dst, src, len);
+  free(dst);
+}
+
+/*
+ * Transform from shuffled to unshuffled storage format.
+ *
+ * block = Memory data for shuffle (gpu_mem_block *; input/output).
+ * 
+ * No return value.
+ *
+ * TODO: This is far from optimal - but then it should not be called that often.
+ *
+ */
+
+EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
+
+  INT i, j, nx, ny, nz;
+  size_t esize, len, idxs, idxd;
+  cufft_plan_data *pdata;
+  unsigned char *src, *dst;
+
+  if(block->cufft_handle == -1) {
+    fprintf(stderr, "libgrid(cuda): gpu_shuffle called for non-cufft capable block.\n");
+    abort();
+  }
+  fprintf(stderr, "libgrid(cuda): Warning - exeuting GPU unshuffle (UNTESTED & SLOW).\n");
+
+  pdata = &(grid_plan_data[block->cufft_handle]);
+  nx = pdata->nx;
+  ny = pdata->ny;
+  nz = pdata->nz;
+  esize = pdata->esize;
+
+  len = esize * (size_t) nx * (size_t) ny * (size_t) nz;
+  src = (unsigned char *) block->host_mem;
+  if(!(dst = (unsigned char *) malloc(len))) {
+    fprintf(stderr, "libgrid(cuda): Out of memory in gpu_unshuffle.\n");
+    abort();
+  }
+  
+  // Swap (x,y) <-> (y,x) blocks using temporary storage. We could do in place but that is tricky and possibly very slow.
+  for (i = 0; i < nx; i++)
+    for (j = 0; j < ny; j++) {
+      idxs = (((size_t) j) * esize * ((size_t) nx) + ((size_t) i) * esize) * ((size_t) nz);
+      idxd = (((size_t) i) * esize * ((size_t) ny) + ((size_t) j) * esize) * ((size_t) nz);
+      bcopy(&src[idxs], &dst[idxd], esize * (size_t) nz);
+    }
+  bcopy(dst, src, len);
+  free(dst);
+}
+
+/*
  * Transfer data from host memory to GPUs.
  *
  * block = Memory block to syncronize from host to GPU (gpu_mem_block *; input/output).
@@ -243,24 +339,23 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
     abort();
   }
 
-  if(block->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) {
-    for(i = 0; i < use_ngpus; i++) {
-      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
-        cuda_error_check();
-        abort();
-      }        
-      if(cudaMemcpy(block->gpu_info->descriptor->data[i], &(((char *) block->host_mem)[st]), block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
-        cuda_error_check();
-        abort();
-      }        
-      st += block->gpu_info->descriptor->size[i];
-    }    
-  } else {
-    fprintf(stderr, "libgrid(cuda): Shuffled transfer not implemented yet.\n");
-    abort();
-  }
+  /* TODO: For now, cuda_gpu_shuffle() is not called. Until we know whether the CPU data is in real or reciprocal space, we cannot do that. */
+  /* This would require keeping track of FFT/IFFT's for each grid. So, we force INPLACE (real data) */
+  block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+
+  for(i = 0; i < use_ngpus; i++) {
+    if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
+      cuda_error_check();
+      abort();
+    }        
+    if(cudaMemcpy(block->gpu_info->descriptor->data[i], &(((char *) block->host_mem)[st]), block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
+      cuda_error_check();
+      abort();
+    }        
+    st += block->gpu_info->descriptor->size[i];
+  }    
   cuda_error_check();
 
   return 0;
@@ -294,25 +389,22 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
     abort();
   }
 
-  if(block->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) {
-    for(i = 0; i < use_ngpus; i++) {
-      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
-        cuda_error_check();
-        abort();
-      }        
-      if(cudaMemcpy(&(((char *) block->host_mem)[st]), block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) {
-        fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
-        cuda_error_check();
-        abort();
-      }        
-      st += block->gpu_info->descriptor->size[i];
-    }    
-  } else {
-    fprintf(stderr, "libgrid(cuda): Shuffled transfer not implemented yet.\n");
-    abort();
-  } 
+  for(i = 0; i < use_ngpus; i++) {
+    if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): gpu2mem copy error (set device).\n");
+      cuda_error_check();
+      abort();
+    }        
+    if(cudaMemcpy(&(((char *) block->host_mem)[st]), block->gpu_info->descriptor->data[i], block->gpu_info->descriptor->size[i], cudaMemcpyDeviceToHost) != cudaSuccess) {
+      fprintf(stderr, "libgrid(cuda): gpu2mem copy error.\n");
+      cuda_error_check();
+      abort();
+    }        
+    st += block->gpu_info->descriptor->size[i];
+  }    
   cuda_error_check();
+
+  if(block->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE_SHUFFLED && use_ngpus > 1) cuda_gpu_unshuffle(block);
 
   return 0;
 }
@@ -1697,7 +1789,12 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
   }
   grid_plan_data[*plan].nx = nx;
   grid_plan_data[*plan].ny = ny;
-  grid_plan_data[*plan].nz = nz;
+  grid_plan_data[*plan].nz = 2 * (nz / 2 + 1);
+
+  if(type == CUFFT_C2C) grid_plan_data[*plan].esize = 2 * sizeof(float);
+  else if(type == CUFFT_Z2Z) grid_plan_data[*plan].esize = 2 * sizeof(double);
+  else if(type == CUFFT_R2C || type == CUFFT_C2R) grid_plan_data[*plan].esize = 2 * sizeof(float);
+  else if(type == CUFFT_D2Z || type == CUFFT_Z2D) grid_plan_data[*plan].esize = 2 * sizeof(double);
 
   /* Maximum amount of memory on GPU */
   for(i = 0; i < ngpus; i++)
