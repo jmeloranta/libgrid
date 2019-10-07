@@ -34,7 +34,11 @@ To install these packages on Fedora linux, use (\# prompt implies execution with
 \begin{verbatim}
 # dnf install git gcc fftw-* grace grace-devel netcdf netcdf-devel
 \end{verbatim}
-If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA drivers and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. This installation is compatible with the default settings in make.conf as described below. Currently, libgrid does not support OpenCL.
+or
+\begin{vernatim}
+# apt-get install git gcc fftw3-dev grace libnetcdf-dev
+\end{verbatim}
+If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA drivers and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs.
 
 To copy the current version of libgrid to subdirectory libgrid, issue (\% implies execution with normal user privileges):
 \begin{verbatim}
@@ -45,30 +49,29 @@ Change to libgrid directory and review the configuration settings:
 % cd libgrid
 % more make.conf
 \end{verbatim}
-The options specified in this file determine how libgrid will be compiled. OpenMP support is included automatically with COMPILER = gcc.\\
+The options specified in this file determine how libgrid will be compiled. OpenMP support is included automatically with COMPILER = gcc.
+Intel or Portland compilers have not been tested with libgrid.\\
 
 \begin{tabular}{ll}
 \textbf{Option} & \textbf{Description}\\
 \cline{1-2}
 COMPILER & gcc (normal use) or gcc-debug (non-parallel debugging version)\\
 REAL & Real floating point precision (float, double or quad precision).\\
-     & Note that for libdft use, single precision floats have limited use.\\
+     & Note that for libdft single precision floats tend to have limited use.\\
 INT & Integer number size (int or long)\\
 ROOT & Root installation directory (default /usr)\\
 CUDA & Set to "yes" if CUDA is installed and "no" if not. The default\\
      & is to auto-detect.\\
-CUDA\_DEV & Which CUDA device number to use by default (0 = first GPU).\\
-          & Note: GPU device number can be changed in the user code.\\
 CUDAINC & Include file directory for CUDA C header files (default\\
-        & /usr/include/cuda).\\
+        & /usr/include/cuda; Fedora). Will also search /usr/include (Debian).\\
 CUDALIB & Directory containing the CUDA libraries (default /usr/lib64).\\
 CUDA\_HOSTCC & GCC version that is compatible with the current installation of\\
-             & CUDA (default /usr/bin/cuda-gcc).\\
-CUDA\_CC & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
+             & CUDA (default is to auto detect; works for Fedora and Debian).\\
+CUDA\_ARCH & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
 CUDA\_FASTMATH & "yes" implies NVCC options: --ftz=true --prec-div=false\\
                & --prec-sqrt=false --fmad=true and "no" implies options:\\
                & --ftz=false --prec-div=true --prec-sqrt=true --fmad=true\\
-               & (default no).\\
+               & (default no). Seems to provide no performance improvement.\\
 CUDA\_TPB & Number of CUDA threads per block (GPU architecture\\
           & dependent; default 6).\\
 CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank\\
@@ -105,7 +108,7 @@ setenv OMP_SCHEDULE auto
 setenv OMP_PROC_BIND TRUE
 setenv OMP_WAIT_POLICY ACTIVE
 \end{verbatim}
-These can be added to your .tcshrc (tcsh) or .profile (bash) file. For the latter, the bash compatible syntax is:
+These can be added to your .tcshrc (tcsh), .profile, or .bashrc file depending on your login shell. For the latter, the syntax is:
 \begin{verbatim}
 export OMP_SCHEDULE=auto
 export OMP_PROC_BIND=TRUE
