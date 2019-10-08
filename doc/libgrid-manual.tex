@@ -18,13 +18,13 @@ om=2.45cm]{geometry}
 
 \section{Introduction}
 
-Libgrid provides routines for efficiently accessing and manipulating 1-D, 2-D, and 3-D Cartesian real and complex grids on Linux-based systems without the need of considering the underlying specialized hardware (e.g., OpenMP, CUDA). In addition to the basic grid operations such as grid allocation, release, Fourier transform, grid arithmetics, etc., it has also specialized routines for propagating time-dependent Schr\"odinger equation in real or imaginary time. The latter routines are required by libdft library, which solves various types of non-linear Schr\"odinger equations that describe superfluid $^4$He and Bose-Einstein condensates. Libgrid was written by Lauri Lehtovaara, David Mateo, and Jussi Eloranta, and can be freely distributed according to GNU GENERAL PUBLIC LICENSE Version 3 (see doc/GPL.txt). This project was partially supported by National Science Foundation grants: CHE-0949057, CHE-1262306 and DMR-1205734.
+Libgrid provides routines for efficiently accessing and manipulating 1-D, 2-D, and 3-D Cartesian real and complex grids on unix-based systems without the need of considering the underlying specialized hardware (e.g., OpenMP, CUDA). In addition to the basic grid operations such as grid allocation, release, Fourier transform, grid arithmetics, etc., it has also specialized routines for propagating time-dependent Schr\"odinger equation (linear or non-linear) in real or imaginary time. The latter routines are required, for example, by libdft library, which solves various types of non-linear Schr\"odinger equations that describe superfluid $^4$He (Orsay-Trento) and Bose-Einstein condensates (Gross-Pitaevskii). Libgrid was written by Lauri Lehtovaara, David Mateo, and Jussi Eloranta, and can be freely distributed according to GNU GENERAL PUBLIC LICENSE Version 3 (see doc/GPL.txt). This project was partially supported by National Science Foundation grants: CHE-0949057, CHE-1262306 and DMR-1205734.
 
 \section{Installation}
 
 Installation of libgrid requires the following packages:
 \begin{itemize}
-\item git (a free and open source distributed version control system)
+\item git (open source distributed version control system)
 \item GNU C compiler with OpenMP support (gcc)
 \item FFTW 3.x (Fast Fourier Transform package)
 \item Grace 2-D plotting program (xmgrace) and its development libraries
@@ -35,10 +35,10 @@ To install these packages on Fedora linux, use (\# prompt implies execution with
 # dnf install git gcc fftw-* grace grace-devel netcdf netcdf-devel
 \end{verbatim}
 or
-\begin{vernatim}
+\begin{verbatim}
 # apt-get install git gcc fftw3-dev grace libnetcdf-dev
 \end{verbatim}
-If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA drivers and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs.
+If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA driver and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs. libgrid uses the following CUDA packages: CUFFT, CURAND, and the basic CUDA runtime (libcuda and libcudart). Also, the CUDA compiler (nvcc) must be installed to compile GPU code.
 
 To copy the current version of libgrid to subdirectory libgrid, issue (\% implies execution with normal user privileges):
 \begin{verbatim}
@@ -49,31 +49,31 @@ Change to libgrid directory and review the configuration settings:
 % cd libgrid
 % more make.conf
 \end{verbatim}
-The options specified in this file determine how libgrid will be compiled. OpenMP support is included automatically with COMPILER = gcc.
-Intel or Portland compilers have not been tested with libgrid.\\
+The options specified in this file determine how libgrid will be compiled. OpenMP support is included automatically with COMPILER = gcc. Invoking debugging will disable OpenMP and the related \#pragma's in the code will show a bunch of warnings when compiling (this is normal). Intel or Portland compilers have not been tested with libgrid. The configuration options are described in the table below.\\
 
 \begin{tabular}{ll}
 \textbf{Option} & \textbf{Description}\\
 \cline{1-2}
 COMPILER & gcc (normal use) or gcc-debug (non-parallel debugging version)\\
-REAL & Real floating point precision (float, double or quad precision).\\
-     & Note that for libdft single precision floats tend to have limited use.\\
+REAL & Floating point number precision (float, double or quad precision).\\
+     & Note that for many applications single precision tends to have very\\
+     & limited use.\\
 INT & Integer number size (int or long)\\
 ROOT & Root installation directory (default /usr)\\
 CUDA & Set to "yes" if CUDA is installed and "no" if not. The default\\
-     & is to auto-detect.\\
+     & is to auto-detect, so changing this is not usually required.\\
 CUDAINC & Include file directory for CUDA C header files (default\\
         & /usr/include/cuda; Fedora). Will also search /usr/include (Debian).\\
 CUDALIB & Directory containing the CUDA libraries (default /usr/lib64).\\
 CUDA\_HOSTCC & GCC version that is compatible with the current installation of\\
-             & CUDA (default is to auto detect; works for Fedora and Debian).\\
+             & CUDA (default is to auto detect; works on Fedora and Debian).\\
 CUDA\_ARCH & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
-CUDA\_FASTMATH & "yes" implies NVCC options: --ftz=true --prec-div=false\\
+CUDA\_FASTMATH & "yes" adds NVCC options: --ftz=true --prec-div=false\\
                & --prec-sqrt=false --fmad=true and "no" implies options:\\
                & --ftz=false --prec-div=true --prec-sqrt=true --fmad=true\\
                & (default no). Seems to provide no performance improvement.\\
 CUDA\_TPB & Number of CUDA threads per block (GPU architecture\\
-          & dependent; default 6).\\
+          & dependent; default 8).\\
 CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank\\
              & -Nicolson). GPU architecture dependent value, 2 - 3\\
              & (default 3).\\
@@ -82,33 +82,33 @@ CUDA\_DEBUG & Whether to include debug code in libggrid CUDA routines\\
 \end{tabular}
 
 \noindent
-To compile the library, change to src subdirectory and issue make:
+To compile the library, change to src subdirectory and issue make (-j does parallel compilation):
 \begin{verbatim}
 % cd src
 % make -j
 \end{verbatim}
-Provided that the compilation completed without errors, install the library (as root unless you changed the ROOT above to point to your own directories):
+Provided that the compilation completed without errors, install the library (as root unless you changed the ROOT setting above to point to your own directory):
 \begin{verbatim}
 # make install
 \end{verbatim}
-To compile the utilities for file format conversions and graphical applications, compile and install the utilities:
+To compile the utilities required for file format conversions and interface with graphical applications, compile and install the utilities:
 \begin{verbatim}
 % cd ../util
 % make
 \end{verbatim}
-Once the utilities compile, install them (as root unless you changed ROOT above to point to your own directories):
+Once the utilities compile, install them (as root unless you changed ROOT above to point to your own directory):
 \begin{verbatim}
 # make install
 \end{verbatim}
 
 \noindent
-The recommended OpenMP environment variable setting for optimal performance is:
+The recommended OpenMP environment variable settings for optimal performance are (csh/tcsh syntax):
 \begin{verbatim}
 setenv OMP_SCHEDULE auto
 setenv OMP_PROC_BIND TRUE
 setenv OMP_WAIT_POLICY ACTIVE
 \end{verbatim}
-These can be added to your .tcshrc (tcsh), .profile, or .bashrc file depending on your login shell. For the latter, the syntax is:
+Depending on your login shell, these can be added to your .tcshrc, .cshrc, .profile, or .bashrc file. For the latter, the commands are (sh derivatives such as bash):
 \begin{verbatim}
 export OMP_SCHEDULE=auto
 export OMP_PROC_BIND=TRUE
@@ -124,7 +124,7 @@ To access libgrid functions in C program, the following header files should be i
 #include <grid/grid.h>
 #include <grid/au.h>
 \end{verbatim}
-where the first include file is required and the second optional include makes the following conversion factors available:\\
+where the first include is required to access libgrid routines and the second (optional) include enables the following conversion factors:\\
 
 \begin{longtable}{ll}
 GRID\_AUTOANG & Factor to convert from Bohr to \AA{}nstr\"om ($10^{-10}$ m).\\
@@ -146,7 +146,7 @@ GRID\_AUTOPAS & Atomic viscosity unit to Pa s.\\
 GRID\_AUKB & Boltzmann constant in a.u. ($k_B$)\\ 
 \end{longtable}
 \noindent
-Note that wherever applicable, librid will use the atomic unit system and the above conversion factors are provided for converting to other systems. To convert from atomic unit to another unit, multiply by the predefined factor above or, divide by it in order to convert the other way around.
+Note that librid will use the atomic unit system and the above conversion factors are provided for converting to other unit systems. To convert from atomic unit to another unit, multiply by the predefined factor above or, divide by it in order to convert the other way around.
 
 To compile and link a program using libgrid, it is most convenient to construct a makefile (note that the \$(CC) line has TAB as the first character):
 \begin{verbatim}
@@ -157,11 +157,11 @@ test: test.o
 
 test.o: test.c
 \end{verbatim}
-This will compile the program specified in test.c and link the appropriate libraries automatically. Both CFLAGS and LDFLAGS are obtained automatically from libgrid's make.conf. If you used a different installation ROOT setting, replace /usr above with that.
+This will compile the program specified in test.c and link the appropriate libraries automatically. Both CFLAGS and LDFLAGS are obtained automatically from libgrid's make.conf (the first line). If you used a different installation ROOT setting, replace /usr above with that.
 
 \section{Data types}
 
-The libgrid header file defines the real and integer data types automatically according to those requested during the configuration step (make.conf). Instead of using float, double, int, long etc. directly, use REAL to represent a floating point number and INT to introduce the variables (e.g., REAL x, y; INT i;). To define complex number type, use REAL complex. Since the function names in the system math library vary depending on the floating point precision (e.g., expf(), exp(), expl()), libgrid defines the corresponding function in upper case such that is assigned to the function of the requested precision (e.g., EXP(), SIN()). So, in order to call the exponential function, use, e.g., y = EXP(x);. Another place where the size of the REAL and INT data types are required is the scanf/printf standard I/O library routines. To print a REAL number with printf, use, for example, printf("value = " FMT\_R "$\backslash$n");. Or to print an INT use FMT\_I. Inside the library itself, EXPORT keyword is added in front of every function that should be visible to end users (automatic generation of prototypes).
+The libgrid header file defines the real and integer data types automatically according to those requested during the configuration step (make.conf). Instead of using float, double, int, long etc. directly, type REAL to represent a floating point number and INT for integer (e.g., REAL x, y; INT i;). To define a complex number, use REAL complex. Since the function names in the system math library vary depending on the floating point precision (e.g., expf(), exp(), expl()), libgrid defines the corresponding functions in upper case such that is assigned to the function of the requested precision (e.g., EXP(), SIN()). So, in order to call the exponential function, use, e.g., y = EXP(x);. Another place where the size of the REAL and INT data types are required is the scanf/printf standard I/O library routines. To print a REAL number with printf, use, for example, printf("value = " FMT\_R "$\backslash$n");. Or to print an INT use FMT\_I instead. Inside the library itself, EXPORT keyword is added in front of every function that should be visible to applications (automatic generation of prototypes).
 
 Libgrid has built-in data types for 1-D, 2-D, and 3-D Cartesian REAL ("rgrid") and REAL complex ("cgrid") grids. To allocate such grids in a C program, first introduce them as pointers, e.g., rgrid *abc or cgrid *abc. Then use either rgrid\_alloc() or cgrid\_alloc() functions to allocate the space. For example:
 \begin{verbatim}
@@ -170,12 +170,12 @@ Libgrid has built-in data types for 1-D, 2-D, and 3-D Cartesian REAL ("rgrid") a
    ...
    cgrid_free(abc);
 \end{verbatim}
-would allocate a periodic 3-D grid with dimensions 32x32x32 and spatial grid step length of 1.0 (for more information on the arguments to cgrid\_alloc() in Section 5). To get a 1-D grid, include it as the last dimension, e.g., 1x1x32, or for a 2-D grid use the two last dimensions, 1x32x32. It is important to follow this convention for performance reasons. In the code, coordinate $x$ corresponds to the first index, $y$ to the second, and $z$ to the third. By default, the origin is placed to the center of the grid.
+would allocate a periodic 3-D grid with dimensions 32x32x32 and spatial grid step length of 1.0 (for more information on the arguments to cgrid\_alloc(), see Section 5). To request a 1-D grid, include its dimension last, e.g., 1x1x32, or for a 2-D grid use the last two dimensions, e.g., 1x32x32. It is important to follow this convention for performance reasons. In the code, coordinate $x$ corresponds to the first index, $y$ to the second, and $z$ to the third. By default, the origin is placed to the center of the grid.
 
-The basic properties of the above rgrid and cgrid data types are explained below.
+The basic properties of the rgrid and cgrid data types are explained below.
 
 \subsection{Real grid data type (rgrid)}
-Data type rgrid corresponds to a structure with the following members:
+This data type (rgrid) corresponds to a structure with the following members:
 \begin{longtable}{p{.33\textwidth} p{.6\textwidth}}
 Member & Description\\
 \cline{1-2}
@@ -186,13 +186,14 @@ INT nx & Number of grid points along the 1st grid index ($x$).\\
 INT ny & Number of grid points along the 2nd grid index ($y$).\\
 INT nz & Number of grid points along the 3rd grid index ($z$).\\
 INT nz2 & This is equal to $2\times(nz / 2 + 1)$. Used for indexing *value.\\
+        & (the typical FFT convention of storing R2C/C2R data).\\
 REAL step & Grid step length (equal in all directions).\\
 REAL x0 & Grid origin $x_0$ (default 0.0).\\
 REAL y0 & Grid origin $y_0$ (default 0.0).\\
 REAL z0 & Grid origin $z_0$ (default 0.0).\\
-REAL kx0 & Grid origin $k_{x,0}$ in the reciprocal (momentum) space (default 0.0).\\
-REAL ky0 & Grid origin $k_{y,0}$ in the reciprocal (momentum) space (default 0.0).\\
-REAL kz0 & Grid origin $k_{z,0}$ in the reciprocal (momentum) space (default 0.0).\\
+REAL kx0 & Grid origin $k_{x,0}$ in the reciprocal space (default 0.0).\\
+REAL ky0 & Grid origin $k_{y,0}$ in the reciprocal space (default 0.0).\\
+REAL kz0 & Grid origin $k_{z,0}$ in the reciprocal space (default 0.0).\\
 REAL (*value\_outside) & Pointer to function returning values outside\\
 \phantom{X}(rgrid *, INT, INT, INT) & the grid.\\
 void *outside\_params\_ptr & Pointer for passing additional data to value\_outside function.\\
@@ -207,7 +208,7 @@ char flag & Field for marking whether the grid is exclusively in use or not (rgr
 \end{longtable}
 
 \noindent
-Note that rgrid is the same as struct rgrid\_struct type. To reference the value at index (i, j, k) in grid-$>$value, use:
+Requesting rgrid data type is the same as using struct rgrid\_struct. To reference the value at index (i, j, k) in grid-$>$value, use:
 \begin{verbatim}
 grid->value[(i * grid->ny + j) * grid->nz2 + k]
 \end{verbatim}
@@ -216,6 +217,11 @@ The same indexing applies to 1-D (i = j = 0) and 2-D grids with (i = 0). This do
 grid->value[(i * grid->ny + j) * (grid->nz / 2 + 1) + k]
 \end{verbatim}
 Alternatively, function rgrid\_cvalue\_at\_index(rgrid *grid, INT i, INT j, INT k) can be used.
+
+\noindent
+\textbf{Especially when CUDA is used, user applications should NOT access the grids directly but use the routines described above.} They take care of the proper communication with the GPU.
+
+%% LEFT HERE %%
 
 \subsection{Complex grid data type (cgrid)}
 
