@@ -51,35 +51,23 @@ Change to libgrid directory and review the configuration settings:
 \end{verbatim}
 The options specified in this file determine how libgrid will be compiled. OpenMP support is included automatically with COMPILER = gcc. Invoking debugging will disable OpenMP and the related \#pragma's in the code will show a bunch of warnings when compiling (this is normal). Intel or Portland compilers have not been tested with libgrid. The configuration options are described in the table below.\\
 
-\begin{tabular}{ll}
+\begin{longtable}{p{.43\textwidth} p{.55\textwidth}}
 \textbf{Option} & \textbf{Description}\\
 \cline{1-2}
 COMPILER & gcc (normal use) or gcc-debug (non-parallel debugging version)\\
-REAL & Floating point number precision (float, double or quad precision).\\
-     & Note that for many applications single precision tends to have very\\
-     & limited use.\\
+REAL & Floating point number precision (float, double or quad precision). Note that for many applications single precision tends to have very limited use.\\
 INT & Integer number size (int or long)\\
 ROOT & Root installation directory (default /usr)\\
-CUDA & Set to "yes" if CUDA is installed and "no" if not. The default\\
-     & is to auto-detect, so changing this is not usually required.\\
-CUDAINC & Include file directory for CUDA C header files (default\\
-        & /usr/include/cuda; Fedora). Will also search /usr/include (Debian).\\
+CUDA & Set to "yes" if CUDA is installed and "no" if not. The default is to auto-detect, so changing this is not usually required.\\
+CUDAINC & Include file directory for CUDA C header files (default /usr/include/cuda; Fedora). Will also search /usr/include (Debian).\\
 CUDALIB & Directory containing the CUDA libraries (default /usr/lib64).\\
-CUDA\_HOSTCC & GCC version that is compatible with the current installation of\\
-             & CUDA (default is to auto detect; works on Fedora and Debian).\\
+CUDA\_HOSTCC & GCC version that is compatible with the current installation of CUDA (default is to auto detect; works on Fedora and Debian).\\
 CUDA\_ARCH & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
-CUDA\_FASTMATH & "yes" adds NVCC options: --ftz=true --prec-div=false\\
-               & --prec-sqrt=false --fmad=true and "no" implies options:\\
-               & --ftz=false --prec-div=true --prec-sqrt=true --fmad=true\\
-               & (default no). Seems to provide no performance improvement.\\
-CUDA\_TPB & Number of CUDA threads per block (GPU architecture\\
-          & dependent; default 8).\\
-CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank\\
-             & -Nicolson). GPU architecture dependent value, 2 - 3\\
-             & (default 3).\\
-CUDA\_DEBUG & Whether to include debug code in libggrid CUDA routines\\
-            & ("yes" or "no"; default no).\\
-\end{tabular}
+CUDA\_FASTMATH & "yes" adds NVCC options: --ftz=true --prec-div=false --prec-sqrt=false --fmad=true and "no" implies options: --ftz=false --prec-div=true --prec-sqrt=true --fmad=true (default no). Seems to provide no performance improvement.\\
+CUDA\_TPB & Number of CUDA threads per block (GPU architecture dependent; default 8).\\
+CUDA\_THRADJ & CUDA Thread adjustment for 2-D operations (i.e., Crank-Nicolson). GPU architecture dependent value, 2 - 3 (default 3).\\
+CUDA\_DEBUG & Whether to include debug code in libggrid CUDA routines ("yes" or "no"; default no).\\
+\end{longtable}
 
 \noindent
 To compile the library, change to src subdirectory and issue make (-j does parallel compilation):
@@ -221,8 +209,6 @@ Alternatively, function rgrid\_cvalue\_at\_index(rgrid *grid, INT i, INT j, INT 
 \noindent
 \textbf{Especially when CUDA is used, user applications should NOT access the grids directly but use the routines described above.} They take care of the proper communication with the GPU.
 
-%% LEFT HERE %%
-
 \subsection{Complex grid data type (cgrid)}
 
 Data type cgrid corresponds to a structure with the following members:
@@ -249,19 +235,18 @@ void *outside\_params\_ptr & Pointer for passing additional data to value\_outsi
 REAL complex default\_outside\_params & Default REAL complex value for outside\_params\_ptr.\\
 fftwX\_plan plan & FFTW plan for forward FFT transforming the grid (X = f, empty, l).\\
 fftwX\_plan iplan & FFTW plan for inverse FFT transforming the grid (X = f, empty, l).\\
-fftwX\_plan implan & Like plan but for non-periodic boundaries (untested).\\
-fftwX\_plan iimplan & Like iplan but for non-periodic boundaries (untested).\\
 cufftHandle cufft\_handle & CUFFT handle for FFT transforms using CUDA.\\
+char host\_lock & If $\ne$ 0 the grid is locked into host memory (no GPU use).\\
 REAL fft\_norm & Normalization factor for FFT (without including the step length).\\
 REAL fft\_norm2 & Normalization factor for FFT (including the step length).\\
 char flag & Field for marking whether the grid is exclusively in use or not (cgrid\_claim() and cgrid\_release()).\\
 \end{longtable}
 \noindent
-Indexing of the grid values follow the same convention as for rgrid data type.
+Indexing of the grid values follow the same convention as for rgrid data type. See also the note about accessing the grid values directly there.
 
 \subsection{Wave function data type (wf)}
 
-Wave functions are special objects that contain a complex grid (wave function values) and all other necessary parameters such that it can be propagated in time by using a non-linear Schr\"odinger equation. This data type is mostly used in libdft library.
+Wave functions are special structures that contain a complex grid (wave function values) and all other necessary parameters such that it can be propagated in time according to a non-linear Schr\"odinger equation.
 
 \begin{longtable}{p{.3\textwidth} p{.65\textwidth}}
 Member & Description\\
@@ -269,18 +254,22 @@ Member & Description\\
 cgrid *grid & Complex grid containing the wave function values.\\
 REAL mass & Particle mass that is represented by this wave function.\\
 REAL norm & Requested normalization of the wave function.\\
-char boundary & Boundary condition to be used for time propagation. WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition, WF\_VORTEX\_X\_BOUNDARY = Vortex line along $x$-axis, WF\_VORTEX\_Y\_BOUNDARY = Vortex line along $y$-axis, or WF\_VORTEX\_Z\_BOUNDARY = Vortex line along $z$-axis,.\\
+char boundary & Boundary condition to be used for time propagation. WF\_DIRICHLET\_BOUNDARY = Dirichlet boundary condition, WF\_NEUMANN\_BOUNDARY = Neumann boundary condition, WF\_PERIODIC\_BOUNDARY = Periodic boundary condition.\\
 char propagator & Time propagator. WF\_2ND\_ORDER\_FFT = FFT propagator with 2nd order accuracy in time, WF\_4TH\_ORDER\_FFT = FFT propagator with 4th order accuracy in time, WF\_2ND\_ORDER\_CN = Crank-Nicolson propagator with 2nd order accuracy in time, or WF\_4TH\_ORDER\_CN = Crank-Nicolson propagator with 4th order accuracy in time.\\
 cgrid *workspace & Workspace required for the chosen propagator (may be NULL if not used).\\
 cgrid *workspace2 & Workspace required for the chosen propagator (may be NULL if not used).\\
 cgrid *workspace3 & Workspace required for the chosen propagator (may be NULL if not used).\\
 REAL (*ts\_func)(INT, INT, INT, void *) & User specified time step function. Allows, for example, for spatially dependent time step length.\\
-struct grid\_abs abs\_data & Structure containing absorbing boundary specification (amp = Absorption amplitude, rho0 = desired value for $|\psi|^2$, data$[6]$ = array of lower, upper bound indices for the boundary in $x, y, z$ directions. The first element is the lower bound for $x$ and the last upper bound for $z$.\\
+INT lx, hx; & If non-zero, these indices specify the position of the absorbing boundary along $x$.\\
+INT ly, hy; & If non-zero, these indices specify the position of the absorbing boundary along $y$.\\
+INT lz, hz;  & If non-zero, these indices specify the position of the absorbing boundary along $z$.\\
 \end{longtable}
 
 \chapter{Library functions}
 
-Functions in libgrid are divided into following classes: 1) rgrid\_* (real valued grids; rgrid), 2) cgrid\_* (complex valued grids; cgrid), and 3) grid\_wf\_* (grids describing a wavefunction; wf). These are described in the subsections below. The arguments are listed in the tables in the same order as they are passed to the corresponding functions.
+Functions in libgrid are divided into following three classes: 1) rgrid\_* (functions for real valued grids; rgrid), 2) cgrid\_* (functions for complex valued grids; cgrid), and 3) grid\_wf\_* (functions for wavefunctions; wf). These are described in the following subsections. The arguments are listed in the tables in the same order as they are passed to the corresponding functions.
+
+%% LEFT HERE %%
 
 \section{Real grid routines}
 
