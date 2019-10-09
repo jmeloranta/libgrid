@@ -972,3 +972,74 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace
 
   cuda_error_check();
 }
+
+
+/*
+ * |rot|
+ *
+ */
+
+__global__ void rgrid_cuda_abs_rot_gpu(CUREAL *rot, CUREAL *fx, CUREAL *fy, CUREAL *fz, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz, INT nzz) { 
+ 
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  CUREAL tmp;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  /* x: (d/dy) fz - (d/dz) fy */
+  tmp = inv_delta * (rgrid_cuda_bc_y_plus(fz, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_y_minus(fz, bc, i, j, k, nx, ny, nz, nzz)
+                     - rgrid_cuda_bc_z_plus(fy, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_z_minus(fy, bc, i, j, k, nx, ny, nz, nzz));
+  rot[idx] = tmp * tmp;
+
+  /* y: (d/dz) fx - (d/dx) fz */
+  tmp = inv_delta * (rgrid_cuda_bc_z_plus(fx, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_z_minus(fx, bc, i, j, k, nx, ny, nz, nzz)
+                     - rgrid_cuda_bc_x_plus(fz, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_x_minus(fz, bc, i, j, k, nx, ny, nz, nzz));
+  rot[idx] = rot[idx] + tmp * tmp;
+
+  /* z: (d/dx) fy - (d/dy) fx */
+  tmp = inv_delta * (rgrid_cuda_bc_x_plus(fy, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_x_minus(fy, bc, i, j, k, nx, ny, nz, nzz)
+                     - rgrid_cuda_bc_y_plus(fx, bc, i, j, k, nx, ny, nz, nzz) - rgrid_cuda_bc_y_minus(fx, bc, i, j, k, nx, ny, nz, nzz));
+  rot[idx] = rot[idx] + tmp * tmp;
+  rot[idx] = SQRT(rot[idx]);
+}
+
+/*
+ * |rot|
+ *
+ * rot       = Grid to be operated on (gpu_mem_block *; input/output).
+ * fx        = x component of the field (gpu_mem_block *; input).
+ * fy        = y component of the field (gpu_mem_block *; input).
+ * fz        = z component of the field (gpu_mem_block *; input).
+ * inv_delta = 1 / (2 * step) (CUREAL; input).
+ * bc        = Boundary condition (char; input).
+ * nx        = # of points along x (INT; input).
+ * ny        = # of points along y (INT; input).
+ * nz        = # of points along z (INT; input).
+ *
+ * TODO: For this it probably makes sense to force transferring the blocks to host memory and do the operation there.
+ *
+ */
+
+extern "C" void rgrid_cuda_abs_rotW(gpu_mem_block *rot, gpu_mem_block *fx, gpu_mem_block *fy, gpu_mem_block *fz, CUREAL inv_delta, char bc, INT nx, INT ny, INT nz) {
+
+  rot->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  INT nzz = 2 * (nz / 2 + 1);
+  dim3 threads(CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK, CUDA_THREADS_PER_BLOCK);
+  dim3 blocks((nz + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (ny + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK,
+              (nx + CUDA_THREADS_PER_BLOCK - 1) / CUDA_THREADS_PER_BLOCK);
+  cudaXtDesc *ROT = rot->gpu_info->descriptor, *FX = fx->gpu_info->descriptor, *FY = fy->gpu_info->descriptor, *FZ = fz->gpu_info->descriptor;
+
+  if(fx->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || fy->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || fz->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): abs_rot must be in real space (INPLACE).");
+    abort();
+  }
+
+  cudaSetDevice(ROT->GPUs[0]);
+  rgrid_cuda_abs_rot_gpu<<<blocks,threads>>>((CUREAL *) ROT->data[0], (CUREAL *) FX->data[0], (CUREAL *) FY->data[0], (CUREAL *) FZ->data[0], 
+                                             inv_delta, bc, nx, ny, nz, nzz);
+
+  cuda_error_check();
+}

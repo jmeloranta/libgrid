@@ -624,35 +624,6 @@ EXPORT REAL rgrid_cuda_min(rgrid *grid, REAL *value) {
   return 0;
 }
 
-/*
- * Calculate |rot| (|curl|; |\Nabla\times|) of a vector field (i.e., magnitude).
- *
- * rot       = Absolute value of rot (rgrid *; output).
- * fx        = X component of the vector field (rgrid *; input).
- * fy        = Y component of the vector field (rgrid *; input).
- * fz        = Z component of the vector field (rgrid *; input).
- * inv_delta = 1 / (2 * step) (REAL; input).
- * bc       = boundary condition (char; input).
- *
- */
-
-EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL inv_delta, char bc) {
-
-  if(rot->host_lock || fx->host_lock || fy->host_lock || fz->host_lock) {
-    cuda_remove_block(fx->value, 1);
-    cuda_remove_block(fy->value, 1);
-    cuda_remove_block(fz->value, 1);
-    cuda_remove_block(rot->value, 0);
-    return -1;
-  }
-
-  if(cuda_four_block_policy(rot->value, rot->grid_len, rot->cufft_handle_r2c, rot->id, 0, fx->value, fx->grid_len, fx->cufft_handle_r2c, fx->id, 1,
-                            fy->value, fy->grid_len, fy->cufft_handle_r2c, fy->id, 1, fz->value, fz->grid_len, fz->cufft_handle_r2c, fz->id, 1) < 0) return -1;
-
-  rgrid_cuda_abs_rotW(cuda_block_address(rot->value), cuda_block_address(fx->value), cuda_block_address(fy->value), cuda_block_address(fz->value), inv_delta, bc, rot->nx, rot->ny, rot->nz);
-  return 0;
-}
-
 /* 
  * Rise a grid to given integer power.
  *
