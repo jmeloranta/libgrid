@@ -4,7 +4,6 @@
  */
 
 #include "grid.h"
-#include "private.h"
 
 /*
  * Solve tridiagonal matrix equation A x = b using the Thomas algorithm.

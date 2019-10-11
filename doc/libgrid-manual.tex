@@ -269,8 +269,6 @@ INT lz, hz;  & If non-zero, these indices specify the position of the absorbing 
 
 Functions in libgrid are divided into following three classes: 1) rgrid\_* (functions for real valued grids; rgrid), 2) cgrid\_* (functions for complex valued grids; cgrid), and 3) grid\_wf\_* (functions for wavefunctions; wf). These are described in the following subsections. The arguments are listed in the tables in the same order as they are passed to the corresponding functions.
 
-%% LEFT HERE %%
-
 \section{Real grid routines}
 
 \subsection{rgrid\_alloc() -- Allocate a real-valued grid}
@@ -500,7 +498,7 @@ REAL z & Current $z$ coordinate.\\
 \noindent
 rgrid\_product\_func() function has no return value.
 
-\subsection{rgrid\_map -- Map function on grid}
+\subsection{rgrid\_map -- Map function onto grid}
 
 This function maps a user specified function onto a given grid. It takes the following arguments:
 \begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
@@ -1383,7 +1381,7 @@ Argument & Description\\
 rgrid *vx & $x$ component of the vector field to be decomposed. On exit, contains the compressible part $x$ component.\\
 rgrid *vy & $y$ component of the vector field to be decomposed. On exit, contains the compressible part $y$ component.\\
 rgrid *vz & $z$ component of the vector field to be decomposed. On exit, contains the compressible part $z$ component.\\
-rgrid *workspace1 & first workspace required by the function.\\
+rgrid *workspace & first workspace required by the function.\\
 rgrid *workspace2 & second workspace required by the function.\\
 \end{longtable}
 \noindent
@@ -1416,7 +1414,9 @@ This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
-rgrid *input & Input grid for spherical averaging, but this is complex data (i.e., after rgrid\_fft()).\\
+rgrid *input1 & Input grid for spherical averaging, but this is complex data (i.e., after rgrid\_fft()).\\
+rgrid *input2 & Input grid for spherical averaging, but this is complex data (i.e., after rgrid\_fft()). May be NULL.\\
+rgrid *input3 & Input grid for spherical averaging, but this is complex data (i.e., after rgrid\_fft()). May be NULL.\\
 REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
 REAL binstep & Binning step length for $k$.\\
 INT nbins & Number of bins allocated in bins.\\
@@ -1525,6 +1525,14 @@ void *farg & Arguments to be passed to the filter function.\\
 \noindent
 This function does not return any value.\\
 NOTE: This does not scale by fft\_norm, so use rgrid\_inverse\_fft\_norm() to include it.
+
+\subsection{rgrid\_host\_lock() and rgrid\_host\_unlock() -- Lock/unlock grid into host memory}
+
+This function can be used to lock or unlock a given grid into host memory (i.e., it will not be allowed to move to GPU). Unlocking means that it is allowed to move to GPU when needed. These functions take only one argument, which is the grid (rgrid *). This function does not return any value.
+
+\subsection{rgrid\_fft\_space() -- Set real or reciprocal space for a grid on GPU}
+
+On pure CPU based systems this function does nothing. On GPU systems it will set the data ordering of the grid. CUFFT changes the data distribution on GPUs after FFT/IFFT operations. For this reason, it is not possible to do two FFT's on the same grid. One has to apply always FFT and IFFT in pairs. Especially when using temporary grids, it may be necessary to tell CUFFT in which space the data is given. This function takes the grid (rgrid *) as the first argument and space (char) as the second argument. The space argument specifies: 0 for real space (CUFFT\_XT\_FORMAT\_INPLACE) or 1 reciprocal space (CUFFT\_XT\_FORMAT\_INPLACE\_SHUFFLED). This function does not return any value.
 
 \section{Complex grid routines}
 

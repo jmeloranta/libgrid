@@ -11,7 +11,7 @@
  */
 
 #include "grid.h"
-#include "private.h"
+#include "cprivate.h"
 
 #ifdef USE_CUDA
 #include <cuda_runtime_api.h>

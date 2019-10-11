@@ -4,7 +4,6 @@
  */
 
 #include "grid.h"
-#include "private.h"
 
 /*
  * Dirichlet (or constant boundary value) boundary condition.

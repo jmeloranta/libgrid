@@ -5,7 +5,6 @@
 
 #include "grid.h"
 #include "au.h"
-#include "private.h"
 
 char grid_analyze_method = (char) -1; // 0 = FD and 1 = FFT, -1 = not set
 

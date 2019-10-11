@@ -11,7 +11,7 @@
  */
 
 #include "grid.h"
-#include "private.h"
+#include "rprivate.h"
 
 #ifdef USE_CUDA
 #include <cuda_runtime_api.h>
@@ -20,39 +20,9 @@
 
 extern char grid_analyze_method;
 
-
-#ifdef USE_CUDA
-static char rgrid_bc_conv(rgrid *grid) {
-
-  if(grid->value_outside == RGRID_DIRICHLET_BOUNDARY) return 0;
-  else if(grid->value_outside == RGRID_NEUMANN_BOUNDARY) return 1;
-  else if(grid->value_outside == RGRID_PERIODIC_BOUNDARY) return 2;
-  else {
-    fprintf(stderr, "libgrid(cuda): Incompatible boundary condition.\n");
-    abort();
-  }
-}
-#endif
-
 /*
- * Local subroutine for rotating grid around z axis.
+ * Allocate new complex grid.
  *
- */
-
-static REAL rgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
-
-  /* Unpack the values in arg */ 
-  rgrid *grid = ((grid_rotation *) arg)->rgrid;
-  REAL sth = ((grid_rotation *) arg)->sinth, cth = ((grid_rotation *) arg)->costh, xp, yp;
-
-  xp = -y * sth + x * cth; 
-  yp =  y * cth + x * sth;
-
-  return rgrid_value(grid, xp, yp, z);
-}
-
-/*
- * Allocate real grid.
  *
  * nx                 = number of points on the grid along x (INT).
  * ny                 = number of points on the grid along y (INT).
@@ -2933,11 +2903,11 @@ EXPORT void rgrid_fft_space(rgrid *grid, char space) {
 }
 
 /*
- * Multiply real grid by coordinate x.
+ * @DOC{rgrid_multiply_by_x, Multiply real grid by coordinate x.
  * 
  * grid  = Grid to be operated on (rgrid *; input/output).
  *
- * No return value.
+ * No return value.}
  *
  */
 

@@ -4,7 +4,7 @@
  */
 
 #include "grid.h"
-#include "private.h"
+#include "cprivate.h"
 
 /*
  * Allocate wavefunction.

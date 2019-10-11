@@ -5,7 +5,6 @@
  */
 
 #include "grid.h"
-#include "private.h"
 
 /*
  * Auxiliary routine for calculating the energy (Crank-Nicolson).

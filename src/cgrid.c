@@ -11,7 +11,7 @@
  */
 
 #include "grid.h"
-#include "private.h"
+#include "cprivate.h"
 
 extern char grid_analyze_method;
 

@@ -44,37 +44,36 @@ libgrid.a: $(OBJS)
 	nvcc $(NVCFLAGS) -c -o $@ $<
 
 grid.h: structs.h proto.h defs.h
-cgrid_bc.o: cgrid_bc.c grid.h private.h
-cgrid.o: cgrid.c grid.h private.h
-cgrid-cuda2.o: cgrid-cuda2.cu cuda-math.h cgrid_bc-cuda.h
+cgrid_bc.o: cgrid_bc.c grid.h
+cgrid.o: cgrid.c grid.h cprivate.h
+cgrid-cuda2.o: cgrid-cuda2.cu cuda-math.h cgrid_bc-cuda.h cuda-vars.h cuda.h
 cgrid-cuda.o: cgrid-cuda.c grid.h
 cgrid_fft.o: cgrid_fft.c grid.h
 cgrid_fft-cuda.o: cgrid_fft-cuda.c grid.h
 ctimer.o: ctimer.c grid.h
-cuda.o: cuda.c cuda.h
-grid_wf.o: grid_wf.c grid.h private.h
-grid_wf_analyze.o: grid_wf_analyze.c grid.h private.h
-grid_wf_cn.o: grid_wf_cn.c grid.h private.h
+cuda.o: cuda.c cuda.h cuda-private.h
+grid_wf.o: grid_wf.c grid.h cprivate.h
+grid_wf_analyze.o: grid_wf_analyze.c grid.h au.h
+grid_wf_cn.o: grid_wf_cn.c grid.h
 grid_wf_cn-cuda.o: grid_wf_cn-cuda.c grid.h
-grid_wf_cn-cuda2.o: grid_wf_cn-cuda2.cu linalg-cuda.h cuda.h cuda-math.h defs.h
-grid_wf_cn-cuda.o: grid_wf_cn-cuda.c grid.h
-grid_wf_diag.o: grid_wf_diag.c grid.h private.h
-grid_wf_fft.o: grid_wf_fft.c grid.h private.h
-grid_wf_fft-cuda2.o: grid_wf_fft-cuda2.cu cuda.h cuda-math.h
+grid_wf_cn-cuda2.o: grid_wf_cn-cuda2.cu linalg-cuda.h cuda.h cuda-math.h defs.h grid_wf-cuda.h
+grid_wf_diag.o: grid_wf_diag.c grid.h
+grid_wf_fft.o: grid_wf_fft.c grid.h
+grid_wf_fft-cuda2.o: grid_wf_fft-cuda2.cu cuda.h cuda-math.h cuda-vars.h
 grid_wf_fft-cuda.o: grid_wf_fft-cuda.c grid.h
-linalg.o: linalg.c grid.h private.h
-ngrid.o: ngrid.c grid.h private.h
+linalg.o: linalg.c grid.h
+ngrid.o: ngrid.c grid.h cprivate.h
 ngrid-cuda.o: ngrid-cuda.c grid.h
-ngrid-cuda2.o: ngrid-cuda2.cu cuda-math.h
-interpolate.o: interpolate.c grid.h private.h
-rgrid_bc.o: rgrid_bc.c grid.h private.h
-rgrid.o: rgrid.c grid.h private.h
+ngrid-cuda2.o: ngrid-cuda2.cu cuda-math.h cgrid_bc-cuda.h cuda-vars.h cuda.h
+interpolate.o: interpolate.c grid.h
+rgrid_bc.o: rgrid_bc.c grid.h
+rgrid.o: rgrid.c grid.h rprivate.h
 rgrid-cuda.o: rgrid-cuda.c grid.h
-rgrid-cuda2.o: rgrid-cuda2.cu cuda-math.h rgrid_bc-cuda.h
+rgrid-cuda2.o: rgrid-cuda2.cu cuda-math.h rgrid_bc-cuda.h cuda-vars.h cuda.h
 rgrid_fft.o: rgrid_fft.c grid.h
 rgrid_fft-cuda.o: rgrid_fft-cuda.c grid.h
-grid_fft.o: grid_fft.c
-threads.o: threads.c grid.h private.h
+grid_fft.o: grid_fft.c grid.h
+threads.o: threads.c grid.h
 ext-cuda/func1c.o: ext-cuda/func1c.c grid.h ext-cuda/func1.h
 ext-cuda/func1cu.o: ext-cuda/func1cu.cu ext-cuda/func1.h
 ext-cuda/func2c.o: ext-cuda/func2c.c grid.h ext-cuda/func2.h

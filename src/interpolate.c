@@ -4,7 +4,6 @@
  */
 
 #include "grid.h"
-#include "private.h"
 
 /*
  * Polynomial interpolation routine.

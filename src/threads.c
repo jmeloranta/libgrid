@@ -4,7 +4,6 @@
  */
 
 #include "grid.h"
-#include "private.h"
 #include "git-version.h"
 
 static INT grid_nthreads = 0;

@@ -4,7 +4,6 @@
  */
 
 #include "grid.h"
-#include "private.h"
 
 /*
  * Calculate the momentum x component.
