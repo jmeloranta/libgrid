@@ -13,6 +13,7 @@
 #define GRID_AUTOJ    4.359748E-18           /* Hartree to Joule */
 #define GRID_AUTOCM1  (3.15773213e5/1.439)   /* Hartree to wavenumbers */
 #define GRID_HZTOCM1  3.335641E-11           /* Hz to wavenumbers */
+#define GRID_AUTOKG   9.10938356E-31         /* Atomic mass unit to kg */ 
 #define GRID_AUTOAMU  (1.0/1822.88853006)    /* Me (mass of electron) to atomic mass unit */
 #define GRID_AUTOFS   0.02418884             /* Atomic time unit to femtosecond */
 #define GRID_AUTOS    (GRID_AUTOFS * 1E-15)  /* Atomic time unit to second */
