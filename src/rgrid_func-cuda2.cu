@@ -3,6 +3,7 @@
  *
  */
 
+#include <stdio.h>
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <device_launch_parameters.h>
@@ -12,6 +13,8 @@
 #include "rgrid_bc-cuda.h"
 #include "cuda-vars.h"
 #include "cuda.h"
+
+extern "C" void cuda_error_check();
 
 /*
  * Return precomputed function value at given value (no interpolation). Not to be called directly.
@@ -41,7 +44,7 @@ __device__ inline CUREAL rgrid_cuda_function_value(CUREAL *pfunc, CUREAL x, CURE
  *
  */
 
-__global__ void rgrid_cuda_operate_one_product_gpu(CUREAL *dst, CUREAL *src1, CUREAL *src2, CUREAL *func, INT nx, INT ny, INT nz, INT nzz, CUREAL begin, INT nsteps, CUREAL step) {
+__global__ void rgrid_cuda_function_operate_one_product_gpu(CUREAL *dst, CUREAL *src1, CUREAL *src2, CUREAL *func, INT nx, INT ny, INT nz, INT nzz, CUREAL begin, INT nsteps, CUREAL step) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
@@ -74,7 +77,7 @@ extern "C" void rgrid_cuda_function_operate_one_productW(gpu_mem_block *dst, gpu
 
   dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
-  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
 
   if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): function_operate_one_product must be in real space (INPLACE).");
@@ -100,7 +103,7 @@ extern "C" void rgrid_cuda_function_operate_one_productW(gpu_mem_block *dst, gpu
  *
  */
 
-__global__ void rgrid_cuda_operate_one_gpu(CUREAL *dst, CUREAL *src, CUREAL *func, INT nx, INT ny, INT nz, INT nzz, CUREAL begin, INT nsteps, CUREAL step) {
+__global__ void rgrid_cuda_function_operate_one_gpu(CUREAL *dst, CUREAL *src, CUREAL *func, INT nx, INT ny, INT nz, INT nzz, CUREAL begin, INT nsteps, CUREAL step) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
