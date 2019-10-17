@@ -215,7 +215,7 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
 }
 
 /*
- * Auxiliary routine to propagate kinetic energy using CFFT (with anti-alias cutoff; "2/3 rule"). The wave function must be in the reciprocal space.
+ * Auxiliary routine to propagate kinetic energy using CFFT (with Lanczos filter). Wave function in Fourier space.
  *
  * gwf  = wavefunction to be propagated (wf *).
  * time = time step (REAL complex).
@@ -226,14 +226,13 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
 
 EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
 
-  INT i, j, k, ij, ijnz, nx = gwf->grid->nx, ny = gwf->grid->ny, nz = gwf->grid->nz, nxy = nx * ny, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
-  INT il = nx / 3, iu = 2 * il, jl = ny / 3, ju = 2 * jl, kl = nz / 3, ku = 2 * kl;
+  INT i, j, k, ij, ijnz, nx = gwf->grid->nx, ny = gwf->grid->ny, nz = gwf->grid->nz, nxy = nx * ny, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, ii, jj, kk;
   REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step, norm;
-  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0;
+  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, tot, cnorm = 2.0 * M_PI / ((REAL) (nx + ny + nz));
   REAL complex *value = gwf->grid->value, time_mass = -I * time * HBAR / (gwf->mass * 2.0);
 
 #ifdef USE_CUDA
-  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cfft(gwf, time_mass)) return;
+  if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cfft(gwf, time_mass, cnorm)) return;
 #endif
   
   /* f(x) = ifft[fft[f(x)]] / N */
@@ -242,7 +241,7 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   lx = 2.0 * M_PI / (((REAL) nx) * step);
   ly = 2.0 * M_PI / (((REAL) ny) * step);
   lz = 2.0 * M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,il,iu,jl,ju,kl,ku) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,cnorm) private(i,j,ij,ijnz,k,kx,ky,kz,ii,jj,kk,tot) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -260,25 +259,35 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
      *
      */
 
-    if (i <= nx2)
+    if (i <= nx2) {
       kx = ((REAL) i) * lx - kx0;
-    else
+      ii = i;
+    } else {
       kx = ((REAL) (i - nx)) * lx - kx0;
+      ii = i - nx;
+    }
 
-    if (j <= ny2)
+    if (j <= ny2) {
       ky = ((REAL) j) * ly - ky0;
-    else
+      jj = j;
+    } else {
       ky = ((REAL) (j - ny)) * ly - ky0;
+      jj = j - ny;
+    }
 
     for(k = 0; k < nz; k++) {
-      if (k <= nz2)
+      if (k <= nz2) {
         kz = ((REAL) k) * lz - kz0; 
-      else
+        kk = k;
+      } else {
         kz = ((REAL) (k - nz)) * lz - kz0;
+        kk = k - nz;
+      }
 
       /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-      if((i > il && i < iu) || (j > jl && j < ju) || (k > kl && k < ku)) value[ijnz + k] = 0.0;
-      else value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
+      tot = SQRT((REAL) (ii * ii + jj * jj + kk * kk)) * cnorm;
+      value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
+      if(tot != 0.0) value[ijnz + k] *= SIN(tot) / tot;
     }
   } 
 }
