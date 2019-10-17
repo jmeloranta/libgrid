@@ -66,7 +66,7 @@ EXPORT char rgrid_cuda_fft_product(rgrid *dst, rgrid *src1, rgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_fft_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->fft_norm2, src1->nx, src1->ny, src1->nz);
+  rgrid_cuda_fft_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
@@ -92,7 +92,7 @@ EXPORT char rgrid_cuda_fft_sum(rgrid *dst, rgrid *src1, rgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_fft_sumW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->fft_norm2, src1->nx, src1->ny, src1->nz);
+  rgrid_cuda_fft_sumW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }

@@ -106,8 +106,8 @@ extern "C" void grid_cuda_wf_propagate_kinetic_fftW(gpu_mem_block *grid, CUREAL 
 
 __global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL cx, CUREAL cy, CUREAL cz, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUCOMPLEX time_mass, REAL cnorm, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg;
-  CUREAL kx, ky, kz, kk, tot;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg, ki, kj, kk;
+  CUREAL kx, ky, kz, ktot, tot;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -138,9 +138,9 @@ __global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL nor
   }
       
   /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-  kk = kx * kx + ky * ky + kz * kz;
+  ktot = kx * kx + ky * ky + kz * kz;
   tot = SQRT((CUREAL) (ki * ki + kj * kj + kk * kk)) * cnorm;
-  b[idx] = b[idx] * CUCEXP(time_mass * kk) * norm;
+  b[idx] = b[idx] * CUCEXP(time_mass * ktot) * norm;
   if(tot != 0.0) b[idx] = b[idx] * SIN(tot) / tot;
 }
 
