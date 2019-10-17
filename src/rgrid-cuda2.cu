@@ -29,6 +29,122 @@ extern "C" void cuda_error_check();
 
 /*
  *
+ * dst = src1 + src2.
+ *
+ * Fourier space.
+ *
+ */
+
+__global__ void rgrid_cuda_fft_sum_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  dst[idx] = src1[idx] + src2[idx];
+}
+
+/*
+ * Direct sum two grids in the Fourier space (data in GPU). Not called directly.
+ *
+ * Sum in GPU memory: dst = src1 + src2
+ *
+ * dst   = output (gpu_mem_block *; output).
+ * src1  = 1st grid to be multiplied (gpu_mem_block *; input).
+ * src2  = 2nd grid to be multiplied (gpu_mem_block *; input).
+ * nx    = Grid dim x (INT; input).
+ * ny    = Grid dim y (INT; input).
+ * nz    = Grid dim z (INT; input).
+ *
+ * In Fourier space.
+ *
+ */
+
+extern "C" void rgrid_cuda_fft_sumW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
+  SETUP_VARIABLES_RECIPROCAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): sum sources must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_fft_sum_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny1, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_fft_sum_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny2, nzz);
+  }
+
+  cuda_error_check();
+}
+
+/*
+ *
+ * dst = src1 * src2.
+ *
+ * Fourier space.
+ *
+ */
+
+__global__ void rgrid_cuda_fft_product_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  dst[idx] = src1[idx] * src2[idx];
+}
+
+/*
+ * Direct multiply of two grids in the Fourier space (data in GPU). Not called directly.
+ *
+ * Multiplication in GPU memory: dst = src1 * src2
+ *
+ * dst   = output (gpu_mem_block *; output).
+ * src1  = 1st grid to be multiplied (gpu_mem_block *; input).
+ * src2  = 2nd grid to be multiplied (gpu_mem_block *; input).
+ * nx    = Grid dim x (INT; input).
+ * ny    = Grid dim y (INT; input).
+ * nz    = Grid dim z (INT; input).
+ *
+ * In Fourier space.
+ *
+ */
+
+extern "C" void rgrid_cuda_fft_productW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
+  SETUP_VARIABLES_RECIPROCAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): multiplication sources must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_fft_product_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny1, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_fft_product_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny2, nzz);
+  }
+
+  cuda_error_check();
+}
+
+/*
+ *
  * dst = src1 * src2 but with alternating signs for FFT.
  *
  * Fourier space.
@@ -49,7 +165,7 @@ __global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CU
 /*
  * Convolution in the Fourier space (data in GPU). Not called directly.
  *
- * Multiplication in GPU memory: grid_gpu_mem[i] = grid_gpu_mem[i] * grid_gpu_mem[j] (with sign variation).
+ * Multiplication in GPU memory: dst = src1 * src2 (with sign variation).
  * Note: this includes the sign variation needed for convolution as well as normalization!
  *
  * dst   = output (gpu_mem_block *; output).
@@ -87,6 +203,7 @@ extern "C" void rgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
 
   cuda_error_check();
 }
+
 
 /*
  *
@@ -251,7 +368,7 @@ extern "C" void rgrid_cuda_multiplyW(gpu_mem_block *grid, CUREAL c, INT nx, INT 
  *
  */
 
-__global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *dst, CUREAL c, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_fft_multiply_gpu(CUCOMPLEX *dst, CUREAL c, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
@@ -273,7 +390,7 @@ __global__ void rgrid_cuda_multiply_fft_gpu(CUCOMPLEX *dst, CUREAL c, INT nx, IN
  *
  */
 
-extern "C" void rgrid_cuda_multiply_fftW(gpu_mem_block *grid, CUREAL c, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fft_multiplyW(gpu_mem_block *grid, CUREAL c, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_RECIPROCAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;
@@ -285,12 +402,12 @@ extern "C" void rgrid_cuda_multiply_fftW(gpu_mem_block *grid, CUREAL c, INT nx, 
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_multiply_fft_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], c, nx, nny1, nzz);
+    rgrid_cuda_fft_multiply_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], c, nx, nny1, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_multiply_fft_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], c, nx, nny2, nzz);
+    rgrid_cuda_fft_multiply_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], c, nx, nny2, nzz);
   }
 
   cuda_error_check();

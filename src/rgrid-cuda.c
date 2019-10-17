@@ -45,6 +45,58 @@ EXPORT char rgrid_cuda_fft_convolute(rgrid *dst, rgrid *src1, rgrid *src2) {
   return 0;
 }
 
+/*
+ * Multiply two grids (in Fourier space).
+ *
+ * dst  = Destination (rgrid *; output).
+ * src1 = Source 1 (rgrid *; input).
+ * src2 = Source 2 (rgrid *; input).
+ *
+ */
+
+EXPORT char rgrid_cuda_fft_product(rgrid *dst, rgrid *src1, rgrid *src2) {
+
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
+
+  rgrid_cuda_fft_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->fft_norm2, src1->nx, src1->ny, src1->nz);
+
+  return 0;
+}
+
+/*
+ * Add two grids (in Fourier space).
+ *
+ * dst  = Destination (rgrid *; output).
+ * src1 = Source 1 (rgrid *; input).
+ * src2 = Source 2 (rgrid *; input).
+ *
+ */
+
+EXPORT char rgrid_cuda_fft_sum(rgrid *dst, rgrid *src1, rgrid *src2) {
+
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
+
+  rgrid_cuda_fft_sumW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->fft_norm2, src1->nx, src1->ny, src1->nz);
+
+  return 0;
+}
+
 /* 
  * Rise a grid to given power.
  *
@@ -125,7 +177,7 @@ EXPORT char rgrid_cuda_multiply(rgrid *grid, REAL c) {
  *
  */
 
-EXPORT char rgrid_cuda_multiply_fft(rgrid *grid, REAL c) {
+EXPORT char rgrid_cuda_fft_multiply(rgrid *grid, REAL c) {
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -134,7 +186,7 @@ EXPORT char rgrid_cuda_multiply_fft(rgrid *grid, REAL c) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_c2r, grid->id, 1) < 0) return -1;
 
-  rgrid_cuda_multiply_fftW(cuda_block_address(grid->value), c, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_fft_multiplyW(cuda_block_address(grid->value), c, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }

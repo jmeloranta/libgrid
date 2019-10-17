@@ -1900,6 +1900,76 @@ EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
+ * Add grids in Fourier space: gridc = grida + gridb.
+ *
+ * gridc = output (rgrid *; output).
+ * grida = 1st grid (rgrid *; input).
+ * gridb = 2nd grid (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fft_sum(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+
+  INT k, ij, ijnz, nx, ny, nz, nxy;
+  REAL complex *avalue, *bvalue, *cvalue;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_sum(gridc, grida, gridb)) return;
+#endif
+
+  nx = gridc->nx;
+  ny = gridc->ny;
+  nz = gridc->nz2 / 2;  // nz2 = 2 * (nz / 2 + 1)
+  nxy = nx * ny;
+  avalue = (REAL complex *) grida->value;
+  bvalue = (REAL complex *) gridb->value;
+  cvalue = (REAL complex *) gridc->value;
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,avalue,bvalue,cvalue) private(ij,ijnz,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    for(k = 0; k < nz; k++)
+      cvalue[ijnz + k] = avalue[ijnz + k] + bvalue[ijnz + k];
+  }
+}
+
+/*
+ * Multiply grids in Fourier space.
+ *
+ * gridc = output (rgrid *; output).
+ * grida = 1st grid (rgrid *; input).
+ * gridb = 2nd grid (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fft_product(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+
+  INT k, ij, ijnz, nx, ny, nz, nxy;
+  REAL complex *avalue, *bvalue, *cvalue;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_product(gridc, grida, gridb)) return;
+#endif
+
+  nx = gridc->nx;
+  ny = gridc->ny;
+  nz = gridc->nz2 / 2;  // nz2 = 2 * (nz / 2 + 1)
+  nxy = nx * ny;
+  avalue = (REAL complex *) grida->value;
+  bvalue = (REAL complex *) gridb->value;
+  cvalue = (REAL complex *) gridc->value;
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,avalue,bvalue,cvalue) private(ij,ijnz,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    for(k = 0; k < nz; k++)
+      cvalue[ijnz + k] = avalue[ijnz + k] * bvalue[ijnz + k];
+  }
+}
+
+/*
  * Multiply grid by a constant in Fourier space (grid->value is complex) 
  *
  * grid = Grid to be multiplied (rgrid *; input/output).
@@ -1909,13 +1979,13 @@ EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
  *
  */
 
-EXPORT void rgrid_multiply_fft(rgrid *grid, REAL c) {
+EXPORT void rgrid_fft_multiply(rgrid *grid, REAL c) {
 
   INT ij, k, ijnz, nxy = grid->nx * grid->ny, nz = grid->nz2 / 2;
   REAL complex *value = (REAL complex *) grid->value;
   
 #ifdef USE_CUDA
-  if(cuda_status() && !rgrid_cuda_multiply_fft(grid, c)) return;
+  if(cuda_status() && !rgrid_cuda_fft_multiply(grid, c)) return;
 #endif
 #pragma omp parallel for firstprivate(nxy,nz,value,c) private(ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
