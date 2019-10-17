@@ -26,7 +26,7 @@
  *
  */
 
-EXPORT rfunction *rgrid_functon_alloc(REAL (*func)(REAL, void *), void *params, REAL begin, REAL step, INT nsteps, char *id) {
+EXPORT rfunction *rgrid_function_alloc(REAL (*func)(REAL, void *), void *params, REAL begin, REAL step, INT nsteps, char *id) {
 
   INT i;
   rfunction *ptr;

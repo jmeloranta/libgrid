@@ -9,6 +9,6 @@
 - GPU shuffle routines not tested.
 - FFT abs boundaries for predict-correct.
 - update manual - it is now quite out of date.
-- Consider removing CFFT - it does not seem to help much?
+- Implement cfunction the same way as rfunction.
 
 also fgrep TODO *.[ch] to find out more specific issues.
