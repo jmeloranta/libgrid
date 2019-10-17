@@ -228,7 +228,7 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
 
   INT i, j, k, ij, ijnz, nx = gwf->grid->nx, ny = gwf->grid->ny, nz = gwf->grid->nz, nxy = nx * ny, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, ii, jj, kk;
   REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step, norm;
-  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, tot, cnorm = 2.0 * M_PI / ((REAL) (nx + ny + nz));
+  REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, tot, cnorm = gwf->cfft_width * M_PI / ((REAL) (nx + ny + nz));
   REAL complex *value = gwf->grid->value, time_mass = -I * time * HBAR / (gwf->mass * 2.0);
 
 #ifdef USE_CUDA

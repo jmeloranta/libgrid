@@ -91,6 +91,7 @@ typedef struct wf_struct {
   cgrid *grid;                  /* Grid holding the wave function data */
   REAL mass;                    /* Particle mass */
   REAL norm;                    /* Wave function norm */
+  REAL cfft_width;              /* Window width for CFFT */
   char boundary;                /* Boundary condition */
   char propagator;              /* Time propagator */
   cgrid *cworkspace;            /* Workspace (NULL if not in use) */
