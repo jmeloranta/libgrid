@@ -113,4 +113,32 @@ typedef struct rotation_struct {
   REAL costh;                  /* cos(theta) */
 } grid_rotation;
 
+/*
+ * Precomputed function structure (REAL).
+ *
+ */
+
+typedef struct rfunction {
+  char id[32]; /* function ID string */ 
+  REAL begin;  /* starting value */
+  INT nsteps;  /* number of values */
+  REAL step;   /* step */
+  REAL *value; /* values */
+  size_t length; /* Data length */
+} rfunction;
+
+/*
+ * Precomputed function structure (REAL complex).
+ *
+ */
+
+typedef struct cfunction {
+  char id[32]; /* function ID string */ 
+  REAL begin;  /* starting value */
+  INT nsteps;  /* number of values */
+  REAL step;   /* step */
+  REAL *value; /* values */
+  size_t length; /* Data length */
+} cfunction;
+
 #endif /* __GRID_STRUCTS__ */

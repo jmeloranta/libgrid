@@ -204,7 +204,6 @@ extern "C" void rgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
   cuda_error_check();
 }
 
-
 /*
  *
  * dst = src^x
