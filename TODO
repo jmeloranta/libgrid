@@ -10,6 +10,5 @@
 - FFT abs boundaries for predict-correct.
 - update manual - it is now quite out of date.
 - Consider removing CFFT - it does not seem to help much?
-- Should we replace external functions with a facility for 1-D lookup tables? (would remove hardcoded functions from libgrd)
 
 also fgrep TODO *.[ch] to find out more specific issues.
