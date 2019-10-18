@@ -9,6 +9,6 @@
 - GPU shuffle routines not tested.
 - FFT abs boundaries for predict-correct.
 - update manual - it is now quite out of date.
-- Implement cfunction the same way as rfunction.
+- Implement cfunction the same way as rfunction. These functions need to use linear interpolation...
 
 also fgrep TODO *.[ch] to find out more specific issues.

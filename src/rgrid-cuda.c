@@ -843,3 +843,28 @@ EXPORT char rgrid_cuda_multiply_by_z(rgrid *grid) {
 
   return 0;
 }
+
+/* 
+ * Natural logarithm of absolute value of grid.
+ *
+ * dst    = destination grid (rgrid *; output).
+ * src    = source grid (rgrid *; input).
+ * eps    = exponent to be used (REAL; input).
+ *
+ */
+
+EXPORT char rgrid_cuda_log(rgrid *dst, rgrid *src, REAL eps) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0)
+    return -1;
+
+  rgrid_cuda_logW(cuda_block_address(dst->value), cuda_block_address(src->value), eps, src->nx, src->ny, src->nz);
+
+  return 0;
+}

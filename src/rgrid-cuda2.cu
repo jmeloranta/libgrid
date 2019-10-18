@@ -2008,3 +2008,58 @@ extern "C" void rgrid_cuda_multiply_by_zW(gpu_mem_block *dst, CUREAL z0, CUREAL 
 
   cuda_error_check();
 }
+
+/*
+ *
+ * dst = LOG(src + eps)
+ *
+ */
+
+__global__ void rgrid_cuda_log_gpu(CUREAL *dst, CUREAL *src, CUREAL eps, INT nx, INT ny, INT nz, INT nzz) {
+  
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nzz + k;
+
+  dst[idx] = LOG(FABS(src[idx]) + eps);
+}
+
+/*
+ * Natural logarithm of |grid|.
+ *
+ * dst      = Destination for operation (gpu_mem_block *; output).
+ * src      = Source for operation (gpu_mem_block *; input).
+ * eps      = Epsilon (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ * Real space.
+ *
+ */
+
+extern "C" void rgrid_cuda_logW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL eps, INT nx, INT ny, INT nz) {
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+  SETUP_VARIABLES_REAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
+
+  if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+    fprintf(stderr, "libgrid(cuda): Log must be in real space (INPLACE).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_log_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], eps, nnx1, ny, nz, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_log_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], eps, nnx2, ny, nz, nzz);
+  }
+
+  cuda_error_check();
+}

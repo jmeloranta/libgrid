@@ -3058,3 +3058,31 @@ EXPORT void rgrid_multiply_by_z(rgrid *grid) {
     }
   }
 }
+
+/* 
+ * Natural logarithm of absolute value of grid.
+ *
+ * dst     = Destination grid (rgrid *; output).
+ * src     = Source grid (rgrid *; input).
+ * eps     = Small number to avoid zero (REAL; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_log(rgrid *dst, rgrid *src, REAL eps) {
+
+  INT ij, k, ijnz, nxy = dst->nx * dst->ny, nz = dst->nz, nzz = dst->nz2;
+  REAL *DST = dst->value;
+  REAL *SRC = src->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_log(dst, src, eps)) return;
+#endif
+#pragma omp parallel for firstprivate(nxy,nz,nzz,DST,SRC,eps) private(ij,ijnz,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nzz;
+    for(k = 0; k < nz; k++)
+      DST[ijnz + k] = LOG(FABS(SRC[ijnz + k]) + eps);
+  }
+}
