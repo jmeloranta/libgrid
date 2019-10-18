@@ -18,17 +18,17 @@
  * func   = Function to be mapped (REAL (*)(REAL, void *); input).
  * params = Additional parameters for func (void *; input).
  * begin  = Lowest x value (REAL; input).
+ * end    = Highest x value (REAL; input).
  * step   = Step for x (REAL; input).
- * nsteps = Number of steps (INT; input).
  * id     = ID string identifying the function (char *; input).
  *
  * Returns pointer to the precomputed function object (rfunction *).
  *
  */
 
-EXPORT rfunction *rgrid_function_alloc(REAL (*func)(REAL, void *), void *params, REAL begin, REAL step, INT nsteps, char *id) {
+EXPORT rfunction *rgrid_function_alloc(REAL (*func)(REAL, void *), void *params, REAL begin, REAL end, REAL step, char *id) {
 
-  INT i;
+  INT i, nsteps = 1 + (INT) ((end - begin) / step);
   rfunction *ptr;
 
   if(!(ptr = (rfunction *) malloc(sizeof(rfunction)))) {

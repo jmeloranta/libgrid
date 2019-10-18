@@ -943,6 +943,94 @@ EXPORT void rgrid_poisson(rgrid *grid) {
 
 EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
 
+  if(grid_analyze_method) {
+    rgrid_fft(fx);
+    rgrid_fft(fy);
+    rgrid_fft(fz);
+    rgrid_fft_div(div, fx, fy, fz);
+    rgrid_inverse_fft(fx);
+    rgrid_inverse_fft(fy);
+    rgrid_inverse_fft(fz);
+  } else rgrid_fd_div(div, fx, fy, fz);
+}
+
+/*
+ * Calculate divergence of a vector field (in Fourier space).
+ *
+ * div     = result (rgrid *; output).
+ * fx      = x component of the field (rgrid *; input). In Fourier space.
+ * fy      = y component of the field (rgrid *; input). In Fourier space.
+ * fz      = z component of the field (rgrid *; input). In Fourier space.
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fft_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
+
+  INT i, j, k, ij, ijnz, nx, ny, nz, nxy, nx2, ny2, nz2;
+  REAL kx0 = div->kx0, ky0 = div->ky0, kz0 = div->kz0;
+  REAL kx, ky, kz, step, norm, lx, ly, lz;
+  REAL complex *adiv = (REAL complex *) div->value, *afx = (REAL complex *) fx->value, *afy = (REAL complex *) fy->value, *afz = (REAL complex *) fz->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_div(div, fx, fy, fz)) return;
+#endif
+
+  /* f'(x) = iF[ i kx F[f(x)] ] */  
+  nx = div->nx;
+  ny = div->ny;
+  nz = div->nz2 / 2;
+  nxy = nx * ny;
+  step = div->step;
+  norm = div->fft_norm;
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = 2.0 * M_PI / (((REAL) nz) * step);
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nz2 = nz / 2;
+
+#pragma omp parallel for firstprivate(adiv,afx,afy,afz,nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    i = ij / ny;
+    j = ij % ny;
+    ijnz = ij * nz;
+
+    if(i < nx2) 
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = -((REAL) (nx - i)) * lx - kx0;
+
+    if(j < ny2) 
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = -((REAL) (ny - j)) * ly - ky0;
+
+    for(k = 0; k < nz; k++) {
+      if(k < nz2) 
+        kz = ((REAL) k) * lz - kz0;
+      else
+        kz = -((REAL) (nz - k)) * lz - kz0;        
+      adiv[ijnz + k] = norm * I * (kx * afx[ijnz + k] + ky * afy[ijnz + k] + kz * afz[ijnz + k]);
+    }
+  } 
+}
+
+/*
+ * Calculate divergence of a vector field (finite difference).
+ *
+ * div     = result (rgrid *; output).
+ * fx      = x component of the field (rgrid *; input).
+ * fy      = y component of the field (rgrid *; input).
+ * fz      = z component of the field (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fd_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
+
   INT i, j, k, ij, ijnz, ny = div->ny, nz = div->nz, nxy = div->nx * div->ny, nzz = div->nz2;
   REAL inv_delta = 1.0 / (2.0 * div->step);
   REAL *lvalue = div->value;
@@ -953,6 +1041,7 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
   }
 
 #ifdef USE_CUDA
+// TODO: single GPU implementation missing
   cuda_remove_block(lvalue, 0);
   cuda_remove_block(fx->value, 1);
   cuda_remove_block(fy->value, 1);

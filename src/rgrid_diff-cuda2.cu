@@ -975,6 +975,89 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace
 
 
 /*
+ * FFT div.
+ *
+ * dst = div (fx, fy, fz)
+ *
+ */
+
+__global__ void rgrid_cuda_fft_div_gpu(CUCOMPLEX *dst, CUCOMPLEX *fx, CUCOMPLEX *fy, CUCOMPLEX *fz, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL lx, CUREAL ly, CUREAL lz, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg;
+  CUREAL kx, ky, kz;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  
+  if(i < nx2) 
+    kx = ((REAL) i) * lx - kx0;
+  else
+    kx = -((REAL) (nx - i)) * lx - kx0;
+  if(jj < ny2) 
+    ky = ((REAL) jj) * ly - ky0;
+  else
+    ky = -((REAL) (nyy - jj)) * ly - ky0;
+  if(k < nz2) 
+    kz = ((REAL) k) * lz - kz0;
+  else
+    kz = -((REAL) (nz - k)) * lz - kz0;        
+
+  dst[idx] = CUMAKE(0.0, norm) * (kx * fx[idx] + ky * fy[idx] + kz * fz[idx]);
+}
+
+/*
+ * FFT div
+ *
+ * div      = Destination grid for operation (gpu_mem_block *; output).
+ * fx       = Vector field X component (gpu_mem_block *; input).
+ * fy       = Vector field Y component (gpu_mem_block *; input).
+ * fz       = Vector field Z component (gpu_mem_block *; input).
+ * norm     = FFT norm (grid->fft_norm) (REAL; input).
+ * kx0      = Momentum shift of origin along X (REAL; input).
+ * ky0      = Momentum shift of origin along Y (REAL; input).
+ * kz0      = Momentum shift of origin along Z (REAL; input).
+ * step     = Spatial step length (REAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ * Only periodic boundaries!
+ *
+ * In Fourier space.
+ *
+ */
+
+extern "C" void rgrid_cuda_fft_divW(gpu_mem_block *div, gpu_mem_block *fx, gpu_mem_block *fy, gpu_mem_block *fz, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz) {
+
+  div->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
+  SETUP_VARIABLES_RECIPROCAL(div);
+  cudaXtDesc *DIV = div->gpu_info->descriptor, *FX = fx->gpu_info->descriptor, *FY = fy->gpu_info->descriptor, *FZ = fz->gpu_info->descriptor;
+  INT seg = 0;
+
+  if(fx->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || fy->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || fz->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): fft_div must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DIV->GPUs[i]);
+    rgrid_cuda_fft_div_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DIV->data[i], (CUCOMPLEX *) FX->data[i], (CUCOMPLEX *) FY->data[i], (CUCOMPLEX *) FZ->data[i], norm, kx0, ky0, kz0, 
+        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny1, nzz, ny, nx / 2, ny / 2, nzz / 2, seg);
+    seg += nny1;
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DIV->GPUs[i]);
+    rgrid_cuda_fft_div_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DIV->data[i], (CUCOMPLEX *) FX->data[i], (CUCOMPLEX *) FY->data[i], (CUCOMPLEX *) FZ->data[i], norm, kx0, ky0, kz0,
+        2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step), step, nx, nny2, nzz, ny, nx / 2, ny / 2, nzz / 2, seg);
+    seg += nny2;
+  }
+
+  cuda_error_check();
+}
+
+/*
  * |rot|
  *
  */

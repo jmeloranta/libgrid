@@ -334,9 +334,22 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
     abort();
   }
 
-  if(block->cufft_handle == -1) {
-    fprintf(stderr, "libgrid(cuda): mem2gpu called for non-cufft capable block.\n");
-    abort();
+  if(block->cufft_handle == -1) { /* This means that we need to copy the block to every GPU */
+    block->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
+    for(i = 0; i < use_ngpus; i++) {
+      if(cudaSetDevice(block->gpu_info->descriptor->GPUs[i]) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): mem2gpu copy error (set device).\n");
+        cuda_error_check();
+        abort();
+      }        
+      if(cudaMemcpy(block->gpu_info->descriptor->data[i], (char *) block->host_mem, block->gpu_info->descriptor->size[i], cudaMemcpyHostToDevice) != cudaSuccess) {
+        fprintf(stderr, "libgrid(cuda): mem2gpu copy error.\n");
+        cuda_error_check();
+        abort();
+      }        
+    }
+    cuda_error_check();
+    return 0;
   }
 
   /* TODO: For now, cuda_gpu_shuffle() is not called. Until we know whether the CPU data is in real or reciprocal space, we cannot do that. */
@@ -563,15 +576,16 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
     nnx1 = nnx2 + 1;
   } else nnx1 = nnx2 = ngpu1 = ngpu2 = nx = 0;
 
-  /* This is for GPU blocks that are not to be used with cufft */
   if(!(block->gpu_info = (cudaLibXtDesc *) malloc(sizeof(cudaLibXtDesc)))) {
     fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
     abort();
   }
+
   if(!(block->gpu_info->descriptor = (cudaXtDesc *) malloc(sizeof(cudaXtDesc)))) {
     fprintf(stderr, "libgrid(cuda): Out of memory in alloc_mem().\n");
     abort();
   }
+
   block->gpu_info->version = 0;
   block->gpu_info->descriptor->version = 0;
   block->gpu_info->descriptor->nGPUs = use_ngpus;

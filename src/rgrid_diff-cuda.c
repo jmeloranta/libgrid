@@ -369,6 +369,35 @@ EXPORT char rgrid_cuda_fft_laplace_expectation_value(rgrid *laplace, REAL *value
 }
 
 /*
+ * Calculate div of a vector field (in Fourier space).
+ *
+ * div = result (rgrid *; output).
+ * fx  = x component of the field (rgrid *; input). In Fourier space.
+ * fy  = y component of the field (rgrid *; input). In Fourier space.
+ * fz  = z component of the field (rgrid *; input). In Fourier space.
+ *
+ */
+
+EXPORT char rgrid_cuda_fft_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
+
+  if(div->host_lock || fx->host_lock || fy->host_lock || fz->host_lock) {
+    cuda_remove_block(fx->value, 1);
+    cuda_remove_block(fy->value, 1);
+    cuda_remove_block(fz->value, 1);
+    cuda_remove_block(div->value, 0);
+    return -1;
+  }
+
+  if(cuda_four_block_policy(div->value, div->grid_len, div->cufft_handle_c2r, div->id, 1, fx->value, fx->grid_len, fx->cufft_handle_c2r, fx->id, 1,
+                            fy->value, fy->grid_len, fy->cufft_handle_c2r, fy->id, 1, fz->value, fz->grid_len, fz->cufft_handle_c2r, fz->id, 1) < 0) return -1;
+
+  rgrid_cuda_fft_divW(cuda_block_address(div->value), cuda_block_address(fx->value), cuda_block_address(fy->value), cuda_block_address(fz->value), div->fft_norm, 
+                      div->kx0, div->ky0, div->kz0, div->step, div->nx, div->ny, div->nz);
+
+  return 0;
+}
+
+/*
  * Calculate |rot| (|curl|; |\Nabla\times|) of a vector field (i.e., magnitude).
  *
  * rot       = Absolute value of rot (rgrid *; output).

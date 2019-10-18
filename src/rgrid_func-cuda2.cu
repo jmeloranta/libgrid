@@ -77,7 +77,7 @@ extern "C" void rgrid_cuda_function_operate_one_productW(gpu_mem_block *dst, gpu
 
   dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
-  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor, *FUNC = func->gpu_info->descriptor;
 
   if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): function_operate_one_product must be in real space (INPLACE).");
@@ -86,12 +86,12 @@ extern "C" void rgrid_cuda_function_operate_one_productW(gpu_mem_block *dst, gpu
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    rgrid_cuda_function_operate_one_product_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], (CUREAL *) func, nnx1, ny, nz, nzz, begin, nsteps, step);
+    rgrid_cuda_function_operate_one_product_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], (CUREAL *) FUNC->data[i], nnx1, ny, nz, nzz, begin, nsteps, step);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    rgrid_cuda_function_operate_one_product_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], (CUREAL *) func, nnx2, ny, nz, nzz, begin, nsteps, step);
+    rgrid_cuda_function_operate_one_product_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC1->data[i], (CUREAL *) SRC2->data[i], (CUREAL *) FUNC->data[i], nnx2, ny, nz, nzz, begin, nsteps, step);
   }
 
   cuda_error_check();
@@ -135,7 +135,7 @@ extern "C" void rgrid_cuda_function_operate_oneW(gpu_mem_block *dst, gpu_mem_blo
 
   dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
   SETUP_VARIABLES_REAL(dst);
-  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor;
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC = src->gpu_info->descriptor, *FUNC = func->gpu_info->descriptor;
 
   if(src->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
     fprintf(stderr, "libgrid(cuda): Power must be in real space (INPLACE).");
@@ -144,12 +144,12 @@ extern "C" void rgrid_cuda_function_operate_oneW(gpu_mem_block *dst, gpu_mem_blo
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    rgrid_cuda_function_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], (CUREAL *) func, nnx1, ny, nz, nzz, begin, nsteps, step);
+    rgrid_cuda_function_operate_one_gpu<<<blocks1,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], (CUREAL *) FUNC->data[i], nnx1, ny, nz, nzz, begin, nsteps, step);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    rgrid_cuda_function_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], (CUREAL *) func, nnx2, ny, nz, nzz, begin, nsteps, step);
+    rgrid_cuda_function_operate_one_gpu<<<blocks2,threads>>>((CUREAL *) DST->data[i], (CUREAL *) SRC->data[i], (CUREAL *) FUNC->data[i], nnx2, ny, nz, nzz, begin, nsteps, step);
   }
 
   cuda_error_check();
