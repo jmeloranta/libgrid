@@ -951,6 +951,7 @@ EXPORT void rgrid_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
     rgrid_inverse_fft(fx);
     rgrid_inverse_fft(fy);
     rgrid_inverse_fft(fz);
+    rgrid_invere_fft(div);
   } else rgrid_fd_div(div, fx, fy, fz);
 }
 
