@@ -19,12 +19,12 @@ void my_error_function(const char *msg) {
 int main(int argc, char **argv) {
 
   INT i, nsteps;
-  FILE *fp;
+  FILE *fp, *fp2;
   REAL x, xmin = 1E99, xmax = -1E99, y, ymin = 1E99, ymax = -1E99;
-  char buf[512];
+  char buf[512], buf2[512], s1, s2;
 
-  if(argc != 2) {
-    fprintf(stderr, "Usage: view3 file\n");
+  if(argc != 3) {
+    fprintf(stderr, "Usage: view3 file1 file2\n");
     exit(1);
   }
 
@@ -65,25 +65,48 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Can't open file %s.\n", argv[1]);
     exit(1);
   }
+  if(!(fp2 = fopen(argv[2], "r"))) {
+    fprintf(stderr, "Can't open file %s.\n", argv[2]);
+    exit(1);
+  }
   nsteps = 0;
+  s1 = s2 = 0;
   for(i = 0; !feof(fp); i++) {
-    fgets(buf, sizeof(buf), fp);    
-    if(buf[0] == '\n') {
+    if(!s1) fgets(buf, sizeof(buf), fp);    
+    if(!s2) fgets(buf2, sizeof(buf2), fp2);    
+    if(buf[0] == '\n') s1 = 1;
+    if(buf2[0] == '\n') s2 = 1;
+    if(s1 == 1 && s2 == 1) {
       GracePrintf("title \"%d\"", nsteps);
       GracePrintf("s0 linestyle 0");
       GracePrintf("s0 symbol 1");
+      GracePrintf("s0 symbol color 1");
       GracePrintf("s0 symbol size 0.3");
       GracePrintf("s0 symbol linewidth 2");
+      GracePrintf("s1 linestyle 0");
+      GracePrintf("s1 symbol color 2");
+      GracePrintf("s1 symbol 1");
+      GracePrintf("s1 symbol size 0.3");
+      GracePrintf("s1 symbol linewidth 2");
       GracePrintf("redraw");
       if(nsteps == 0) sleep(5);
       else usleep(300000);
       GracePrintf("kill g0.s0 SAVEALL");     
+      GracePrintf("kill g0.s1 SAVEALL");     
       nsteps++;
+      s1 = s2 = 0;
       continue;
     }
-    if(sscanf(buf, FMT_R " " FMT_R "\n", &x, &y) != 2) break;
-    GracePrintf("g0.s0 point " FMT_R "," FMT_R, x, y);
+    if(!s1) {
+      if(sscanf(buf, FMT_R " " FMT_R "\n", &x, &y) != 2) break;
+      GracePrintf("g0.s0 point " FMT_R "," FMT_R, x, y);
+    }
+    if(!s2) {
+      if(sscanf(buf2, FMT_R " " FMT_R "\n", &x, &y) != 2) break;
+      GracePrintf("g0.s1 point " FMT_R "," FMT_R, x, y);
+    }
   }
   fclose(fp);
+  fclose(fp2);
   return 0;
 }
