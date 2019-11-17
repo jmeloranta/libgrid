@@ -2865,7 +2865,6 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
 EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REAL, REAL), void *farg) {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy, nx2, ny2, nz2;
-  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL kx, ky, kz, lx, ly, lz, step;
   REAL complex *value = (REAL complex *) grid->value;
   
@@ -2886,26 +2885,26 @@ EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REA
   ly = 2.0 * M_PI / (((REAL) ny) * step);
   lz = M_PI / (((REAL) nz - 1) * step);
 
-#pragma omp parallel for firstprivate(nx2,ny2,nz2,func,farg,nx,ny,nz,nxy,step,value,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx2,ny2,nz2,func,farg,nx,ny,nz,nxy,step,value,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
     ijnz = ij * nz;
       
     if(i < nx2) 
-      kx = ((REAL) i) * lx - kx0;
+      kx = ((REAL) i) * lx;
     else
-      kx = -((REAL) (nx - i)) * lx - kx0;
+      kx = -((REAL) (nx - i)) * lx;
     if(j < ny2) 
-      ky = ((REAL) j) * ly - ky0;
+      ky = ((REAL) j) * ly;
     else
-      ky = -((REAL) (ny - j)) * ly - ky0;
+      ky = -((REAL) (ny - j)) * ly;
       
     for(k = 0; k < nz; k++) {
       if(k < nz2) 
-        kz = ((REAL) k) * lz - kz0;
+        kz = ((REAL) k) * lz;
       else
-        kz = -((REAL) (nz - k)) * lz - kz0;        
+        kz = -((REAL) (nz - k)) * lz;
       value[ijnz + k] *= (*func)(farg, kx, ky, kz);
     }
   }

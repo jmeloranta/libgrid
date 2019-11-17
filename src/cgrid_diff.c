@@ -478,7 +478,6 @@ EXPORT void cgrid_fd_laplace_z(cgrid *grid, cgrid *laplacez) {
 EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
 
   INT i, k, ij, ijnz, nx, ny, nz, nxy;
-  REAL kx0 = grid->kx0;
   REAL kx, step, norm;
   REAL complex *gxvalue = gradient_x->value;
   
@@ -496,7 +495,7 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
   
   if (gradient_x != grid) cgrid_copy(gradient_x, grid);
 
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue,kx0) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gxvalue) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     ijnz = ij * nz;
@@ -507,9 +506,9 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
      * else k = -k
      */
     if (i <= nx / 2)
-      kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
+      kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step);
     else 
-      kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
+      kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step);
       
     for(k = 0; k < nz; k++)	  
       gxvalue[ijnz + k] *= kx * norm * I;
@@ -532,7 +531,6 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
 
   INT j, k, ij, ijnz, nx, ny, nz, nxy;
   REAL ky, step, norm;
-  REAL ky0 = grid->ky0;
   REAL complex *gyvalue = gradient_y->value;
   
 #ifdef USE_CUDA
@@ -549,7 +547,7 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
   if (gradient_y != grid)
     cgrid_copy(gradient_y, grid);
 
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue,ky0) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gyvalue) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     j = ij % ny;
     ijnz = ij * nz;
@@ -560,9 +558,9 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
      * else k = -k
      */
     if (j <= ny / 2)
-      ky = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - ky0;
+      ky = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) ;
     else 
-      ky = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - ky0;
+      ky = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step);
       
     for(k = 0; k < nz; k++)	  
       gyvalue[ijnz + k] *= ky * norm * I;
@@ -585,7 +583,6 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
 
   INT k, ij, ijnz, nx, ny, nz, nxy;
   REAL kz, lz, step, norm;
-  REAL kz0 = grid->kz0;
   REAL complex *gzvalue = gradient_z->value;
   
 #ifdef USE_CUDA
@@ -601,7 +598,7 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
   
   if(gradient_z != grid) cgrid_copy(gradient_z, grid);
 
-#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue,kz0) private(ij,ijnz,k,kz,lz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(norm,nx,ny,nz,nxy,step,gzvalue) private(ij,ijnz,k,kz,lz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
       
@@ -614,9 +611,9 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
     lz = ((REAL) nz) * step;
     for(k = 0; k < nz; k++) {
       if (k <= nz / 2)
-        kz = 2.0 * M_PI * ((REAL) k) / lz - kz0;
+        kz = 2.0 * M_PI * ((REAL) k) / lz;
       else 
-        kz = 2.0 * M_PI * ((REAL) (k - nz)) / lz - kz0;
+        kz = 2.0 * M_PI * ((REAL) (k - nz)) / lz;
        
       gzvalue[ijnz + k] *= kz * norm * I;
     }
@@ -638,7 +635,6 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
 EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy, nx2, ny2, nz2;
-  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL kx, ky, kz, lx, ly, lz, step, norm;
   REAL complex *lvalue = laplace->value;
   
@@ -663,7 +659,7 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
   nx2 = nx / 2;
   ny2 = ny / 2;
   nz2 = nz / 2;
-#pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -675,20 +671,20 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
      * else k = -k
      */
     if (i <= nx2)
-      kx = ((REAL) i) * lx - kx0;
+      kx = ((REAL) i) * lx;
     else 
-      kx = ((REAL) (i - nx)) * lx - kx0;
+      kx = ((REAL) (i - nx)) * lx;
       
     if (j <= ny2)
-      ky = ((REAL) j) * ly - ky0;
+      ky = ((REAL) j) * ly;
     else 
-      ky = ((REAL) (j - ny)) * ly - ky0;
+      ky = ((REAL) (j - ny)) * ly;
       
     for(k = 0; k < nz; k++) {
       if (k <= nz2)
-        kz = ((REAL) k) * lz - kz0;
+        kz = ((REAL) k) * lz;
       else 
-        kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz;
         
       lvalue[ijnz + k] *= -(kx * kx + ky * ky + kz * kz) * norm;
     }
@@ -710,7 +706,6 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
 EXPORT void cgrid_fft_laplace_x(cgrid *grid, cgrid *laplace)  {
 
   INT i, k, ij, ijnz, nx, ny, nz, nxy, nx2;
-  REAL kx0 = grid->kx0;
   REAL kx, lx, step, norm;
   REAL complex *lvalue = laplace->value;
   
@@ -731,7 +726,7 @@ EXPORT void cgrid_fft_laplace_x(cgrid *grid, cgrid *laplace)  {
   
   lx = 2.0 * M_PI / ((REAL) nx) * step;
   nx2 = nx / 2;
-#pragma omp parallel for firstprivate(nx2,norm,nx,ny,nz,nxy,step,lvalue,kx0,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx2,norm,nx,ny,nz,nxy,step,lvalue,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     ijnz = ij * nz;
@@ -742,9 +737,9 @@ EXPORT void cgrid_fft_laplace_x(cgrid *grid, cgrid *laplace)  {
      * else k = -k
      */
     if (i <= nx2)
-      kx = ((REAL) i) * lx - kx0;
+      kx = ((REAL) i) * lx;
     else 
-      kx = ((REAL) (i - nx)) * lx - kx0;
+      kx = ((REAL) (i - nx)) * lx;
       
     for(k = 0; k < nz; k++)
       lvalue[ijnz + k] *= -kx * kx * norm;
@@ -766,7 +761,6 @@ EXPORT void cgrid_fft_laplace_x(cgrid *grid, cgrid *laplace)  {
 EXPORT void cgrid_fft_laplace_y(cgrid *grid, cgrid *laplace)  {
 
   INT j, k, ij, ijnz, nx, ny, nz, nxy, ny2;
-  REAL ky0 = grid->ky0;
   REAL ky, ly, step, norm;
   REAL complex *lvalue = laplace->value;
   
@@ -787,7 +781,7 @@ EXPORT void cgrid_fft_laplace_y(cgrid *grid, cgrid *laplace)  {
   
   ly = 2.0 * M_PI / ((REAL) ny) * step;
   ny2 = ny / 2;
-#pragma omp parallel for firstprivate(ny2,norm,nx,ny,nz,nxy,step,lvalue,ky0,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(ny2,norm,nx,ny,nz,nxy,step,lvalue,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     j = ij % ny;
     ijnz = ij * nz;
@@ -799,9 +793,9 @@ EXPORT void cgrid_fft_laplace_y(cgrid *grid, cgrid *laplace)  {
      */
       
     if (j <= ny2)
-      ky = ((REAL) j) * ly - ky0;
+      ky = ((REAL) j) * ly;
     else 
-      ky = ((REAL) (j - ny)) * ly - ky0;
+      ky = ((REAL) (j - ny)) * ly;
       
     for(k = 0; k < nz; k++)
       lvalue[ijnz + k] *= -ky * ky * norm;
@@ -823,7 +817,6 @@ EXPORT void cgrid_fft_laplace_y(cgrid *grid, cgrid *laplace)  {
 EXPORT void cgrid_fft_laplace_z(cgrid *grid, cgrid *laplace)  {
 
   INT k, ij, ijnz, nx, ny, nz, nxy, nz2;
-  REAL kz0 = grid->kz0;
   REAL kz, lz, step, norm;
   REAL complex *lvalue = laplace->value;
   
@@ -844,7 +837,7 @@ EXPORT void cgrid_fft_laplace_z(cgrid *grid, cgrid *laplace)  {
   
   lz = 2.0 * M_PI / ((REAL) nz) * step;
   nz2 = nz / 2;
-#pragma omp parallel for firstprivate(nz2,norm,nx,ny,nz,nxy,step,lvalue,kz0,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nz2,norm,nx,ny,nz,nxy,step,lvalue,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
       
@@ -855,9 +848,9 @@ EXPORT void cgrid_fft_laplace_z(cgrid *grid, cgrid *laplace)  {
      */
     for(k = 0; k < nz; k++) {
       if (k <= nz2)
-        kz = ((REAL) k) * lz - kz0;
+        kz = ((REAL) k) * lz;
       else 
-        kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz;
         
       lvalue[ijnz + k] *= -kz * kz * norm;
     }
@@ -879,7 +872,6 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy, nx2, ny2, nz2;
   REAL kx, ky, kz, lx, ly, lz, step, norm, sum = 0.0, ssum;
-  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL complex *lvalue = laplace->value;
 
   if(grid != laplace) cgrid_copy(laplace, grid);
@@ -908,7 +900,7 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   nx2 = nx / 2;
   ny2 = ny / 2;
   nz2 = nz / 2;
-#pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz,ssum) reduction(+:sum) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz,ssum) reduction(+:sum) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -920,22 +912,22 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
      * else k = -k
      */
     if (i <= nx2)
-      kx = ((REAL) i) * lx - kx0;
+      kx = ((REAL) i) * lx;
     else 
-      kx = ((REAL) (i - nx)) * lx - kx0;
+      kx = ((REAL) (i - nx)) * lx;
       
     if (j <= ny2)
-      ky = ((REAL) j) * ly - ky0;
+      ky = ((REAL) j) * ly;
     else 
-      ky = ((REAL) (j - ny)) * ly - ky0;
+      ky = ((REAL) (j - ny)) * ly;
       
     ssum = 0.0;
       
     for(k = 0; k < nz; k++) {
       if (k <= nz2)
-        kz = ((REAL) k) * lz - kz0;
+        kz = ((REAL) k) * lz;
       else 
-        kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz;
 	
       ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
     }
@@ -954,6 +946,8 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
  *        and function f (output) on exit (cgrid *; input/output).
  *
  * No return value.
+ *
+ * NOTE: Does not impose moving background.
  *
  */
 

@@ -2473,7 +2473,6 @@ EXPORT void cgrid_ipower(cgrid *dst, cgrid *src, INT exponent) {
 EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REAL, REAL), void *farg) {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy, nx2, ny2, nz2;
-  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
   REAL kx, ky, kz, lx, ly, lz, step;
   REAL complex *value = grid->value;
   
@@ -2493,7 +2492,7 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
   nx2 = nx / 2;
   ny2 = ny / 2;
   nz2 = nz / 2;
-#pragma omp parallel for firstprivate(nx2,ny2,nz2,func,farg,nx,ny,nz,nxy,step,value,kx0,ky0,kz0,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx2,ny2,nz2,func,farg,nx,ny,nz,nxy,step,value,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -2505,20 +2504,20 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
      * else k = -k
      */
     if (i <= nx2)
-      kx =((REAL) i) * lx - kx0;
+      kx =((REAL) i) * lx;
     else 
-      kx = ((REAL) (i - nx)) * lx - kx0;
+      kx = ((REAL) (i - nx)) * lx;
       
     if (j <= ny2)
-      ky = ((REAL) j) * ly - ky0;
+      ky = ((REAL) j) * ly;
     else 
-      ky = ((REAL) (j - ny)) * ly - ky0;
+      ky = ((REAL) (j - ny)) * ly;
     
     for(k = 0; k < nz; k++) {
       if (k <= nz2)
-        kz = ((REAL) k) * lz - kz0;
+        kz = ((REAL) k) * lz;
       else 
-        kz = ((REAL) (k - nz)) * lz - kz0;
+        kz = ((REAL) (k - nz)) * lz;
        
       value[ijnz + k] *= (*func)(farg, kx, ky, kz);
     }

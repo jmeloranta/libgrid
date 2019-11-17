@@ -126,25 +126,19 @@ EXPORT REAL grid_wf_energy_fft(wf *gwf, rgrid *potential) {
  *
  * Returns the kinetic energy.
  *
- * NOTE: The moving background contribution is subtracted off (laplace expectation value routine includes it!).
- *
  */
 
 EXPORT REAL grid_wf_kinetic_energy_fft(wf *gwf) {
 
   cgrid *cworkspace, *grid = gwf->grid;
-  REAL mass = gwf->mass, kx = gwf->grid->kx0, ky = gwf->grid->ky0, kz = gwf->grid->kz0;
-  REAL ekin = -HBAR * HBAR * (kx * kx + ky * ky + kz * kz) / (2.0 * mass);
 
-  if(ekin != 0.0) ekin *= CREAL(cgrid_integral_of_square(gwf->grid));  // Remove moving background contribution
-
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_clone(grid, "WF cworkspace");
   cworkspace = gwf->cworkspace;
   /* delta (- k^2) fft[f(x)] / N */
   cgrid_copy(cworkspace, gwf->grid);
   cgrid_fft(cworkspace);
   
-  return -HBAR * HBAR / (2.0 * gwf->mass) * cgrid_fft_laplace_expectation_value(cworkspace, cworkspace) + ekin;
+  return -HBAR * HBAR / (2.0 * gwf->mass) * cgrid_fft_laplace_expectation_value(cworkspace, cworkspace);
 }
 
 /*
@@ -221,6 +215,8 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
  * time = time step (REAL complex).
  *
  * No return value.
+ *
+ * NOTE: This routine often causes more trouble than it is worth.
  *
  */
 

@@ -377,7 +377,7 @@ extern "C" void cgrid_cuda_fd_laplace_zW(gpu_mem_block *src, gpu_mem_block *dst,
  *
  */
 
-__global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL step, INT nx, INT ny, INT nz, INT nx2) {
+__global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nx2) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL kx;
@@ -387,9 +387,9 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   idx = (i * ny + j) * nz + k;
 
   if (i <= nx2)
-    kx = 2.0 * M_PI * ((CUREAL) i) / (((CUREAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((CUREAL) i) / (((CUREAL) nx) * step);
   else 
-    kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step);
 
   b[idx] = b[idx] * CUMAKE(0.0, kx * norm);     // multiply by I * kx * norm
 }
@@ -399,7 +399,6 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  *
  * dst        = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm       = FFT norm (grid->fft_norm) (CUREAL; input).
- * kx0        = Momentum shift of origin along X (CUREAL; input).
  * step       = Spatial step length (CUREAL; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
@@ -407,7 +406,7 @@ __global__ void cgrid_cuda_fft_gradient_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  *
  */
 
-extern "C" void cgrid_cuda_fft_gradient_xW(gpu_mem_block *dst, CUREAL norm, CUREAL kx0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_gradient_xW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -420,12 +419,12 @@ extern "C" void cgrid_cuda_fft_gradient_xW(gpu_mem_block *dst, CUREAL norm, CURE
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_gradient_x_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, kx0, step, nnx1, nny1, nz, nx2);
+    cgrid_cuda_fft_gradient_x_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, nx2);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_gradient_x_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, kx0, step, nnx2, nny2, nz, nx2);
+    cgrid_cuda_fft_gradient_x_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, nx2);
   }
 
   cuda_error_check();
@@ -438,7 +437,7 @@ extern "C" void cgrid_cuda_fft_gradient_xW(gpu_mem_block *dst, CUREAL norm, CURE
  *
  */
 
-__global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL ky0, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT ny2, INT seg) {
+__global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT ny2, INT seg) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg;
   CUREAL ky;
@@ -448,9 +447,9 @@ __global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   idx = (i * ny + j) * nz + k;
 
   if (jj <= ny2)
-    ky = 2.0 * M_PI * ((CUREAL) jj) / (((CUREAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((CUREAL) jj) / (((CUREAL) nyy) * step);
   else 
-    ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step);
 
   b[idx] = b[idx] * CUMAKE(0.0, ky * norm);    // multiply by I * ky * norm
 }
@@ -460,7 +459,6 @@ __global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  *
  * dst        = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm       = FFT norm (grid->fft_norm) (CUREAL; input).
- * ky0        = Momentum shift of origin along Y (CUREAL; input).
  * step       = Spatial step length (CUREAL; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
@@ -468,7 +466,7 @@ __global__ void cgrid_cuda_fft_gradient_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  *
  */
 
-extern "C" void cgrid_cuda_fft_gradient_yW(gpu_mem_block *dst, CUREAL norm, CUREAL ky0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_gradient_yW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -481,14 +479,14 @@ extern "C" void cgrid_cuda_fft_gradient_yW(gpu_mem_block *dst, CUREAL norm, CURE
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_gradient_y_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, ky0, step, nnx1, nny1, nz, ny, ny2, segy);
+    cgrid_cuda_fft_gradient_y_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, ny, ny2, segy);
     segx += dsegx1;
     segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_gradient_y_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, ky0, step, nnx2, nny2, nz, ny, ny2, segy);
+    cgrid_cuda_fft_gradient_y_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, ny, ny2, segy);
     segx += dsegx2;
     segy += dsegy2;
   }
@@ -503,7 +501,7 @@ extern "C" void cgrid_cuda_fft_gradient_yW(gpu_mem_block *dst, CUREAL norm, CURE
  *
  */
 
-__global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nz2) {
+__global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nz2) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL kz;
@@ -513,9 +511,9 @@ __global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
   idx = (i * ny + j) * nz + k;
 
   if (k <= nz2)
-    kz = 2.0 * M_PI * ((CUREAL) k) / (((CUREAL) nz) * step) - kz0;
+    kz = 2.0 * M_PI * ((CUREAL) k) / (((CUREAL) nz) * step);
   else 
-    kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step) - kz0;
+    kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step);
 
   b[idx] = b[idx] * CUMAKE(0.0, kz * norm);   // multiply by I * kz * norm
 }
@@ -525,7 +523,6 @@ __global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  *
  * dst        = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm       = FFT norm (grid->fft_norm) (CUREAL; input).
- * kz0        = Momentum shift of origin along Z (CUREAL; input).
  * step       = Spatial step length (CUREAL; input).
  * nx         = # of points along x (INT; input).
  * ny         = # of points along y (INT; input).
@@ -533,7 +530,7 @@ __global__ void cgrid_cuda_fft_gradient_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL 
  *
  */
 
-extern "C" void cgrid_cuda_fft_gradient_zW(gpu_mem_block *dst, CUREAL norm, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_gradient_zW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -546,12 +543,12 @@ extern "C" void cgrid_cuda_fft_gradient_zW(gpu_mem_block *dst, CUREAL norm, CURE
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_gradient_z_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, kz0, step, nnx1, nny1, nz, nz2);
+    cgrid_cuda_fft_gradient_z_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, nz2);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_gradient_z_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, kz0, step, nnx2, nny2, nz, nz2);
+    cgrid_cuda_fft_gradient_z_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, nz2);
   }
 
   cuda_error_check();
@@ -564,7 +561,7 @@ extern "C" void cgrid_cuda_fft_gradient_zW(gpu_mem_block *dst, CUREAL norm, CURE
  *
  */
 
-__global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
+__global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, jj = j + seg, idx;
   CUREAL kx, ky, kz;
@@ -574,19 +571,19 @@ __global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0
   idx = (i * ny + j) * nz + k;
   
   if (i <= nx2)
-    kx = 2.0 * M_PI * ((CUREAL) i) / (((CUREAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((CUREAL) i) / (((CUREAL) nx) * step);
   else 
-    kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step);
       
   if (jj <= ny2)
-    ky = 2.0 * M_PI * ((CUREAL) jj) / (((CUREAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((CUREAL) jj) / (((CUREAL) nyy) * step);
   else 
-    ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step);
       
   if (k <= nz2)
-    kz = 2.0 * M_PI * ((CUREAL) k) / (((CUREAL) nz) * step) - kz0;
+    kz = 2.0 * M_PI * ((CUREAL) k) / (((CUREAL) nz) * step);
   else 
-    kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step) - kz0;      
+    kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step);
 
   b[idx] = b[idx] * (-(kx * kx + ky * ky + kz * kz) * norm);
 }
@@ -596,9 +593,6 @@ __global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0
  *
  * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm     = FFT norm (grid->fft_norm) (CUREAL; input).
- * kx0      = Momentum shift of origin along X (CUREAL; input).
- * ky0      = Momentum shift of origin along Y (CUREAL; input).
- * kz0      = Momentum shift of origin along Z (CUREAL; input).
  * step     = Spatial step length (CUREAL; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -606,7 +600,7 @@ __global__ void cgrid_cuda_fft_laplace_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0
  *
  */
 
-extern "C" void cgrid_cuda_fft_laplaceW(gpu_mem_block *dst, CUREAL norm, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_laplaceW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -619,14 +613,14 @@ extern "C" void cgrid_cuda_fft_laplaceW(gpu_mem_block *dst, CUREAL norm, CUREAL 
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, kx0, ky0, kz0, step, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
+    cgrid_cuda_fft_laplace_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx1;
     segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, kx0, ky0, kz0, step, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
+    cgrid_cuda_fft_laplace_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx2;
     segy += dsegy2;
   }
@@ -641,7 +635,7 @@ extern "C" void cgrid_cuda_fft_laplaceW(gpu_mem_block *dst, CUREAL norm, CUREAL 
  *
  */
 
-__global__ void cgrid_cuda_fft_laplace_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kx0, CUREAL step, INT nx, INT ny, INT nz, INT nx2) {
+__global__ void cgrid_cuda_fft_laplace_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nx2) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL kx;
@@ -651,9 +645,9 @@ __global__ void cgrid_cuda_fft_laplace_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
   idx = (i * ny + j) * nz + k;
   
   if (i <= nx2)
-    kx = 2.0 * M_PI * ((CUREAL) i) / (((CUREAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((CUREAL) i) / (((CUREAL) nx) * step);
   else 
-    kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((CUREAL) (i - nx)) / (((CUREAL) nx) * step);
       
   b[idx] = b[idx] * (-kx * kx * norm);
 }
@@ -663,7 +657,6 @@ __global__ void cgrid_cuda_fft_laplace_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
  *
  * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm     = FFT norm (grid->fft_norm) (CUREAL; input).
- * kx0      = Momentum shift of origin along X (CUREAL; input).
  * step     = Spatial step length (CUREAL; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -671,7 +664,7 @@ __global__ void cgrid_cuda_fft_laplace_x_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
  *
  */
 
-extern "C" void cgrid_cuda_fft_laplace_xW(gpu_mem_block *dst, CUREAL norm, CUREAL kx0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_laplace_xW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -684,14 +677,14 @@ extern "C" void cgrid_cuda_fft_laplace_xW(gpu_mem_block *dst, CUREAL norm, CUREA
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_x_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, kx0, step, nnx1, nny1, nz, nx2);
+    cgrid_cuda_fft_laplace_x_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, nx2);
     segx += dsegx1;
     segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_x_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, kx0, step, nnx2, nny2, nz, nx2);
+    cgrid_cuda_fft_laplace_x_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, nx2);
     segx += dsegx2;
     segy += dsegy2;
   }
@@ -706,7 +699,7 @@ extern "C" void cgrid_cuda_fft_laplace_xW(gpu_mem_block *dst, CUREAL norm, CUREA
  *
  */
 
-__global__ void cgrid_cuda_fft_laplace_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL ky0, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT ny2, INT seg) {
+__global__ void cgrid_cuda_fft_laplace_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT ny2, INT seg) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, jj = j + seg, idx;
   CUREAL ky;
@@ -716,9 +709,9 @@ __global__ void cgrid_cuda_fft_laplace_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
   idx = (i * ny + j) * nz + k;
   
   if (jj <= ny2)
-    ky = 2.0 * M_PI * ((CUREAL) jj) / (((CUREAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((CUREAL) jj) / (((CUREAL) nyy) * step);
   else 
-    ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((CUREAL) (jj - nyy)) / (((CUREAL) nyy) * step);
       
   b[idx] = b[idx] * (-ky * ky * norm);
 }
@@ -728,7 +721,6 @@ __global__ void cgrid_cuda_fft_laplace_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
  *
  * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm     = FFT norm (grid->fft_norm) (CUREAL; input).
- * ky0      = Momentum shift of origin along Y (CUREAL; input).
  * step     = Spatial step length (CUREAL; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -736,7 +728,7 @@ __global__ void cgrid_cuda_fft_laplace_y_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
  *
  */
 
-extern "C" void cgrid_cuda_fft_laplace_yW(gpu_mem_block *dst, CUREAL norm, CUREAL ky0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_laplace_yW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -749,14 +741,14 @@ extern "C" void cgrid_cuda_fft_laplace_yW(gpu_mem_block *dst, CUREAL norm, CUREA
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_y_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, ky0, step, nnx1, nny1, nz, ny, ny2, segy);
+    cgrid_cuda_fft_laplace_y_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, ny, ny2, segy);
     segx += dsegx1;
     segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_y_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, ky0, step, nnx2, nny2, nz, ny, ny2, segy);
+    cgrid_cuda_fft_laplace_y_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, ny, ny2, segy);
     segx += dsegx2;
     segy += dsegy2;
   }
@@ -771,7 +763,7 @@ extern "C" void cgrid_cuda_fft_laplace_yW(gpu_mem_block *dst, CUREAL norm, CUREA
  *
  */
 
-__global__ void cgrid_cuda_fft_laplace_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nz2) {
+__global__ void cgrid_cuda_fft_laplace_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz, INT nz2) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
   CUREAL kz;
@@ -781,9 +773,9 @@ __global__ void cgrid_cuda_fft_laplace_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
   idx = (i * ny + j) * nz + k;
   
   if (k <= nz2)
-    kz = 2.0 * M_PI * ((CUREAL) k) / (((CUREAL) nz) * step) - kz0;
+    kz = 2.0 * M_PI * ((CUREAL) k) / (((CUREAL) nz) * step);
   else 
-    kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step) - kz0;      
+    kz = 2.0 * M_PI * ((CUREAL) (k - nz)) / (((CUREAL) nz) * step);
       
   b[idx] = b[idx] * (-kz * kz * norm);
 }
@@ -793,7 +785,6 @@ __global__ void cgrid_cuda_fft_laplace_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
  *
  * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
  * norm     = FFT norm (grid->fft_norm) (CUREAL; input).
- * kz0      = Momentum shift of origin along Z (CUREAL; input).
  * step     = Spatial step length (CUREAL; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -801,7 +792,7 @@ __global__ void cgrid_cuda_fft_laplace_z_gpu(CUCOMPLEX *b, CUREAL norm, CUREAL k
  *
  */
 
-extern "C" void cgrid_cuda_fft_laplace_zW(gpu_mem_block *dst, CUREAL norm, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz) {
+extern "C" void cgrid_cuda_fft_laplace_zW(gpu_mem_block *dst, CUREAL norm, CUREAL step, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_SEG(dst);
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -814,14 +805,14 @@ extern "C" void cgrid_cuda_fft_laplace_zW(gpu_mem_block *dst, CUREAL norm, CUREA
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_z_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, kz0, step, nnx1, nny1, nz, nz2);
+    cgrid_cuda_fft_laplace_z_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx1, nny1, nz, nz2);
     segx += dsegx1;
     segy += dsegy1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_fft_laplace_z_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, kz0, step, nnx2, nny2, nz, nz2);
+    cgrid_cuda_fft_laplace_z_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], norm, step, nnx2, nny2, nz, nz2);
     segx += dsegx2;
     segy += dsegy2;
   }
@@ -840,7 +831,7 @@ extern "C" void cgrid_cuda_fft_laplace_zW(gpu_mem_block *dst, CUREAL norm, CUREA
  *
  */
 
-__global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOMPLEX *blocks, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
+__global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOMPLEX *blocks, CUREAL step, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, jj = j + seg;
   INT d = blockDim.x * blockDim.y * blockDim.z, idx, idx2, t;
@@ -858,19 +849,19 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
   idx = (i * ny + j) * nz + k;
 
   if (i <= nx2)
-    kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step);
   else 
-    kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - kx0;
+    kx = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step);
       
   if (jj <= ny2)
-    ky = 2.0 * M_PI * ((REAL) jj) / (((REAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((REAL) jj) / (((REAL) nyy) * step);
   else 
-    ky = 2.0 * M_PI * ((REAL) (jj - nyy)) / (((REAL) nyy) * step) - ky0;
+    ky = 2.0 * M_PI * ((REAL) (jj - nyy)) / (((REAL) nyy) * step);
       
   if (k <= nz2)
-    kz = 2.0 * M_PI * ((REAL) k) / (((REAL) nz) * step) - kz0;
+    kz = 2.0 * M_PI * ((REAL) k) / (((REAL) nz) * step);
   else 
-    kz = 2.0 * M_PI * ((REAL) (k - nz)) / (((REAL) nz) * step) - kz0;
+    kz = 2.0 * M_PI * ((REAL) (k - nz)) / (((REAL) nz) * step);
 
   idx2 = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
   els2[idx2] -= (kx * kx + ky * ky + kz * kz) * (CUCREAL(b[idx]) * CUCREAL(b[idx]) + CUCIMAG(b[idx]) * CUCIMAG(b[idx]));
@@ -888,9 +879,6 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
  * FFT laplace expectation value
  *
  * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
- * kx0      = Momentum shift of origin along X (REAL; input).
- * ky0      = Momentum shift of origin along Y (REAL; input).
- * kz0      = Momentum shift of origin along Z (REAL; input).
  * step     = Spatial step length (REAL; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
@@ -904,7 +892,7 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
 extern __global__ void cgrid_cuda_block_init(CUCOMPLEX *, INT);
 extern __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *, INT);
 
-extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, INT nx, INT ny, INT nz, CUCOMPLEX *value) {
+extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CUREAL step, INT nx, INT ny, INT nz, CUCOMPLEX *value) {
 
   SETUP_VARIABLES_SEG(dst)
   cudaXtDesc *DST = dst->gpu_info->descriptor;
@@ -922,7 +910,7 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CU
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
     // Blocks, Threads, dynamic memory size
-    cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], kx0, ky0, kz0, step, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
+    cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], step, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx1;
     segy += dsegy1;
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
@@ -934,7 +922,7 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CU
     cudaSetDevice(DST->GPUs[i]);
     cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
     // Blocks, Threads, dynamic memory size
-    cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], kx0, ky0, kz0, step, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
+    cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], step, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx2;
     segy += dsegy2;
     cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);

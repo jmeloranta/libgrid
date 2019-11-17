@@ -310,7 +310,7 @@ EXPORT void grid_wf_fft_probability_flux_x(wf *gwf, rgrid *flux_x) {
 
   cgrid *grid = gwf->grid, *cworkspace;
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_clone(grid, "WF cworkspace");
   cworkspace = gwf->cworkspace;
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
@@ -335,7 +335,7 @@ EXPORT void grid_wf_fft_probability_flux_y(wf *gwf, rgrid *flux_y) {
 
   cgrid *grid = gwf->grid, *cworkspace;
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_clone(grid, "WF cworkspace");
   cworkspace = gwf->cworkspace;
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
@@ -360,7 +360,7 @@ EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
 
   cgrid *grid = gwf->grid, *cworkspace;
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
+  if(!gwf->cworkspace) gwf->cworkspace = cgrid_clone(grid, "WF cworkspace");
   cworkspace = gwf->cworkspace;
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
