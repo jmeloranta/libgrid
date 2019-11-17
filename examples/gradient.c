@@ -1,5 +1,5 @@
 /*
- * Example: Calculate gradient by finite difference and FFT for comparison.
+ * Example: Calculate gradient by finite difference or FFT.
  *
  */
 
@@ -8,6 +8,9 @@
 #include <math.h>
 #include <grid/grid.h>
 #include <omp.h>
+
+/* Method: FD(0) or FFT(1) */
+#define METHOD 1
 
 /* Grid dimensions */
 #define NX 128
@@ -19,16 +22,16 @@
 
 /* wave vectors top be mapped onto grid */
 #define KX (2.0 * 2.0 * M_PI / (NX * STEP))
-#define KY 1.0
-#define KZ 1.0
+#define KY (2.0 * 2.0 * M_PI / (NY * STEP))
+#define KZ (2.0 * 2.0 * M_PI / (NZ * STEP))
 #define AMP 1E-3
 
 #define RHO0 (0.0218360 * GRID_AUTOANG * GRID_AUTOANG * GRID_AUTOANG)
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 1
-int gpus[NGPUS] = {0};
+#define NGPUS 2
+int gpus[NGPUS] = {0, 1};
 #endif
 
 /* Function returning standing wave in x, y, and z directions */
@@ -43,7 +46,7 @@ int main(int argc, char **argv) {
   rgrid *grad_x, *grad_y, *grad_z;  /* Pointers for gradient components */
 
   grid_threads_init(0);  /* Use all available cores */
-  grid_wf_analyze_method(1); // FFT:1 FD:0 
+  grid_wf_analyze_method(METHOD);
 
   /* If libgrid was compiled with CUDA support, enable CUDA */
 #ifdef USE_CUDA
