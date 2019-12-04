@@ -401,7 +401,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
   REAL complex one_sixth_time = time / 6.0;
   REAL complex two_thirds_time = 2.0 * time / 3.0;
   cgrid *grid = gwf->grid;
-  REAL complex *gsave;
+  cgrid *gsave;
   REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0;
   REAL cons = -(HBAR * HBAR / (2.0 * gwf->mass)) * (kx0 * kx0 + ky0 * ky0 + kz0 * kz0);
   REAL (*save)(INT, INT, INT, INT, INT, INT, INT, INT, INT);
@@ -424,14 +424,14 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         cgrid_inverse_fft(gwf->grid);
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         /* Imaginary time step */
-        gsave = gwf->grid->value;
-        gwf->grid->value = gwf->cworkspace->value;
+        gsave = gwf->grid;
+        gwf->grid = gwf->cworkspace;
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_fft(gwf, -I * CREAL(time));
         cgrid_inverse_fft(gwf->grid);
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
-        gwf->grid->value = gsave;
+        gwf->grid = gsave;
         gwf->ts_func = save;
         /* merge solutions according to the boundary function grid_wf_boundary() */
         grid_wf_merge(gwf, gwf->grid, gwf->cworkspace);
@@ -485,14 +485,14 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         cgrid_inverse_fft(gwf->grid);
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         /* Imaginary time step */
-        gsave = gwf->grid->value;
-        gwf->grid->value = gwf->cworkspace->value;
+        gsave = gwf->grid;
+        gwf->grid = gwf->cworkspace;
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_cfft(gwf, -I * CREAL(time));
         cgrid_inverse_fft(gwf->grid);
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
-        gwf->grid->value = gsave;
+        gwf->grid = gsave;
         gwf->ts_func = save;
         /* merge solutions according to the boundary function grid_wf_boundary() */
         grid_wf_merge(gwf, gwf->grid, gwf->cworkspace);
