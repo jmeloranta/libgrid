@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
   GraceRegisterErrorFunction(my_error_function);
   /* Start Grace with a buffer size of 2048 and open the pipe */
-  if (GraceOpenVA("/usr/bin/xmgrace", 2048, "-free", "-nosigcatch","-geometry", "930x730", NULL) == -1) {
+  if (GraceOpenVA("/usr/bin/xmgrace", 2048, "-free", "-nosigcatch","-geometry", "930x730", "-nosafe", NULL) == -1) {
     fprintf(stderr, "Can't start Grace. \n");
     exit(1);
   }
@@ -91,8 +91,12 @@ int main(int argc, char **argv) {
       GracePrintf("redraw");
       if(nsteps == 0) sleep(5);
       else usleep(300000);
-      GracePrintf("kill g0.s0 SAVEALL");     
-      GracePrintf("kill g0.s1 SAVEALL");     
+      GracePrintf("HARDCOPY DEVICE \"PNG\"");
+      GracePrintf("PRINT TO \"output-%.6d.png\"", nsteps);
+      GracePrintf("DEVICE \"PNG\" DPI 800");
+      GracePrintf("PRINT");
+      GracePrintf("kill g0.s0 SAVEALL");
+      GracePrintf("kill g0.s1 SAVEALL");
       nsteps++;
       s1 = s2 = 0;
       continue;
