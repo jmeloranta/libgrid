@@ -67,7 +67,7 @@ EXPORT char cgrid_cuda_fft_convolute(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->fft_norm2, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -740,27 +740,6 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
   cgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
-  return 0;
-}
-
-/*
- * Solve Poisson equation.
- *
- * grid = destination grid (cgrid *; input/output).
- *
- */
-
-EXPORT char cgrid_cuda_poisson(cgrid *grid) {
-
-  if(grid->host_lock) {
-    cuda_remove_block(grid->value, 1);
-    return -1;
-  }
-
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
-
-  cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
-
   return 0;
 }
 

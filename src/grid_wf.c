@@ -18,14 +18,6 @@
  *              WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition.
  *              WF_NEUMANN_BOUNDARY   = Neumann boundary condition.
  *              WF_PERIODIC_BOUNDARY  = Periodic boundary condition.
- *              WF_FFT_EEE_BOUNDARY   = Even/Even/Even boundary condition.
- *              WF_FFT_OEE_BOUNDARY   = Odd/Even/Even boundary condition.
- *              WF_FFT_EOE_BOUNDARY   = Even/Odd/Even boundary condition.
- *              WF_FFT_EEO_BOUNDARY   = Even/Even/Odd boundary condition.
- *              WF_FFT_OOE_BOUNDARY   = Odd/Odd/Even boundary condition.
- *              WF_FFT_EOO_BOUNDARY   = Even/Odd/Odd boundary condition.
- *              WF_FFT_OEO_BOUNDARY   = Odd/Even/Odd boundary condition.
- *              WF_FFT_OOO_BOUNDARY   = Odd/Odd/Odd boundary condition.
  * propagator = which time propagator to use for this wavefunction (char):
  *              WF_2ND_ORDER_FFT      = 2nd order in time (FFT).
  *              WF_4TH_ORDER_FFT      = 4th order in time (FFT).
@@ -298,7 +290,7 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       }
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       cgrid_copy(gwfp->grid, gwf->grid);
       grid_wf_propagate_potential(gwfp, time, potential, cons);
       /* continue with correct cycle */
@@ -314,7 +306,7 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
       }
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       cgrid_copy(gwfp->grid, gwf->grid);
       grid_wf_propagate_potential(gwfp, time, potential, cons);
       /* continue with correct cycle */
@@ -358,14 +350,14 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
       grid_wf_propagate_potential(gwf, time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       /* end correct cycle */
       break;
     case WF_2ND_ORDER_CFFT:
       grid_wf_propagate_potential(gwf, time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       /* end correct cycle */
       break;
     case WF_4TH_ORDER_FFT:
@@ -421,7 +413,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_fft(gwf, time);
-        cgrid_inverse_fft(gwf->grid);
+        cgrid_inverse_fft_norm(gwf->grid);
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         /* Imaginary time step */
         gsave = gwf->grid;
@@ -429,7 +421,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_fft(gwf, -I * CREAL(time));
-        cgrid_inverse_fft(gwf->grid);
+        cgrid_inverse_fft_norm(gwf->grid);
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         gwf->grid = gsave;
         gwf->ts_func = save;
@@ -439,7 +431,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_fft(gwf, time);
-        cgrid_inverse_fft(gwf->grid);
+        cgrid_inverse_fft_norm(gwf->grid);
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
       }
       break;
@@ -458,14 +450,14 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_fft(gwf, half_time);    
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);  // Uses cworkspace and cworkspace2 !
       cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       break;
     case WF_2ND_ORDER_CFFT:
@@ -482,7 +474,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_cfft(gwf, time);
-        cgrid_inverse_fft(gwf->grid);
+        cgrid_inverse_fft_norm(gwf->grid);
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         /* Imaginary time step */
         gsave = gwf->grid;
@@ -490,7 +482,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_cfft(gwf, -I * CREAL(time));
-        cgrid_inverse_fft(gwf->grid);
+        cgrid_inverse_fft_norm(gwf->grid);
         grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         gwf->grid = gsave;
         gwf->ts_func = save;
@@ -500,7 +492,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
         cgrid_fft(gwf->grid);
         grid_wf_propagate_kinetic_cfft(gwf, time);
-        cgrid_inverse_fft(gwf->grid);
+        cgrid_inverse_fft_norm(gwf->grid);
         grid_wf_propagate_potential(gwf, half_time, potential, cons);
       }
       break;
@@ -519,14 +511,14 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);    
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);   // Uses cworkspace and cworkspace2 !
       cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);
-      cgrid_inverse_fft(gwf->grid);
+      cgrid_inverse_fft_norm(gwf->grid);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, cons);
       break;
     case WF_2ND_ORDER_CN:

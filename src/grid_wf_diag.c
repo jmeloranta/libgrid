@@ -37,7 +37,7 @@ EXPORT REAL grid_wf_energy_and_error(wf *gwf, cgrid *potential, cgrid *workspace
     cgrid_copy(workspace, gwf->grid);
     cgrid_fft(workspace);
     cgrid_fft_laplace(workspace, workspace);
-    cgrid_scaled_inverse_fft(workspace, -HBAR*HBAR / (2.0 * gwf->mass));
+    cgrid_scaled_inverse_fft(workspace, -gwf->grid->fft_norm * HBAR * HBAR / (2.0 * gwf->mass));
   } else {
     fprintf(stderr, "libgrid: Error in grid_wf_energy_and_error(). Invalid boundary condition.\n");
     abort();

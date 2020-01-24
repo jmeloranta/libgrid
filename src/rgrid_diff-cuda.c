@@ -206,7 +206,7 @@ EXPORT char rgrid_cuda_fft_gradient_x(rgrid *gradient_x) {
 
   if(cuda_one_block_policy(gradient_x->value, gradient_x->grid_len, gradient_x->cufft_handle_c2r, gradient_x->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_gradient_xW(cuda_block_address(gradient_x->value), gradient_x->step, gradient_x->fft_norm, gradient_x->nx, gradient_x->ny, gradient_x->nz);
+  rgrid_cuda_fft_gradient_xW(cuda_block_address(gradient_x->value), gradient_x->step, gradient_x->nx, gradient_x->ny, gradient_x->nz);
 
   return 0;
 }
@@ -227,7 +227,7 @@ EXPORT char rgrid_cuda_fft_gradient_y(rgrid *gradient_y) {
 
   if(cuda_one_block_policy(gradient_y->value, gradient_y->grid_len, gradient_y->cufft_handle_c2r, gradient_y->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_gradient_yW(cuda_block_address(gradient_y->value), gradient_y->step, gradient_y->fft_norm, gradient_y->nx, gradient_y->ny, gradient_y->nz);
+  rgrid_cuda_fft_gradient_yW(cuda_block_address(gradient_y->value), gradient_y->step, gradient_y->nx, gradient_y->ny, gradient_y->nz);
 
   return 0;
 }
@@ -248,7 +248,7 @@ EXPORT char rgrid_cuda_fft_gradient_z(rgrid *gradient_z) {
 
   if(cuda_one_block_policy(gradient_z->value, gradient_z->grid_len, gradient_z->cufft_handle_c2r, gradient_z->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_gradient_zW(cuda_block_address(gradient_z->value), gradient_z->step, gradient_z->fft_norm, gradient_z->nx, gradient_z->ny, gradient_z->nz);
+  rgrid_cuda_fft_gradient_zW(cuda_block_address(gradient_z->value), gradient_z->step, gradient_z->nx, gradient_z->ny, gradient_z->nz);
 
   return 0;
 }
@@ -269,7 +269,7 @@ EXPORT char rgrid_cuda_fft_laplace(rgrid *laplace) {
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle_c2r, laplace->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), laplace->fft_norm, laplace->step, laplace->nx, laplace->ny, laplace->nz);
+  rgrid_cuda_fft_laplaceW(cuda_block_address(laplace->value), laplace->step, laplace->nx, laplace->ny, laplace->nz);
 
   return 0;
 }
@@ -290,7 +290,7 @@ EXPORT char rgrid_cuda_fft_laplace_x(rgrid *laplace_x) {
 
   if(cuda_one_block_policy(laplace_x->value, laplace_x->grid_len, laplace_x->cufft_handle_c2r, laplace_x->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_laplace_xW(cuda_block_address(laplace_x->value), laplace_x->step, laplace_x->fft_norm, laplace_x->nx, laplace_x->ny, laplace_x->nz);
+  rgrid_cuda_fft_laplace_xW(cuda_block_address(laplace_x->value), laplace_x->step, laplace_x->nx, laplace_x->ny, laplace_x->nz);
 
   return 0;
 }
@@ -311,7 +311,7 @@ EXPORT char rgrid_cuda_fft_laplace_y(rgrid *laplace_y) {
 
   if(cuda_one_block_policy(laplace_y->value, laplace_y->grid_len, laplace_y->cufft_handle_c2r, laplace_y->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_laplace_yW(cuda_block_address(laplace_y->value), laplace_y->step, laplace_y->fft_norm, laplace_y->nx, laplace_y->ny, laplace_y->nz);
+  rgrid_cuda_fft_laplace_yW(cuda_block_address(laplace_y->value), laplace_y->step, laplace_y->nx, laplace_y->ny, laplace_y->nz);
 
   return 0;
 }
@@ -332,7 +332,7 @@ EXPORT char rgrid_cuda_fft_laplace_z(rgrid *laplace_z) {
 
   if(cuda_one_block_policy(laplace_z->value, laplace_z->grid_len, laplace_z->cufft_handle_c2r, laplace_z->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_laplace_zW(cuda_block_address(laplace_z->value), laplace_z->step, laplace_z->fft_norm, laplace_z->nx, laplace_z->ny, laplace_z->nz);
+  rgrid_cuda_fft_laplace_zW(cuda_block_address(laplace_z->value), laplace_z->step, laplace_z->nx, laplace_z->ny, laplace_z->nz);
 
   return 0;
 }
@@ -391,7 +391,7 @@ EXPORT char rgrid_cuda_fft_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
   if(cuda_four_block_policy(div->value, div->grid_len, div->cufft_handle_c2r, div->id, 1, fx->value, fx->grid_len, fx->cufft_handle_c2r, fx->id, 1,
                             fy->value, fy->grid_len, fy->cufft_handle_c2r, fy->id, 1, fz->value, fz->grid_len, fz->cufft_handle_c2r, fz->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_divW(cuda_block_address(div->value), cuda_block_address(fx->value), cuda_block_address(fy->value), cuda_block_address(fz->value), div->fft_norm, 
+  rgrid_cuda_fft_divW(cuda_block_address(div->value), cuda_block_address(fx->value), cuda_block_address(fy->value), cuda_block_address(fz->value), 
                       div->step, div->nx, div->ny, div->nz);
 
   return 0;
@@ -423,5 +423,28 @@ EXPORT char rgrid_cuda_abs_rot(rgrid *rot, rgrid *fx, rgrid *fy, rgrid *fz, REAL
                             fy->value, fy->grid_len, fy->cufft_handle_r2c, fy->id, 1, fz->value, fz->grid_len, fz->cufft_handle_r2c, fz->id, 1) < 0) return -1;
 
   rgrid_cuda_abs_rotW(cuda_block_address(rot->value), cuda_block_address(fx->value), cuda_block_address(fy->value), cuda_block_address(fz->value), inv_delta, bc, rot->nx, rot->ny, rot->nz);
+  return 0;
+}
+
+/*
+ * Solve Poisson equation (starting in Fourier space).
+ *
+ * grid = destination grid (rgrid *; input/output).
+ *
+ * NOTE: grid must be FFT'd first so that grid->value is complex.
+ *
+ */
+
+EXPORT char rgrid_cuda_poisson(rgrid *grid) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_c2r, grid->id, 1) < 0) return -1;
+
+  rgrid_cuda_poissonW(cuda_block_address(grid->value), grid->step * grid->step, grid->nx, grid->ny, grid->nz);
+
   return 0;
 }

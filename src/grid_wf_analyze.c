@@ -315,7 +315,7 @@ EXPORT void grid_wf_fft_probability_flux_x(wf *gwf, rgrid *flux_x) {
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
   cgrid_fft_gradient_x(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace);
   cgrid_conjugate_product(cworkspace, grid, cworkspace);
   grid_complex_im_to_real(flux_x, cworkspace);  
   rgrid_multiply(flux_x, HBAR / gwf->mass);
@@ -340,7 +340,7 @@ EXPORT void grid_wf_fft_probability_flux_y(wf *gwf, rgrid *flux_y) {
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
   cgrid_fft_gradient_y(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace);
   cgrid_conjugate_product(cworkspace, grid, cworkspace);
   grid_complex_im_to_real(flux_y, cworkspace);  
   rgrid_multiply(flux_y, HBAR / gwf->mass);
@@ -365,7 +365,7 @@ EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
   cgrid_fft_gradient_z(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace);
   cgrid_conjugate_product(cworkspace, grid, cworkspace);
   grid_complex_im_to_real(flux_z, cworkspace);  
   rgrid_multiply(flux_z, HBAR / gwf->mass);
@@ -629,7 +629,6 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
   INT i;
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
-
 
   rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
 

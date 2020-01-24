@@ -151,27 +151,26 @@ extern "C" void rgrid_cuda_fft_productW(gpu_mem_block *dst, gpu_mem_block *src1,
  *
  */
 
-__global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, CUREAL norm, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  if((i + j + k) & 1) norm *= -1.0;
-  dst[idx] = norm * src1[idx] * src2[idx];
+  dst[idx] = src1[idx] * src2[idx];
+  if((i + j + k) & 1) dst[idx] = -dst[idx];
 }
 
 /*
  * Convolution in the Fourier space (data in GPU). Not called directly.
  *
  * Multiplication in GPU memory: dst = src1 * src2 (with sign variation).
- * Note: this includes the sign variation needed for convolution as well as normalization!
+ * Note: this includes the sign variation needed for convolution!
  *
  * dst   = output (gpu_mem_block *; output).
  * src1  = 1st grid to be convoluted (gpu_mem_block *; input).
  * src2  = 2nd grid to be convoluted (gpu_mem_block *; input).
- * norm  = FFT norm (CUREAL; input).
  * nx    = Grid dim x (INT; input).
  * ny    = Grid dim y (INT; input).
  * nz    = Grid dim z (INT; input).
@@ -180,7 +179,7 @@ __global__ void rgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CU
  *
  */
 
-extern "C" void rgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, CUREAL norm, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
 
   dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   SETUP_VARIABLES_RECIPROCAL(dst);
@@ -193,12 +192,12 @@ extern "C" void rgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    rgrid_cuda_fft_convolute_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], norm, nx, nny1, nzz);
+    rgrid_cuda_fft_convolute_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny1, nzz);
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    rgrid_cuda_fft_convolute_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], norm, nx, nny2, nzz);
+    rgrid_cuda_fft_convolute_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny2, nzz);
   }
 
   cuda_error_check();
@@ -1770,69 +1769,6 @@ extern "C" void rgrid_cuda_zero_indexW(gpu_mem_block *grid, INT lx, INT hx, INT 
     cudaSetDevice(GRID->GPUs[i]);
     rgrid_cuda_zero_index_gpu<<<blocks2,threads>>>((CUREAL *) GRID->data[i], lx, hx, ly, hy, lz, hz, nnx2, ny, nz, nzz, seg);
     seg += nnx2;
-  }
-
-  cuda_error_check();
-}
-
-/*
- * Poisson equation.
- *
- */
-
-__global__ void rgrid_cuda_poisson_gpu(CUCOMPLEX *grid, CUREAL norm, CUREAL step2, CUREAL ilx, CUREAL ily, CUREAL ilz, INT nx, INT ny, INT nzz, INT seg) {
-  
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg;
-  CUREAL kx, ky, kz;
-
-  if(i >= nx || j >= ny || k >= nzz) return;
-
-  idx = (i * ny + j) * nzz + k;
-  kx = COS(ilx * (CUREAL) i);
-  ky = COS(ily * (CUREAL) jj);
-  kz = COS(ilz * (CUREAL) k);
-  if(i || jj || k)
-    grid[idx] = grid[idx] * norm * step2 / (2.0 * (kx + ky + kz - 3.0));
-  else
-    grid[idx] = CUMAKE(0.0,0.0);
-}
-
-/*
- * Solve Poisson.
- *
- * grid    = Grid specifying the RHS (gpu_mem_block *; input/output).
- * norm    = FFT normalization constant (CUREAL; input).
- * step2   = Spatial step ^ 2 (CUREAL; input).
- * nx      = # of points along x (INT; input).
- * ny      = # of points along y (INT; input).
- * nz      = # of points along z (INT; input).
- *
- * In Fourier space.
- *
- */
-
-extern "C" void rgrid_cuda_poissonW(gpu_mem_block *grid, CUREAL norm, CUREAL step2, INT nx, INT ny, INT nz) {
-
-  SETUP_VARIABLES_RECIPROCAL(grid);
-  cudaXtDesc *GRID = grid->gpu_info->descriptor;
-  INT seg = 0;
-  CUREAL ilx = 2.0 * M_PI / ((CUREAL) nx), ily = 2.0 * M_PI / ((CUREAL) ny), ilz = M_PI / ((CUREAL) nzz);
-
-  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
-    fprintf(stderr, "libgrid(cuda): poisson must be in Fourier space (INPLACE_SHUFFLED).");
-    abort();
-  }
-
-  for(i = 0; i < ngpu1; i++) {
-    cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_poisson_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], norm, step2, ilx, ily, ilz, nx, nny1, nzz, seg);
-    seg += nny1;
-  }
-
-  for(i = ngpu1; i < ngpu2; i++) {
-    cudaSetDevice(GRID->GPUs[i]);
-    rgrid_cuda_poisson_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], norm, step2, ilx, ily, ilz, nx, nny2, nzz, seg);
-    seg += nny2;
   }
 
   cuda_error_check();

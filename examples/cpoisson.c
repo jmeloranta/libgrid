@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   /* Solve the Poisson equation (result written over the right hand side in grid) */
   cgrid_fft(grid);
   cgrid_poisson(grid);   // include normalization
-  cgrid_inverse_fft(grid);
+  cgrid_inverse_fft_norm(grid);
 
   /* Write output file (solution) */
   cgrid_write_grid("output", grid);
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   /* Check by taking Laplacian (should be equal to input) & write */
   cgrid_fft(grid);
   cgrid_fft_laplace(grid, grid);
-  cgrid_inverse_fft(grid);
+  cgrid_inverse_fft_norm(grid);
 
   cgrid_write_grid("check", grid);
 

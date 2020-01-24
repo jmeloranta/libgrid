@@ -1843,11 +1843,27 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
 }
 
 /*
+ * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm (including spatial step).
+ *
+ * grid = grid to be inverse Fourier transformed (rgrid *; input/output).
+ *
+ * No return value.
+ *
+ * Note: The input grid is overwritten with the output.
+ *
+ */
+
+EXPORT void rgrid_inverse_fft_norm2(rgrid *grid) {
+
+  rgrid_scaled_inverse_fft(grid, grid->fft_norm2);
+}
+
+/*
  * Convolute FFT transformed grids (periodic). To apply this on grids grida and gridb and place the result in gridc:
  * rgrid_fft(grida);
  * rgrid_fft(gridb);
  * rgrid_convolute(gridc, grida, gridb);
- * rgrid_inverse_fft(gridc);
+ * rgrid_inverse_fft_norm2(gridc);    // note: must be norm2
  * gridc now contains the convolution of grida and gridb.
  *
  * grida = 1st grid to be convoluted (rgrid *; input).
@@ -1856,7 +1872,8 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
  *
  * No return value.
  *
- * Note: the input/output grids may be the same.
+ * Notes: - the input/output grids may be the same.
+ *        - this no longer multiplies the result by the norm (use *_inverse_fft_norm2).
  *
  * Convert from FFT to Fourier integral:
  *
@@ -1868,7 +1885,6 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
 EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy;
-  REAL norm = grida->fft_norm2;
   REAL complex *avalue, *bvalue, *cvalue;
 
 #ifdef USE_CUDA
@@ -1884,7 +1900,7 @@ EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
   avalue = (REAL complex *) grida->value;
   bvalue = (REAL complex *) gridb->value;
   cvalue = (REAL complex *) gridc->value;
-#pragma omp parallel for firstprivate(nx,ny,nz,nxy,avalue,bvalue,cvalue,norm) private(i,j,ij,ijnz,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,avalue,bvalue,cvalue) private(i,j,ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -1892,9 +1908,9 @@ EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
     for(k = 0; k < nz; k++) {
       /* if odd */
       if ((i + j + k) & 1)
-	cvalue[ijnz + k] = -norm * avalue[ijnz + k] * bvalue[ijnz + k];
+	cvalue[ijnz + k] = -avalue[ijnz + k] * bvalue[ijnz + k];
       else
-	cvalue[ijnz + k] = norm * avalue[ijnz + k] * bvalue[ijnz + k];
+	cvalue[ijnz + k] = avalue[ijnz + k] * bvalue[ijnz + k];
     }
   }
 }
@@ -2528,15 +2544,17 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
     rgrid_fft_gradient_x(wx, ux);
     rgrid_fft_gradient_y(wx, uy);
     rgrid_fft_gradient_z(wx, uz);
-    rgrid_inverse_fft(ux);
-    rgrid_inverse_fft(uy);
-    rgrid_inverse_fft(uz);
+    rgrid_inverse_fft_norm(ux);
+    rgrid_inverse_fft_norm(uy);
+    rgrid_inverse_fft_norm(uz);
     rgrid_difference(wx, vx, ux);
     rgrid_difference(wy, vy, uy);
     rgrid_difference(wz, vz, uz);
   } else { /* FD */
     rgrid_div(wx, vx, vy, vz);
+    rgrid_fft(wx);
     rgrid_poisson(wx);
+    rgrid_inverse_fft_norm(wx);
     rgrid_fd_gradient_x(wx, ux);
     rgrid_fd_gradient_y(wx, uy);
     rgrid_fd_gradient_z(wx, uz);
@@ -2578,12 +2596,14 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
     rgrid_fft_gradient_x(workspace, vx);
     rgrid_fft_gradient_y(workspace, vy);
     rgrid_fft_gradient_z(workspace, vz);
-    rgrid_inverse_fft(vx);
-    rgrid_inverse_fft(vy);
-    rgrid_inverse_fft(vz);
+    rgrid_inverse_fft_norm(vx);
+    rgrid_inverse_fft_norm(vy);
+    rgrid_inverse_fft_norm(vz);
   } else { /* FD */
     rgrid_div(workspace, vx, vy, vz);
+    rgrid_fft(workspace);
     rgrid_poisson(workspace);
+    rgrid_inverse_fft_norm(workspace);
     rgrid_fd_gradient_x(workspace, vx);
     rgrid_fd_gradient_y(workspace, vy);
     rgrid_fd_gradient_z(workspace, vz);
@@ -2619,17 +2639,19 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
     rgrid_fft(workspace);
     rgrid_poisson(workspace);
     rgrid_fft_gradient_x(workspace, workspace2);
-    rgrid_inverse_fft(workspace2);
+    rgrid_inverse_fft_norm(workspace2);
     rgrid_difference(vx, vx, workspace2);
     rgrid_fft_gradient_y(workspace, workspace2);
-    rgrid_inverse_fft(workspace2);
+    rgrid_inverse_fft_norm(workspace2);
     rgrid_difference(vy, vy, workspace2);
     rgrid_fft_gradient_z(workspace, workspace2);
-    rgrid_inverse_fft(workspace2);
+    rgrid_inverse_fft_norm(workspace2);
     rgrid_difference(vz, vz, workspace2);
   } else { /* FD */
     rgrid_div(workspace, vx, vy, vz);
+    rgrid_fft(workspace);
     rgrid_poisson(workspace);
+    rgrid_inverse_fft_norm(workspace);
     rgrid_fd_gradient_x(workspace, workspace2);
     rgrid_difference(vx, vx, workspace2);
     rgrid_fd_gradient_y(workspace, workspace2);
@@ -2857,8 +2879,6 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
  * farg   = Arguments to be passed to the function (void *; input).
  *
  * No return value.
- *
- * NOTE: This does not multiply by fft_norm, so use rgrid_inverse_fft_norm()...
  *
  */
 

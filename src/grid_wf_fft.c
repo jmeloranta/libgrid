@@ -26,7 +26,7 @@ EXPORT void grid_wf_momentum_x(wf *gwf, rgrid *momentum_x) {
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
   cgrid_fft_gradient_x(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace);
   cgrid_multiply(cworkspace, -I * HBAR / (2.0 * gwf->mass));
   grid_complex_re_to_real(momentum_x, cworkspace);
 }
@@ -50,7 +50,7 @@ EXPORT void grid_wf_momentum_y(wf *gwf, rgrid *momentum_y) {
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
   cgrid_fft_gradient_y(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace);
   cgrid_multiply(cworkspace, -I * HBAR / (2.0 * gwf->mass));
   grid_complex_re_to_real(momentum_y, cworkspace);
 }
@@ -74,7 +74,7 @@ EXPORT void grid_wf_momentum_z(wf *gwf, rgrid *momentum_z) {
   cgrid_copy(cworkspace, grid);
   cgrid_fft(cworkspace);
   cgrid_fft_gradient_z(cworkspace, cworkspace);
-  cgrid_inverse_fft(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace);
   cgrid_multiply(cworkspace, -I*HBAR / (2.0 * gwf->mass));
   grid_complex_re_to_real(momentum_z, cworkspace);
 }
@@ -154,7 +154,7 @@ EXPORT REAL grid_wf_kinetic_energy_fft(wf *gwf) {
 EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
 
   INT i, j, k, ij, ijnz, nx = gwf->grid->nx, ny = gwf->grid->ny, nz = gwf->grid->nz, nxy = nx * ny, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
-  REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step, norm;
+  REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step;
   REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0;
   REAL complex *value = gwf->grid->value, time_mass = -I * time * HBAR / (gwf->mass * 2.0);
 
@@ -162,13 +162,10 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_fft(gwf, time_mass)) return;
 #endif
   
-  /* f(x) = ifft[fft[f(x)]] / N */
-  norm = gwf->grid->fft_norm;
-
   lx = 2.0 * M_PI / (((REAL) nx) * step);
   ly = 2.0 * M_PI / (((REAL) ny) * step);
   lz = 2.0 * M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(lx,ly,lz,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -203,7 +200,7 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
         kz = ((REAL) (k - nz)) * lz - kz0;
         
       /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-      value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
+      value[ijnz + k] *= CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
     }
   } 
 }
@@ -223,7 +220,7 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
 EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
 
   INT i, j, k, ij, ijnz, nx = gwf->grid->nx, ny = gwf->grid->ny, nz = gwf->grid->nz, nxy = nx * ny, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, ii, jj, kk;
-  REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step, norm;
+  REAL kx, ky, kz, lx, ly, lz, step = gwf->grid->step;
   REAL kx0 = gwf->grid->kx0, ky0 = gwf->grid->ky0, kz0 = gwf->grid->kz0, tot, cnorm = gwf->cfft_width * M_PI / ((REAL) (nx + ny + nz));
   REAL complex *value = gwf->grid->value, time_mass = -I * time * HBAR / (gwf->mass * 2.0);
 
@@ -231,13 +228,10 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cfft(gwf, time_mass, cnorm)) return;
 #endif
   
-  /* f(x) = ifft[fft[f(x)]] / N */
-  norm = gwf->grid->fft_norm;
-
   lx = 2.0 * M_PI / (((REAL) nx) * step);
   ly = 2.0 * M_PI / (((REAL) ny) * step);
   lz = 2.0 * M_PI / (((REAL) nz) * step);
-#pragma omp parallel for firstprivate(lx,ly,lz,norm,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,cnorm) private(i,j,ij,ijnz,k,kx,ky,kz,ii,jj,kk,tot) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(lx,ly,lz,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,cnorm) private(i,j,ij,ijnz,k,kx,ky,kz,ii,jj,kk,tot) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
     j = ij % ny;
@@ -282,7 +276,7 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
 
       /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
       tot = SQRT((REAL) (ii * ii + jj * jj + kk * kk)) * cnorm;
-      value[ijnz + k] *= norm * CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
+      value[ijnz + k] *= CEXP(time_mass * (kx * kx + ky * ky + kz * kz));
       if(tot != 0.0) value[ijnz + k] *= SIN(tot) / tot;
     }
   } 
@@ -312,11 +306,10 @@ EXPORT void grid_wf_square_of_potential_gradient(wf *gwf, cgrid *sq_grad_pot, cg
   cgrid_fft(sq_grad_pot);
   cgrid_fft_gradient_x(sq_grad_pot, cworkspace);
   cgrid_fft_gradient_y(sq_grad_pot, cworkspace2);
-  cgrid_fft_gradient_z(sq_grad_pot, sq_grad_pot);
-  
-  cgrid_inverse_fft(sq_grad_pot);
-  cgrid_inverse_fft(cworkspace);
-  cgrid_inverse_fft(cworkspace2);
+  cgrid_fft_gradient_z(sq_grad_pot, sq_grad_pot);  
+  cgrid_inverse_fft_norm(sq_grad_pot);
+  cgrid_inverse_fft_norm(cworkspace);
+  cgrid_inverse_fft_norm(cworkspace2);
   
   cgrid_conjugate_product(sq_grad_pot, sq_grad_pot, sq_grad_pot);
   cgrid_conjugate_product(cworkspace, cworkspace, cworkspace);

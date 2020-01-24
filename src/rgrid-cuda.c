@@ -40,7 +40,7 @@ EXPORT char rgrid_cuda_fft_convolute(rgrid *dst, rgrid *src1, rgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
 
-  rgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->fft_norm2, src1->nx, src1->ny, src1->nz);
+  rgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
 
   return 0;
 }
@@ -754,29 +754,6 @@ EXPORT char rgrid_cuda_zero_index(rgrid *grid, INT lx, INT hx, INT ly, INT hy, I
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
 
   rgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
-  return 0;
-}
-
-/*
- * Solve Poisson equation (starting in Fourier space).
- *
- * grid = destination grid (rgrid *; input/output).
- *
- * NOTE: grid must be FFT'd first so that grid->value is complex.
- *
- */
-
-EXPORT char rgrid_cuda_poisson(rgrid *grid) {
-
-  if(grid->host_lock) {
-    cuda_remove_block(grid->value, 1);
-    return -1;
-  }
-
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_c2r, grid->id, 1) < 0) return -1;
-
-  rgrid_cuda_poissonW(cuda_block_address(grid->value), grid->fft_norm, grid->step * grid->step, grid->nx, grid->ny, grid->nz);
-
   return 0;
 }
 

@@ -1952,13 +1952,30 @@ EXPORT void cgrid_inverse_fft_norm(cgrid *grid) {
 }
 
 /*
+ * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm (including the spatial step).
+ *
+ * grid = grid to be inverse Fourier transformed (input/output) (cgrid *; input/output).
+ *
+ * No return value.
+ *
+ * Note: The input grid is overwritten with the output.
+ *
+ */
+
+EXPORT void cgrid_inverse_fft_norm2(cgrid *grid) {
+
+  cgrid_scaled_inverse_fft(grid, grid->fft_norm2);
+}
+
+
+/*
  * Convolute FFT transformed grids. 
  *
  * To convolute grids grida and gridb and place the result in gridc:
  * cgrid_fft(grida);
  * cgrid_fft(gridb);
  * cgrid_convolue(gridc, grida, gridb);
- * cgrid_inverse_fft(gridc);
+ * cgrid_inverse_fft_norm2(gridc);    // Note: must be norm2
  * gridc now contains the convolution of grida and gridb.
  *
  * gridc = output grid (cgrid *; output).
@@ -1979,7 +1996,6 @@ EXPORT void cgrid_inverse_fft_norm(cgrid *grid) {
 EXPORT void cgrid_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy;
-  REAL norm = grida->fft_norm2;
   REAL complex *cvalue, *bvalue, *avalue;
 
 #ifdef USE_CUDA
@@ -1996,7 +2012,7 @@ EXPORT void cgrid_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
   bvalue = gridb->value;
   avalue = grida->value; 
  
-#pragma omp parallel for firstprivate(nx,ny,nz,nxy,cvalue,bvalue,avalue,norm) private(i,j,ij,ijnz,k) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,cvalue,bvalue,avalue) private(i,j,ij,ijnz,k) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -2004,9 +2020,9 @@ EXPORT void cgrid_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
     for(k = 0; k < nz; k++) {
       /* if odd */
       if ((i + j + k) & 1)
-        cvalue[ijnz + k] = -norm * avalue[ijnz + k] * bvalue[ijnz + k];
+        cvalue[ijnz + k] = -avalue[ijnz + k] * bvalue[ijnz + k];
       else
-        cvalue[ijnz + k] = norm * avalue[ijnz + k] * bvalue[ijnz + k];
+        cvalue[ijnz + k] = avalue[ijnz + k] * bvalue[ijnz + k];
     }
   }
 }
@@ -2465,8 +2481,6 @@ EXPORT void cgrid_ipower(cgrid *dst, cgrid *src, INT exponent) {
  * farg   = Arguments to be passed to the function (void *; input).
  *
  * No return value.
- *
- * NOTE: This does not multiply by fft_norm, so use cgrid_inverse_fft_norm()...
  *
  */
 

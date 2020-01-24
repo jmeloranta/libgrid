@@ -15,7 +15,6 @@
 #include <cuda.h>
 #include <device_launch_parameters.h>
 
-
 /* 
  * Differentiate a grid with respect to x (central difference).
  *
@@ -204,7 +203,7 @@ EXPORT char cgrid_cuda_fft_gradient_x(cgrid *src, cgrid *dst) {
 
   if (dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_gradient_xW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_gradient_xW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -229,7 +228,7 @@ EXPORT char cgrid_cuda_fft_gradient_y(cgrid *src, cgrid *dst) {
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_gradient_yW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_gradient_yW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -254,7 +253,7 @@ EXPORT char cgrid_cuda_fft_gradient_z(cgrid *src, cgrid *dst) {
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_gradient_zW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_gradient_zW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -279,7 +278,7 @@ EXPORT char cgrid_cuda_fft_laplace(cgrid *src, cgrid *dst) {
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_laplaceW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_laplaceW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -304,7 +303,7 @@ EXPORT char cgrid_cuda_fft_laplace_x(cgrid *src, cgrid *dst) {
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_laplace_xW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_laplace_xW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -329,7 +328,7 @@ EXPORT char cgrid_cuda_fft_laplace_y(cgrid *src, cgrid *dst) {
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_laplace_yW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_laplace_yW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -354,7 +353,7 @@ EXPORT char cgrid_cuda_fft_laplace_z(cgrid *src, cgrid *dst) {
 
   if(dst != src) cuda_gpu2gpu(cuda_find_block(dst->value), cuda_find_block(src->value));
 
-  cgrid_cuda_fft_laplace_zW(cuda_block_address(dst->value), dst->fft_norm, dst->step, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_laplace_zW(cuda_block_address(dst->value), dst->step, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -386,6 +385,27 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value
   if(laplace->ny != 1) *value *= step;
   if(laplace->nz != 1) *value *= step;
   *value *= norm;
+
+  return 0;
+}
+
+/*
+ * Solve Poisson equation.
+ *
+ * grid = destination grid (cgrid *; input/output).
+ *
+ */
+
+EXPORT char cgrid_cuda_poisson(cgrid *grid) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+
+  cgrid_cuda_poissonW(cuda_block_address(grid->value), grid->step * grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
