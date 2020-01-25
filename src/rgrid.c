@@ -2538,8 +2538,13 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
 EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, rgrid *uz, rgrid *wx, rgrid *wy, rgrid *wz) {
 
   if(grid_analyze_method) { /* FFT */
-    rgrid_div(wx, vx, vy, vz);
-    rgrid_fft(wx);
+    rgrid_fft(vx);
+    rgrid_fft(vy);
+    rgrid_fft(vz);
+    rgrid_fft_div(wx, vx, vy, vz);
+    rgrid_inverse_fft_norm(vx);
+    rgrid_inverse_fft_norm(vy);
+    rgrid_inverse_fft_norm(vz);
     rgrid_poisson(wx);
     rgrid_fft_gradient_x(wx, ux);
     rgrid_fft_gradient_y(wx, uy);
@@ -2590,8 +2595,10 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
 EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) {
 
   if(grid_analyze_method) { /* FFT */
-    rgrid_div(workspace, vx, vy, vz);
-    rgrid_fft(workspace);
+    rgrid_fft(vx);
+    rgrid_fft(vy);
+    rgrid_fft(vz);
+    rgrid_fft_div(workspace, vx, vy, vz);
     rgrid_poisson(workspace);
     rgrid_fft_gradient_x(workspace, vx);
     rgrid_fft_gradient_y(workspace, vy);
@@ -2635,9 +2642,14 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
 EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
 
   if(grid_analyze_method == 1) { /* FFT */
-    rgrid_div(workspace, vx, vy, vz);
-    rgrid_fft(workspace);
+    rgrid_fft(vx);
+    rgrid_fft(vy);
+    rgrid_fft(vz);
+    rgrid_fft_div(workspace, vx, vy, vz);
     rgrid_poisson(workspace);
+    rgrid_inverse_fft_norm(vx);
+    rgrid_inverse_fft_norm(vy);
+    rgrid_inverse_fft_norm(vz);
     rgrid_fft_gradient_x(workspace, workspace2);
     rgrid_inverse_fft_norm(workspace2);
     rgrid_difference(vx, vx, workspace2);
@@ -2670,7 +2682,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
  * input1  = Input grid 1 for averaging (rgrid *; input).
  * input2  = Input grid 2 for averaging (rgrid *; input). Can be NULL if N/A.
  * input3  = Input grid 3 for averaging (rgrid *; input). Can be NULL if N/A.
- * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
+ * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length (REAL; input).
  * nbins   = Number of bins requested (INT; input).
  * volel   = 1: Include 4pi r^2 volume element or 0: just calculate average (char; input).
@@ -2744,7 +2756,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
  * input1  = Input grid 1 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
  * input2  = Input grid 2 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
  * input3  = Input grid 3 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
- * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimenion equal to nbins.
+ * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length for k (REAL; input). 
  * nbins   = Number of bins requested (INT; input).
  * volel   = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).

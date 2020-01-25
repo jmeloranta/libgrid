@@ -557,7 +557,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 0);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -597,7 +597,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 0);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -636,7 +636,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
   rgrid_fft(workspace2);
   rgrid_fft(workspace3);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 0);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
