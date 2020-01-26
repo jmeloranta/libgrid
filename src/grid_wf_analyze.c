@@ -30,17 +30,18 @@ EXPORT void grid_wf_analyze_method(char method) {
  * vx     = x output grid containing the velocity (rgrid *).
  * vy     = y output grid containing the velocity (rgrid *).
  * vz     = z output grid containing the velocity (rgrid *).
+ * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz) {
+EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz, REAL eps) {
 
   grid_wf_probability_flux(gwf, vx, vy, vz);  
-  grid_division_norm(vx, vx, gwf->grid, GRID_EPS2);
-  grid_division_norm(vy, vy, gwf->grid, GRID_EPS2);
-  grid_division_norm(vz, vz, gwf->grid, GRID_EPS2);
+  grid_division_norm(vx, vx, gwf->grid, eps);
+  grid_division_norm(vy, vy, gwf->grid, eps);
+  grid_division_norm(vz, vz, gwf->grid, eps);
 }
 
 /*
@@ -49,15 +50,16 @@ EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz) {
  *
  * gwf    = wavefunction for the operation (wf *).
  * vx     = x output grid containing the velocity (rgrid *).
+ * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx) {
+EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL eps) {
 
   grid_wf_probability_flux_x(gwf, vx);
-  grid_division_norm(vx, vx, gwf->grid, GRID_EPS2);
+  grid_division_norm(vx, vx, gwf->grid, eps);
 }
 
 /*
@@ -66,15 +68,16 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx) {
  *
  * gwf    = wavefunction for the operation (wf *).
  * vy     = y output grid containing the velocity (rgrid *).
+ * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy) {
+EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL eps) {
 
   grid_wf_probability_flux_y(gwf, vy);
-  grid_division_norm(vy, vy, gwf->grid, GRID_EPS2);
+  grid_division_norm(vy, vy, gwf->grid, eps);
 }
 
 /*
@@ -83,15 +86,16 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy) {
  *
  * gwf    = wavefunction for the operation (wf *).
  * vz     = z output grid containing the velocity (rgrid *).
+ * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz) {
+EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL eps) {
 
   grid_wf_probability_flux_z(gwf, vz);
-  grid_division_norm(vz, vz, gwf->grid, GRID_EPS2);
+  grid_division_norm(vz, vz, gwf->grid, eps);
 }
 
 /*
@@ -542,16 +546,17 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
  * workspace1 = Workspace 1 (rgrid *; input/output).
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
+ * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3) {
+EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, REAL eps) {
 
   INT i;
 
-  grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
+  grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
   rgrid_fft(workspace1);
   rgrid_fft(workspace2);
@@ -580,16 +585,17 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * workspace4 = Workspace 4 (rgrid *; input/output).
  * workspace5 = Workspace 5 (rgrid *; input/output).
+ * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5) {
+EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps) {
 
   INT i;
 
-  grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
+  grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
   rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
 
@@ -619,16 +625,17 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * workspace4 = Workspace 4 (rgrid *; input/output).
+ * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4) {
+EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
 
   INT i;
 
-  grid_wf_velocity(gwf, workspace1, workspace2, workspace3);
+  grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
   rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
 
@@ -649,12 +656,13 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
  * wf         = Wavefunction (wf *; input).
  * workspace1 = Workspace (rgrid *; input).
  * workspace2 = Workspace (rgrid *; input).
+ * eps        = Epsilon for (safe) dividing by |psi|^2 (REAL).
  *
  * Returns the kinetic energy (REAL).
  *
  */
 
-EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *workspace2, REAL eps) {
 
   rgrid_zero(workspace2);
   grid_wf_probability_flux_x(gwf, workspace1);  // = rho * v_x
@@ -665,7 +673,7 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
   rgrid_add_scaled_product(workspace2, 0.5 * gwf->mass, workspace1, workspace1);
   
   grid_wf_density(gwf, workspace1);
-  rgrid_division_eps(workspace2, workspace2, workspace1, GRID_EPS2);
+  rgrid_division_eps(workspace2, workspace2, workspace1, eps);
 
   return rgrid_integral(workspace2);
 }

@@ -6,7 +6,6 @@
 #include "au.h"
 
 #define GRID_EPS 1.0E-16  // Small epsilon
-#define GRID_EPS2 1E-5    // Large epsilon (for dividing by density)
 
 #define GRID_ABS_BC_FFT (3.0E4 / GRID_AUTOK) // Absorbing boundary base value for FFT
 
