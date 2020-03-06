@@ -10,15 +10,17 @@
 #include <grid/grid.h>
 
 /* Grid dimensions */
-#define NX 128
-#define NY 128
-#define NZ 128
+#define NX 1024
+#define NY 1
+#define NZ 1
 #define STEP 0.5
+
+#undef USE_CUDA
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 2
-int gpus[NGPUS] = {3, 4};
+#define NGPUS 1
+int gpus[NGPUS] = {0};
 #endif
 
 int main(int argc, char **argv) {
@@ -41,7 +43,7 @@ int main(int argc, char **argv) {
   rgrid_zero(ngrid);
 
   /* Add random noise */
-  rgrid_random(ugrid, 1.0);
+  rgrid_random_uniform(ugrid, 1.0);
   rgrid_random_normal(ngrid, 1.0);
 
   rgrid_write_grid("uniform", ugrid);
