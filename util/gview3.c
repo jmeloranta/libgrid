@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
   }
   fclose(fp);
   printf("Region [" FMT_R "X" FMT_R "] x [" FMT_R "X" FMT_R "].\n", xmin, xmax, ymin, ymax);
+  system("rm output-*.png"); // Remove old images
 
   GraceRegisterErrorFunction(my_error_function);
   /* Start Grace with a buffer size of 2048 and open the pipe */
