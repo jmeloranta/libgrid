@@ -216,20 +216,18 @@ EXPORT size_t cuda_memory() {
 }
 
 /*
- * Transform from unshuffled to shuffled storage format.
+ * Transform between shuffled and unshuffled storage formats.
  *
  * block = Memory data for shuffle (gpu_mem_block *; input/output).
  * 
  * No return value.
  *
- * TODO: This is far from optimal - but then it should not be called that often.
- *
  */
 
-EXPORT void cuda_gpu_shuffle(gpu_mem_block *block) {
+EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
 
-  INT i, j, nx, ny, nz;
-  size_t esize, len, idxs, idxd;
+  INT i, j, jj, jjj, nx, ny, nz, nzz, nny1, nny2, ngpu1, ngpu2;
+  size_t esize, len, idxs, idxd, nzsize;
   cufft_plan_data *pdata;
   unsigned char *src, *dst;
 
@@ -248,65 +246,30 @@ EXPORT void cuda_gpu_shuffle(gpu_mem_block *block) {
   len = esize * (size_t) nx * (size_t) ny * (size_t) nz;
   src = (unsigned char *) block->host_mem;
   if(!(dst = (unsigned char *) malloc(len))) {
-    fprintf(stderr, "libgrid(cuda): Out of memory in gpu_shuffle.\n");
-    abort();
-  }
-  
-  // Swap (x,y) <-> (y,x) blocks using temporary storage. We could do in place but that is tricky and possibly very slow.
-  for (i = 0; i < nx; i++)
-    for (j = 0; j < ny; j++) {
-      idxs = (((size_t) i) * esize * ((size_t) ny) + ((size_t) j) * esize) * ((size_t) nz);
-      idxd = (((size_t) j) * esize * ((size_t) nx) + ((size_t) i) * esize) * ((size_t) nz);
-      bcopy(&src[idxs], &dst[idxd], esize * (size_t) nz);
-    }
-  bcopy(dst, src, len);
-  free(dst);
-}
-
-/*
- * Transform from shuffled to unshuffled storage format.
- *
- * block = Memory data for shuffle (gpu_mem_block *; input/output).
- * 
- * No return value.
- *
- * TODO: This is far from optimal - but then it should not be called that often.
- *
- */
-
-EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
-
-  INT i, j, nx, ny, nz;
-  size_t esize, len, idxs, idxd;
-  cufft_plan_data *pdata;
-  unsigned char *src, *dst;
-
-  if(block->cufft_handle == -1) {
-    fprintf(stderr, "libgrid(cuda): gpu_shuffle called for non-cufft capable block.\n");
-    abort();
-  }
-  fprintf(stderr, "libgrid(cuda): Warning - exeuting GPU unshuffle (UNTESTED & SLOW).\n");
-
-  pdata = &(grid_plan_data[block->cufft_handle]);
-  nx = pdata->nx;
-  ny = pdata->ny;
-  nz = pdata->nz;
-  esize = pdata->esize;
-
-  len = esize * (size_t) nx * (size_t) ny * (size_t) nz;
-  src = (unsigned char *) block->host_mem;
-  if(!(dst = (unsigned char *) malloc(len))) {
     fprintf(stderr, "libgrid(cuda): Out of memory in gpu_unshuffle.\n");
     abort();
   }
-  
-  // Swap (x,y) <-> (y,x) blocks using temporary storage. We could do in place but that is tricky and possibly very slow.
-  for (i = 0; i < nx; i++)
-    for (j = 0; j < ny; j++) {
-      idxs = (((size_t) j) * esize * ((size_t) nx) + ((size_t) i) * esize) * ((size_t) nz);
-      idxd = (((size_t) i) * esize * ((size_t) ny) + ((size_t) j) * esize) * ((size_t) nz);
-      bcopy(&src[idxs], &dst[idxd], esize * (size_t) nz);
+
+  ngpu2 = block->gpu_info->descriptor->nGPUs;
+  ngpu1 = ny % ngpu2;
+  nny2 = ny / ngpu2;
+  nny1 = nny2 + 1;
+  nzz = 2 * (nz / 2 + 1);
+  for (i = 0; i < nx; i++) { // SHUFFLED
+    j = 0;
+    for(jj = 0; jj < ngpu1; jj++) {
+      for (jjj = 0; jjj < nny1; jjj++, j++) {
+        for (k = 0; k < nzz; k++)
+          bcopy(&(src[(jj * nx * nny1 * nzz + (i * nny1) + jjj) * nzz + k]), &(dst[((i * ny) + j) * nzz + k]), esize);
     }
+    for(jj = ngpu1; jj < ngpu2; jj++) {
+      for (jjj = 0; jjj < nny2; jjj++, j++) {
+        for (k = 0; k < nzz; k++)
+          bcopy(&(src[(jj * nx * nny2 * nzz + (i * nny2) + jjj) * nzz + k]), &(dst[((i * ny) + j) * nzz + k]), esize);
+        }
+      }    
+    }
+  }
   bcopy(dst, src, len);
   free(dst);
 }
