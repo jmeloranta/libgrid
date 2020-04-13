@@ -424,6 +424,60 @@ EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
 }
 
 /*
+ * Calculate angular momentum L_x.
+ *
+ * wf         = Wavefunction (wf *; input).
+ * dst        = Destination for the operation (rgrid *; input).
+ * workspace  = Workspace required for the operation (rgrid *; input).
+ *
+ */
+
+EXPORT void grid_wf_lx_op(wf *wf, rgrid *dst, rgrid *workspace) {
+
+  grid_wf_pz(wf, dst);       // p_z
+  rgrid_multiply_by_y(dst);   // yp_z
+  grid_wf_py(wf, workspace);       // p_y
+  rgrid_multiply_by_z(workspace);   // zp_y    
+  rgrid_difference(dst, dst, workspace); // yp_z - zp_y
+}
+
+/*
+ * Calculate angular momentum L_y.
+ *
+ * wf         = Wavefunction (gwf *).
+ * dst        = Destination for the operation (rgrid *; input).
+ * workspace  = Workspace required for the operation (rgrid *; input).
+ *
+ */
+ 
+EXPORT void grid_wf_ly_op(wf *wf, rgrid *dst, rgrid *workspace) {
+
+  grid_wf_px(wf, dst);       // p_x
+  rgrid_multiply_by_z(dst);   // zp_x
+  grid_wf_pz(wf, workspace);       // p_z
+  rgrid_multiply_by_x(workspace);   // xp_z
+  rgrid_difference(dst, dst, workspace); // zp_x - xp_z
+}
+
+/*
+ * Calculate angular momentum operator L_z.
+ *
+ * wf         = Wavefunction (gwf *).
+ * dst        = Destination for the operation (rgrid *; input).
+ * workspace  = Workspace required for the operation (rgrid *; input).
+ *
+ */
+ 
+EXPORT void grid_wf_lz_op(wf *wf, rgrid *dst, rgrid *workspace) {
+
+  grid_wf_py(wf, dst);       // p_y
+  rgrid_multiply_by_x(dst);   // xp_y
+  grid_wf_px(wf, workspace);       // p_x
+  rgrid_multiply_by_y(workspace);   // yp_x
+  rgrid_difference(dst, dst, workspace); // xp_y - yp_x
+}
+
+/*
  * Calculate angular momentum expectation value <L_x>.
  *
  * wf         = Wavefunction (wf *; input).
@@ -436,11 +490,7 @@ EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
 
 EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
-  grid_wf_pz(wf, workspace1);       // p_z
-  rgrid_multiply_by_y(workspace1);   // yp_z
-  grid_wf_py(wf, workspace2);       // p_y
-  rgrid_multiply_by_z(workspace2);   // zp_y    
-  rgrid_difference(workspace1, workspace1, workspace2); // yp_z - zp_y
+  grid_wf_lx_op(wf, workspace1, workspace2);
   return rgrid_integral(workspace1);
 }
 
@@ -457,11 +507,7 @@ EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  
 EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
-  grid_wf_px(wf, workspace1);       // p_x
-  rgrid_multiply_by_z(workspace1);   // zp_x
-  grid_wf_pz(wf, workspace2);       // p_z
-  rgrid_multiply_by_x(workspace2);   // xp_z
-  rgrid_difference(workspace1, workspace1, workspace2); // zp_x - xp_z
+  grid_wf_ly_op(wf, workspace1, workspace2);
   return rgrid_integral(workspace1);
 }
 
@@ -478,11 +524,7 @@ EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  
 EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
 
-  grid_wf_py(wf, workspace1);       // p_y
-  rgrid_multiply_by_x(workspace1);   // xp_y
-  grid_wf_px(wf, workspace2);       // p_x
-  rgrid_multiply_by_y(workspace2);   // yp_x
-  rgrid_difference(workspace1, workspace1, workspace2); // xp_y - yp_x
+  grid_wf_lz_op(wf, workspace1, workspace2);
   return rgrid_integral(workspace1);
 }
 
