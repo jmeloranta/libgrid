@@ -226,8 +226,8 @@ EXPORT size_t cuda_memory() {
 
 EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
 
-  INT i, j, jj, jjj, nx, ny, nz, nzz, nny1, nny2, ngpu1, ngpu2;
-  size_t esize, len, idxs, idxd, nzsize;
+  INT i, j, jj, jjj, k, nx, ny, nz, nzz, nny1, nny2, ngpu1, ngpu2;
+  size_t esize, len;
   cufft_plan_data *pdata;
   unsigned char *src, *dst;
 
