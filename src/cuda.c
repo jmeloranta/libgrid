@@ -235,7 +235,7 @@ EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
     fprintf(stderr, "libgrid(cuda): gpu_shuffle called for non-cufft capable block.\n");
     abort();
   }
-  fprintf(stderr, "libgrid(cuda): Warning - exeuting GPU shuffle (UNTESTED & SLOW).\n");
+  fprintf(stderr, "libgrid(cuda): Warning - exeuting GPU shuffle (EXPERIMENTAL).\n");
 
   pdata = &(grid_plan_data[block->cufft_handle]);
   nx = pdata->nx;
