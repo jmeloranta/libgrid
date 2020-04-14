@@ -2505,9 +2505,6 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
     rgrid_fft(vy);
     rgrid_fft(vz);
     rgrid_fft_div(workspace, vx, vy, vz);
-    rgrid_inverse_fft_norm(vx);
-    rgrid_inverse_fft_norm(vy);
-    rgrid_inverse_fft_norm(vz);
     rgrid_poisson(workspace);
     rgrid_fft_gradient_x(workspace, vx);
     rgrid_fft_gradient_y(workspace, vy);
