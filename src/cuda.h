@@ -33,8 +33,10 @@ typedef struct gpu_mem_block gpu_mem_block;
 struct cufft_plan_data {
   INT nx;        // grid dimension x
   INT ny;        // grid dimension y
-  INT nz;        // grid dimension z (for real grids 2*(nz / 2 + 1)
+  INT nz;        // real grid dimension (nz) for C2C
+  INT nz2;       // grid dimension z (for real grids 2*(nz / 2 + 1) for R2C/C2R
   size_t esize;  // number of bytes per element
+  char type;     // Type of last trasnform: 0 = C2C, 1 = R2C, 2 = C2R
 };
 
 typedef struct cufft_plan_data cufft_plan_data;

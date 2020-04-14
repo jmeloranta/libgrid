@@ -216,9 +216,9 @@ EXPORT size_t cuda_memory() {
 }
 
 /*
- * Transform between shuffled and unshuffled storage formats.
+ * Transform between from shuffled (reciprocal) to unshuffled (real) storage format.
  *
- * block = Memory data for shuffle (gpu_mem_block *; input/output).
+ * block = Memory data for unshuffle (gpu_mem_block *; input/output).
  * 
  * No return value.
  *
@@ -226,7 +226,7 @@ EXPORT size_t cuda_memory() {
 
 EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
 
-  INT i, j, jj, jjj, k, nx, ny, nz, nzz, nny1, nny2, ngpu1, ngpu2;
+  INT i, j, jj, jjj, nx, ny, nz, nny1, nny2, ngpu1, ngpu2, bs;
   size_t esize, len;
   cufft_plan_data *pdata;
   unsigned char *src, *dst;
@@ -240,7 +240,19 @@ EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
   pdata = &(grid_plan_data[block->cufft_handle]);
   nx = pdata->nx;
   ny = pdata->ny;
-  nz = pdata->nz;
+  switch(pdata->type) {
+    case 0: // C2C
+      nz = pdata->nz;
+    case 1: // R2C
+      nz = pdata->nz2 / 2;
+      break;
+    case 2: // C2R
+      nz = pdata->nz2;
+      break;
+    default:
+      fprintf(stderr, "libgrid(cuda): Illegal transform type in GPU shuffle.\n");
+      exit(1);
+  }     
   esize = pdata->esize;
 
   len = esize * (size_t) nx * (size_t) ny * (size_t) nz;
@@ -254,21 +266,15 @@ EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
   ngpu1 = ny % ngpu2;
   nny2 = ny / ngpu2;
   nny1 = nny2 + 1;
-  nzz = 2 * (nz / 2 + 1);
-  for (i = 0; i < nx; i++) { // SHUFFLED
+  for (i = 0; i < nx; i++) {
     j = 0;
-    for(jj = 0; jj < ngpu1; jj++) {
-      for (jjj = 0; jjj < nny1; jjj++, j++) {
-        for (k = 0; k < nzz; k++)
-          bcopy(&(src[(jj * nx * nny1 * nzz + (i * nny1) + jjj) * nzz + k]), &(dst[((i * ny) + j) * nzz + k]), esize);
-    }
-    for(jj = ngpu1; jj < ngpu2; jj++) {
-      for (jjj = 0; jjj < nny2; jjj++, j++) {
-        for (k = 0; k < nzz; k++)
-          bcopy(&(src[(jj * nx * nny2 * nzz + (i * nny2) + jjj) * nzz + k]), &(dst[((i * ny) + j) * nzz + k]), esize);
-        }
-      }    
-    }
+    for(jj = 0; jj < ngpu1; jj++)
+      for (jjj = 0; jjj < nny1; jjj++, j++)
+        bcopy(&(src[((jj * nx + i) * nny1 + jjj) * nz * (INT) esize]), &(dst[((i * ny) + j) * nz * (INT) esize]), esize * (size_t) nz);
+    bs = ngpu1 * nny1 * nx * nz; // use nny1 for indexing the first part and then continue with nny2 below
+    for(jj = 0; jj < ngpu2 - ngpu1; jj++)
+      for (jjj = 0; jjj < nny2; jjj++, j++)
+        bcopy(&(src[(bs + ((jj * nx + i) * nny2 + jjj) * nz) * (INT) esize]), &(dst[((i * ny) + j) * nz * (INT) esize]), esize * (size_t) nz);
   }
   bcopy(dst, src, len);
   free(dst);
@@ -616,6 +622,7 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
   fprintf(stderr, "cuda: Add block %lx (%s) of length %ld with copy %d.\n", (unsigned long int) host_mem, id, length, copy);
 #endif
   if((ptr = cuda_find_block(host_mem))) { /* Already in GPU memory? */
+    ptr->cufft_handle = cufft_handle;    // This was added recently: if a block is in GPU already, we still need to modify the handle.
     cuda_block_hit(ptr);
 #ifdef CUDA_DEBUG
     fprintf(stderr, "cuda: Already in GPU memory.\n");
@@ -1766,12 +1773,38 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
   }
   grid_plan_data[*plan].nx = nx;
   grid_plan_data[*plan].ny = ny;
-  grid_plan_data[*plan].nz = 2 * (nz / 2 + 1);
+  grid_plan_data[*plan].nz = nz;  
+  grid_plan_data[*plan].nz2 = 2 * (nz / 2 + 1);
 
-  if(type == CUFFT_C2C) grid_plan_data[*plan].esize = 2 * sizeof(float);
-  else if(type == CUFFT_Z2Z) grid_plan_data[*plan].esize = 2 * sizeof(double);
-  else if(type == CUFFT_R2C || type == CUFFT_C2R) grid_plan_data[*plan].esize = 2 * sizeof(float);
-  else if(type == CUFFT_D2Z || type == CUFFT_Z2D) grid_plan_data[*plan].esize = 2 * sizeof(double);
+  switch(type) {
+    case CUFFT_C2C:
+      grid_plan_data[*plan].esize = 2 * sizeof(float);
+      grid_plan_data[*plan].type = 0; // complex to complex
+      break;
+    case CUFFT_Z2Z:
+      grid_plan_data[*plan].esize = 2 * sizeof(double);
+      grid_plan_data[*plan].type = 0; // complex to complex
+      break;
+    case CUFFT_R2C:
+      grid_plan_data[*plan].esize = 2 * sizeof(float);      
+      grid_plan_data[*plan].type = 1; // real to complex
+      break;
+    case CUFFT_C2R:
+      grid_plan_data[*plan].esize = 2 * sizeof(float);      
+      grid_plan_data[*plan].type = 2; // complex to real
+      break;
+    case CUFFT_D2Z:
+      grid_plan_data[*plan].esize = 2 * sizeof(double);      
+      grid_plan_data[*plan].type = 1; // real to complex
+      break;
+    case CUFFT_Z2D:
+      grid_plan_data[*plan].esize = 2 * sizeof(double);      
+      grid_plan_data[*plan].type = 2; // complex to real
+      break;
+    default:
+      fprintf(stderr, "libgrid(cuda): Illegal CUFFT transform type.\n");
+      exit(1);
+  }          
 
   /* Maximum amount of memory on GPU */
   for(i = 0; i < ngpus; i++)
