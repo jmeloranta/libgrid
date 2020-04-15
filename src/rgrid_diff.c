@@ -871,7 +871,7 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
  *
  */
 
-EXPORT void rgrid_poisson(rgrid *grid) {
+EXPORT void rgrid_fft_poisson(rgrid *grid) {
 
   INT i, j, k, nx = grid->nx, ny = grid->ny, nz, idx;
   REAL step = grid->step, step2 = step * step, ilx, ily;
@@ -964,7 +964,7 @@ EXPORT void rgrid_fft_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
   step = div->step;
   lx = 2.0 * M_PI / (((REAL) nx) * step);
   ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = 2.0 * M_PI / (((REAL) nz) * step);
+  lz = M_PI / (((REAL) nz - 1) * step);
   nx2 = nx / 2;
   ny2 = ny / 2;
   nz2 = nz / 2;

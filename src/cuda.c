@@ -240,19 +240,7 @@ EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
   pdata = &(grid_plan_data[block->cufft_handle]);
   nx = pdata->nx;
   ny = pdata->ny;
-  switch(pdata->type) {
-    case 0: // C2C
-      nz = pdata->nz;
-    case 1: // R2C
-      nz = pdata->nz2 / 2;
-      break;
-    case 2: // C2R
-      nz = pdata->nz2;
-      break;
-    default:
-      fprintf(stderr, "libgrid(cuda): Illegal transform type in GPU shuffle.\n");
-      exit(1);
-  }     
+  nz = pdata->nz;
   esize = pdata->esize;
 
   len = esize * (size_t) nx * (size_t) ny * (size_t) nz;
@@ -622,7 +610,6 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
   fprintf(stderr, "cuda: Add block %lx (%s) of length %ld with copy %d.\n", (unsigned long int) host_mem, id, length, copy);
 #endif
   if((ptr = cuda_find_block(host_mem))) { /* Already in GPU memory? */
-    ptr->cufft_handle = cufft_handle;    // This was added recently: if a block is in GPU already, we still need to modify the handle.
     cuda_block_hit(ptr);
 #ifdef CUDA_DEBUG
     fprintf(stderr, "cuda: Already in GPU memory.\n");
@@ -1773,33 +1760,25 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
   }
   grid_plan_data[*plan].nx = nx;
   grid_plan_data[*plan].ny = ny;
-  grid_plan_data[*plan].nz = nz;  
-  grid_plan_data[*plan].nz2 = 2 * (nz / 2 + 1);
 
   switch(type) {
     case CUFFT_C2C:
       grid_plan_data[*plan].esize = 2 * sizeof(float);
-      grid_plan_data[*plan].type = 0; // complex to complex
+      grid_plan_data[*plan].nz = nz;
       break;
     case CUFFT_Z2Z:
       grid_plan_data[*plan].esize = 2 * sizeof(double);
-      grid_plan_data[*plan].type = 0; // complex to complex
+      grid_plan_data[*plan].nz = nz;
       break;
     case CUFFT_R2C:
-      grid_plan_data[*plan].esize = 2 * sizeof(float);      
-      grid_plan_data[*plan].type = 1; // real to complex
-      break;
     case CUFFT_C2R:
-      grid_plan_data[*plan].esize = 2 * sizeof(float);      
-      grid_plan_data[*plan].type = 2; // complex to real
+      grid_plan_data[*plan].esize = sizeof(float);      
+      grid_plan_data[*plan].nz = 2 * (nz / 2 + 1);
       break;
     case CUFFT_D2Z:
-      grid_plan_data[*plan].esize = 2 * sizeof(double);      
-      grid_plan_data[*plan].type = 1; // real to complex
-      break;
     case CUFFT_Z2D:
-      grid_plan_data[*plan].esize = 2 * sizeof(double);      
-      grid_plan_data[*plan].type = 2; // complex to real
+      grid_plan_data[*plan].esize = sizeof(double);      
+      grid_plan_data[*plan].nz = 2 * (nz / 2 + 1);
       break;
     default:
       fprintf(stderr, "libgrid(cuda): Illegal CUFFT transform type.\n");

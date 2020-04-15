@@ -44,7 +44,7 @@ cintegrate: cintegrate.o
 
 clean:
 	-rm fft fft.o spherical spherical.o poisson poisson.o *~ *.x *.y *.z *.grd *.dat
-	-rm wavepacket.o wavepacket gradient.o gradient comp.dat incomp.dat decomp decomp.o
+	-rm wavepacket.o wavepacket gradient.o gradient cgradient.o cgradient comp.dat incomp.dat decomp decomp.o
 	-rm veloc veloc.o random random.o v{x,y,z}-fd.* v{x,y,z}-fft.* integrate integrate.o
 	-rm cfft cfft.o cintegrate cintegrate.o cpoisson cpoisson.o
 

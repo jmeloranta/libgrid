@@ -2451,7 +2451,7 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
     rgrid_inverse_fft_norm(vx);
     rgrid_inverse_fft_norm(vy);
     rgrid_inverse_fft_norm(vz);
-    rgrid_poisson(wx);
+    rgrid_fft_poisson(wx);
     rgrid_fft_gradient_x(wx, ux);
     rgrid_fft_gradient_y(wx, uy);
     rgrid_fft_gradient_z(wx, uz);
@@ -2464,7 +2464,7 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
   } else { /* FD */
     rgrid_div(wx, vx, vy, vz);
     rgrid_fft(wx);
-    rgrid_poisson(wx);
+    rgrid_fft_poisson(wx);
     rgrid_inverse_fft_norm(wx);
     rgrid_fd_gradient_x(wx, ux);
     rgrid_fd_gradient_y(wx, uy);
@@ -2505,7 +2505,7 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
     rgrid_fft(vy);
     rgrid_fft(vz);
     rgrid_fft_div(workspace, vx, vy, vz);
-    rgrid_poisson(workspace);
+    rgrid_fft_poisson(workspace);
     rgrid_fft_gradient_x(workspace, vx);
     rgrid_fft_gradient_y(workspace, vy);
     rgrid_fft_gradient_z(workspace, vz);
@@ -2515,7 +2515,7 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
   } else { /* FD */
     rgrid_div(workspace, vx, vy, vz);
     rgrid_fft(workspace);
-    rgrid_poisson(workspace);
+    rgrid_fft_poisson(workspace);
     rgrid_inverse_fft_norm(workspace);
     rgrid_fd_gradient_x(workspace, vx);
     rgrid_fd_gradient_y(workspace, vy);
@@ -2552,7 +2552,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
     rgrid_fft(vy);
     rgrid_fft(vz);
     rgrid_fft_div(workspace, vx, vy, vz);
-    rgrid_poisson(workspace);
+    rgrid_fft_poisson(workspace);
     rgrid_inverse_fft_norm(vx);
     rgrid_inverse_fft_norm(vy);
     rgrid_inverse_fft_norm(vz);
@@ -2568,7 +2568,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
   } else { /* FD */
     rgrid_div(workspace, vx, vy, vz);
     rgrid_fft(workspace);
-    rgrid_poisson(workspace);
+    rgrid_fft_poisson(workspace);
     rgrid_inverse_fft_norm(workspace);
     rgrid_fd_gradient_x(workspace, workspace2);
     rgrid_difference(vx, vx, workspace2);

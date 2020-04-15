@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 
   /* Solve the Poisson equation (result written over the right hand side in grid) */
   cgrid_fft(grid);
-  cgrid_poisson(grid);   // include normalization
+  cgrid_fft_poisson(grid);   // include normalization
   cgrid_inverse_fft_norm(grid);
 
   /* Write output file (solution) */
