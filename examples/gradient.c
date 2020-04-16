@@ -10,7 +10,7 @@
 #include <omp.h>
 
 /* Method: FD(0) or FFT(1) */
-#define METHOD 1
+#define METHOD 0
 
 /* Grid dimensions */
 #define NX 128
@@ -30,8 +30,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 2
-int gpus[NGPUS] = {0, 1};
+#define NGPUS 1
+int gpus[NGPUS] = {0};
 #endif
 
 /* Function returning standing wave in x, y, and z directions */

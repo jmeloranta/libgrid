@@ -642,6 +642,7 @@ EXPORT void rgrid_fft_laplace(rgrid *grid, rgrid *laplace)  {
       kx = ((REAL) i) * lx;
     else
       kx = -((REAL) (nx - i)) * lx;
+
     if(j < ny2) 
       ky = ((REAL) j) * ly;
     else
@@ -992,7 +993,7 @@ EXPORT void rgrid_fft_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
         kz = -((REAL) (nz - k)) * lz;
       adiv[ijnz + k] = I * (kx * afx[ijnz + k] + ky * afy[ijnz + k] + kz * afz[ijnz + k]);
     }
-  } 
+  }
 }
 
 /*

@@ -125,7 +125,7 @@ __global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL cx,
     kj = jj;
   } else {
     ky = cy * ((CUREAL) (jj - nyy)) - ky0;
-    kj = jj - ny;
+    kj = jj - nyy;
   }
 
   if (k <= nz2) {
