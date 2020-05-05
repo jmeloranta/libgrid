@@ -24,7 +24,7 @@
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
 #define NGPUS 1
-int gpus[NGPUS] = {3};
+int gpus[NGPUS] = {0};
 #endif
 
 /* Function to be mapped onto the grid */

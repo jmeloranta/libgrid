@@ -692,6 +692,33 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 }
 
 /*
+ * Calculate total spherical occupation numbers in the Fourier space, n(|k|). Integral over n(|k|)
+ * gives the total number of particles.
+ *
+ * gwf        = Wave function to be analyzed (wf *; input).
+ * bins       = Averages in k-space (REAL *; output). The array length is nbins.
+ * binstep    = Step length in k-space in atomic units (REAL; input).
+ * nbins      = Number of bins to use (INT; input).
+ * cworkspace = Workspace (cgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nbins, cgrid *cworkspace) {
+
+  REAL nrm;
+
+  nrm = grid_wf_norm(gwf);
+  cgrid_copy(cworkspace, gwf->grid);
+  cgrid_fft(cworkspace);
+  nrm = SQRT(nrm / grid_wf_norm(gwf));  // make sure that we still normalize to the correct # of particles
+  cgrid_multiply(gwf->grid, nrm);
+
+  cgrid_spherical_average_reciprocal(cworkspace, NULL, NULL, bins, binstep, nbins, 1);
+}
+
+/*
  * Calculate total classical kinetic energy minus the quantum pressure: int 1/2 * mass * rho * |v|^2 d^3
  * This is the kinetic energy due to classical flow / motion.
  *

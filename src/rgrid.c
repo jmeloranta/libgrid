@@ -2693,7 +2693,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
 #endif
 
   if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
-    fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average().\n");
+    fprintf(stderr, "libgrid: Out of memory in rgrid_spherical_average_reciprocal().\n");
     abort();
   }
   bzero(nvals, sizeof(INT) * (size_t) nbins);

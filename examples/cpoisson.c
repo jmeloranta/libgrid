@@ -10,15 +10,15 @@
 #include <grid/grid.h>
 
 /* Grid dimensions */
-#define NX 256
-#define NY 256
-#define NZ 256
+#define NX 64
+#define NY 64
+#define NZ 64
 #define STEP 0.2
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
 #define NGPUS 1
-int gpus[NGPUS] = {3};
+int gpus[NGPUS] = {0};
 #endif
 
 /* Right hand side function for Poisson equation (Gaussian) */

@@ -551,7 +551,7 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
   j = 0;
   k = 0;
   for(i = 0; i < nx; i++) { 
-    if (i <= nx / 2)
+    if (i < nx / 2)
       x = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - grid->kx0;
     else 
       x = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - grid->kx0;
@@ -2608,4 +2608,164 @@ EXPORT void cgrid_multiply_by_z(cgrid *grid) {
       value[ijnz + k] *= z;
     }
   }
+}
+
+/*
+ * Compute spherical shell average of |grid|^2 with respect to the grid origin
+ * (result 1-D grid).
+ *
+ * sp_ave(r) = \int f(r, \theta, \phi) sin(\theta) d\theta d\phi / (4 pi r^2)
+ * 
+ * input1  = Input grid 1 for averaging (cgrid *; input).
+ * input2  = Input grid 2 for averaging (cgrid *; input). Can be NULL if N/A.
+ * input3  = Input grid 3 for averaging (cgrid *; input). Can be NULL if N/A.
+ * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
+ * binstep = Binning step length (REAL; input).
+ * nbins   = Number of bins requested (INT; input).
+ * volel   = 1: Include 4pi r^2 volume element or 0: just calculate average (char; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
+
+  INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
+  REAL step = input1->step, x0 = input1->x0, y0 = input1->y0, z0 = input1->z0, r, x, y, z;
+  REAL complex *value1 = input1->value, *value2, *value3;
+  INT *nvals, ij, i, j, k, ijnz;
+
+  if(input2) value2 = input2->value;
+  else value2 = NULL;
+  if(input3) value3 = input3->value;
+  else value3 = NULL;
+
+#ifdef USE_CUDA
+  cuda_remove_block(value1, 1);
+  if(value2) cuda_remove_block(value2, 1);
+  if(value3) cuda_remove_block(value3, 1);
+#endif
+
+  if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
+    fprintf(stderr, "libgrid: Out of memory in cgrid_spherical_average().\n");
+    abort();
+  }
+  bzero(nvals, sizeof(INT) * (size_t) nbins);
+  bzero(bins, sizeof(REAL) * (size_t) nbins);
+
+// TODO: Can't execute in parallel (reduction for bins[idx] needed
+//#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,nxy,step,value1,value2,value3,x0,y0,z0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,x,y,z,r,idx) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    i = ij / ny;
+    j = ij % ny;
+    x = ((REAL) (i - nx2)) * step - x0;
+    y = ((REAL) (j - ny2)) * step - y0;    
+    for(k = 0; k < nz; k++) {
+      z = ((REAL) (k - nz2)) * step - z0;
+      r = SQRT(x * x + y * y + z * z);
+      idx = (INT) (r / binstep);
+      if(idx < nbins) {
+        bins[idx] = bins[idx] + sqnorm(value1[ijnz + k]);
+        if(value2) bins[idx] = bins[idx] + sqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + sqnorm(value3[ijnz + k]);
+        nvals[idx]++;
+      }
+    }
+  }
+  if(volel) {
+    for(k = 0, z = 0.0; k < nbins; k++, z += binstep) {
+      if(nvals[k]) bins[k] = bins[k] * 4.0 * M_PI * z * z / (REAL) nvals[k];
+    }
+  } else {
+    for(k = 0; k < nbins; k++)
+      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+  }
+  free(nvals);
+}
+
+/*
+ * Compute spherical shell average in the reciprocal space of power spectrum with respect to the grid origin
+ * (result 1-D grid).
+ *
+ * sp_ave(k) = \int |sqrt(grid(k, \theta_k, \phi_k))|^2 sin(\theta_k) d\theta_k d\phi_k / (4pi k^2)
+ * 
+ * input1  = Input grid 1 for averaging (cgrid *; input), but this complex data (i.e., *after* FFT).
+ * input2  = Input grid 2 for averaging (cgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
+ * input3  = Input grid 3 for averaging (cgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
+ * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
+ * binstep = Binning step length for k (REAL; input). 
+ * nbins   = Number of bins requested (INT; input).
+ * volel   = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
+ *
+ * No return value.
+ *
+ * Note to compute E(k), grid should correspond to flux / sqrt(rho) = \sqrt(rho) * v.
+ *
+ */
+
+EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
+
+  INT nx = input1->nx, ny = input1->ny, nz = input1->nz, idx, nxy = nx * ny;
+  REAL step = input1->step, r, kx, ky, kz, norm2;
+  REAL complex *value1 = input1->value, *value2, *value3;
+  REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
+  INT *nvals, ij, i, j, k, ijnz, nz2 = nz / 2;
+
+  if(input2) value2 = input2->value;
+  else value2 = NULL;
+  if(input3) value3 = input3->value;
+  else value3 = NULL;
+
+#ifdef USE_CUDA
+  cuda_remove_block(value1, 1);
+  if(value2) cuda_remove_block(value2, 1);
+  if(value3) cuda_remove_block(value3, 1);
+#endif
+
+  if(!(nvals = (INT *) malloc(sizeof(INT) * (size_t) nbins))) {
+    fprintf(stderr, "libgrid: Out of memory in cgrid_spherical_average_reciprocal().\n");
+    abort();
+  }
+  bzero(nvals, sizeof(INT) * (size_t) nbins);
+  bzero(bins, sizeof(REAL) * (size_t) nbins);
+
+// TODO: Can't execute in parallel (reduction for bins[idx] needed
+//#pragma omp parallel for firstprivate(nx,ny,nz,nz2,nxy,step,lx,ly,lz,value1,value2,value3,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    i = ij / ny;
+    j = ij % ny;
+    if(i < nx/2) 
+      kx = ((REAL) i) * lx;
+    else
+      kx = -((REAL) (nx - i)) * lx;
+    if(j < ny/2)
+      ky = ((REAL) j) * ly;
+    else
+      ky = -((REAL) (ny - j)) * ly;
+    for(k = 0; k < nz; k++) {
+      if(k < nz2)
+        kz = ((REAL) k) * lz; /* - kz0; */
+      else
+        kz = -((REAL) (nz - k)) * lz; /* - kz0; */
+      r = SQRT(kx * kx + ky * ky + kz * kz);
+      idx = (INT) (r / binstep);
+      if(idx < nbins) {
+        bins[idx] = bins[idx] + 2.0 * sqnorm(value1[ijnz + k]);
+        if(value2) bins[idx] = bins[idx] + 2.0 * sqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + 2.0 * sqnorm(value3[ijnz + k]);
+        nvals[idx]++;
+      }
+    }
+  }
+  norm2 = input1->step * input1->step * input1->step; norm2 *= norm2;
+  if(volel) {
+    for(k = 0, kz = 0.0; k < nbins; k++, kz += binstep)
+      if(nvals[k]) bins[k] = norm2 * bins[k] * 4.0 * M_PI * kz * kz / (REAL) nvals[k];
+  } else {
+    for(k = 0; k < nbins; k++)
+      if(nvals[k]) bins[k] = norm2 * bins[k] / (REAL) nvals[k];
+  }
+  free(nvals);
 }
