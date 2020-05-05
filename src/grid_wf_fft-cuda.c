@@ -38,7 +38,7 @@ EXPORT char grid_cuda_wf_propagate_kinetic_fft(wf *gwf, REAL complex time_mass) 
 }
 
 /*
- * Propagate kinetic energy in Fourier space (with anti-aliasing).
+ * Propagate kinetic energy in Fourier space (with Lanczos filter).
  *
  * Only periodic boundaries implemented.
  *

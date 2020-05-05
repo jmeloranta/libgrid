@@ -2769,3 +2769,30 @@ EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgr
   }
   free(nvals);
 }
+
+/*
+ * Apply anti-alias to grid by a given rule. Note that the grid must be in Fourier space.
+ * 
+ * grid   = Grid for the operation (cgrid *; input/output).
+ * rule   = 1: 2/3 rule, 2: 1/2 (or 2/4) rule (char; input).
+ *
+ * No return value.
+ * 
+ */
+
+EXPORT void cgrid_dealias(cgrid *grid, char rule) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz;
+
+  switch (rule) {
+    case 1:
+      cgrid_zero_index(grid, nx/2 - nx/3, nx/2 + nx/3 + 1, ny/2 - ny/3, ny/2 + ny/3 + 1, nz/2 - nz/3, nz/2 + nz/3 + 1);
+      break;
+    case 2:
+      cgrid_zero_index(grid, nx/2 - nx/4, nx/2 + nx/4 + 1, ny/2 - ny/4, ny/2 + ny/4 + 1, nz/2 - nz/4, nz/2 + nz/4 + 1);
+      break;
+    default:
+      fprintf(stderr, "libgrid: Illegal dealias rule in cgrid_dealias().\n");
+      exit(1);
+  }
+}
