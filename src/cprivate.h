@@ -13,7 +13,7 @@ static inline REAL linear_weight(REAL x) {
   return (1.0 - x);
 }
 
-static inline REAL sqnorm(REAL complex x) {
+static inline REAL csqnorm(REAL complex x) {
 
   return CREAL(x) * CREAL(x) + CIMAG(x) * CIMAG(x);
 }

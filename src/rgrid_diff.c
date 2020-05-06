@@ -854,7 +854,7 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
         kz = ((REAL) k) * lz;
       else
         kz = -((REAL) (nz - k)) * lz;
-      ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
+      ssum -= (kx * kx + ky * ky + kz * kz) * csqnorm(lvalue[ijnz + k]);
     }
     sum += ssum;
   }

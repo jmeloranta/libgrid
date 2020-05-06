@@ -453,7 +453,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       cgrid_inverse_fft_norm(gwf->grid);
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);  // Uses cworkspace and cworkspace2 !
-      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
+      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * csqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_fft(gwf, half_time);
@@ -514,7 +514,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       cgrid_inverse_fft_norm(gwf->grid);
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);   // Uses cworkspace and cworkspace2 !
-      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
+      cgrid_add_scaled(gwf->cworkspace, ((1.0 / 48.0) * HBAR * HBAR / gwf->mass) * csqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, potential, cons);
       cgrid_fft(gwf->grid);
       grid_wf_propagate_kinetic_cfft(gwf, half_time);
@@ -534,7 +534,7 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       cgrid_copy(gwf->cworkspace, potential);
       grid_wf_square_of_potential_gradient(gwf, gwf->cworkspace3, potential);   // Uses cworkspace and cworkspace2 !
-      cgrid_add_scaled(gwf->cworkspace, (1.0/48.0 * HBAR * HBAR / gwf->mass) * sqnorm(time), gwf->cworkspace3);
+      cgrid_add_scaled(gwf->cworkspace, (1.0/48.0 * HBAR * HBAR / gwf->mass) * csqnorm(time), gwf->cworkspace3);
       grid_wf_propagate_potential(gwf, two_thirds_time, gwf->cworkspace, 0.0);
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
@@ -674,7 +674,7 @@ EXPORT inline void grid_wf_map(wf *gwf, REAL complex (*func)(void *arg, REAL x, 
 
 EXPORT inline REAL grid_wf_norm(wf *gwf) { 
 
-  return cgrid_integral_of_square(gwf->grid); 
+  return cgrid_integral_of_square(gwf->grid);
 }
 
 /*

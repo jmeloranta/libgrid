@@ -21,7 +21,7 @@
 extern char grid_analyze_method;
 
 /*
- * Allocate new complex grid.
+ * Allocate new real grid.
  *
  *
  * nx                 = number of points on the grid along x (INT).
@@ -2591,7 +2591,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length (REAL; input).
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include 4pi r^2 volume element or 0: just calculate average (char; input).
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2600,7 +2600,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
 EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nzz = input1->nz2, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
-  REAL step = input1->step, *value1 = input1->value, x0 = input1->x0, y0 = input1->y0, z0 = input1->z0, r, x, y, z;
+  REAL step = input1->step, *value1 = input1->value, x0 = input1->x0, y0 = input1->y0, z0 = input1->z0, r, x, y, z, nrm;
   REAL *value2, *value3;
   INT *nvals, ij, i, j, k, ijnz;
 
@@ -2623,7 +2623,6 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
 // TODO: Can't execute in parallel (reduction for bins[idx] needed
-//#pragma omp parallel for firstprivate(nx,ny,nz,nzz,nx2,ny2,nz2,nxy,step,value1,value2,value3,x0,y0,z0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,x,y,z,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nzz;
     i = ij / ny;
@@ -2643,9 +2642,9 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
     }
   }
   if(volel) {
-    for(k = 0, z = 0.0; k < nbins; k++, z += binstep) {
-      if(nvals[k]) bins[k] = bins[k] * 4.0 * M_PI * z * z / (REAL) nvals[k];
-    }
+    nrm = step * step * step / binstep;
+    for(k = 0; k < nbins; k++)
+      bins[k] *= nrm;
   } else {
     for(k = 0; k < nbins; k++)
       if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
@@ -2665,7 +2664,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length for k (REAL; input). 
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2676,7 +2675,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
 EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz2 / 2, idx, nxy = nx * ny;
-  REAL step = input1->step, r, kx, ky, kz, norm2;
+  REAL step = input1->step, r, kx, ky, kz;
   REAL complex *value1 = (REAL complex *) input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = M_PI / (((REAL) nz - 1) * step);
   INT *nvals, ij, i, j, k, ijnz, nz2 = nz / 2;
@@ -2721,20 +2720,19 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + 2.0 * sqnorm(value1[ijnz + k]);
-        if(value2) bins[idx] = bins[idx] + 2.0 * sqnorm(value2[ijnz + k]);
-        if(value3) bins[idx] = bins[idx] + 2.0 * sqnorm(value3[ijnz + k]);
+        bins[idx] = bins[idx] + 2.0 * (CREAL(value1[ijnz + k]) * CREAL(value1[ijnz + k]) + CIMAG(value1[ijnz + k]) * CIMAG(value1[ijnz + k]));
+        if(value2) bins[idx] = bins[idx] + 2.0 * (CREAL(value2[ijnz + k]) * CREAL(value2[ijnz + k]) + CIMAG(value2[ijnz + k]) * CIMAG(value2[ijnz + k]));
+        if(value3) bins[idx] = bins[idx] + 2.0 * (CREAL(value3[ijnz + k]) * CREAL(value3[ijnz + k]) + CIMAG(value3[ijnz + k]) * CIMAG(value3[ijnz + k]));
         nvals[idx]++;
       }
     }
   }
-  norm2 = input1->step * input1->step * input1->step; norm2 *= norm2;
   if(volel) {
-    for(k = 0, kz = 0.0; k < nbins; k++, kz += binstep)
-      if(nvals[k]) bins[k] = norm2 * bins[k] * 4.0 * M_PI * kz * kz / (REAL) nvals[k];
+    for(k = 0; k < nbins; k++)
+      bins[k] /= binstep;
   } else {
     for(k = 0; k < nbins; k++)
-      if(nvals[k]) bins[k] = norm2 * bins[k] / (REAL) nvals[k];
+      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
   }
   free(nvals);
 }
@@ -2910,11 +2908,11 @@ EXPORT void rgrid_fft_space(rgrid *grid, char space) {
 }
 
 /*
- * @DOC{rgrid_multiply_by_x, Multiply real grid by coordinate x.
+ * Multiply real grid by coordinate x.
  * 
  * grid  = Grid to be operated on (rgrid *; input/output).
  *
- * No return value.}
+ * No return value.
  *
  */
 

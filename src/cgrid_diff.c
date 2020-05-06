@@ -915,7 +915,7 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
       else 
         kz = ((REAL) (k - nz)) * lz;
 	
-      ssum -= (kx * kx + ky * ky + kz * kz) * sqnorm(lvalue[ijnz + k]);
+      ssum -= (kx * kx + ky * ky + kz * kz) * csqnorm(lvalue[ijnz + k]);
     }
 
     sum += ssum;

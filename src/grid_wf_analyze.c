@@ -589,22 +589,27 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
  * workspace2 = Workspace 2 (rgrid *; input/output).
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, REAL eps) {
+EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, REAL eps, char volel) {
 
   INT i;
+  REAL nrm = SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
   rgrid_fft(workspace1);
+  rgrid_fft_multiply(workspace1, nrm);
   rgrid_fft(workspace2);
+  rgrid_fft_multiply(workspace2, nrm);
   rgrid_fft(workspace3);
+  rgrid_fft_multiply(workspace3, nrm);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, volel);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -628,24 +633,29 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  * workspace4 = Workspace 4 (rgrid *; input/output).
  * workspace5 = Workspace 5 (rgrid *; input/output).
  * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps) {
+EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps, char volel) {
 
   INT i;
+  REAL nrm = SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
   rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
 
   rgrid_fft(workspace1);
+  rgrid_fft_multiply(workspace1, nrm);
   rgrid_fft(workspace2);
+  rgrid_fft_multiply(workspace2, nrm);
   rgrid_fft(workspace3);
+  rgrid_fft_multiply(workspace3, nrm);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, volel);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -668,24 +678,29 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * workspace4 = Workspace 4 (rgrid *; input/output).
  * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
+EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps, char volel) {
 
   INT i;
+  REAL nrm = SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
   rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
 
   rgrid_fft(workspace1);
+  rgrid_fft_multiply(workspace1, nrm);
   rgrid_fft(workspace2);
+  rgrid_fft_multiply(workspace2, nrm);
   rgrid_fft(workspace3);
+  rgrid_fft_multiply(workspace3, nrm);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, volel);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -700,22 +715,19 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
  * binstep    = Step length in k-space in atomic units (REAL; input).
  * nbins      = Number of bins to use (INT; input).
  * cworkspace = Workspace (cgrid *).
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nbins, cgrid *cworkspace) {
+EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nbins, cgrid *cworkspace, char volel) {
 
-  REAL nrm;
-
-  nrm = grid_wf_norm(gwf);
   cgrid_copy(cworkspace, gwf->grid);
   cgrid_fft(cworkspace);
-  nrm = SQRT(nrm / grid_wf_norm(gwf));  // make sure that we still normalize to the correct # of particles
-  cgrid_multiply(gwf->grid, nrm);
+  cgrid_multiply(cworkspace, SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz))));
 
-  cgrid_spherical_average_reciprocal(cworkspace, NULL, NULL, bins, binstep, nbins, 1);
+  cgrid_spherical_average_reciprocal(cworkspace, NULL, NULL, bins, binstep, nbins, volel);
 }
 
 /*

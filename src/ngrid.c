@@ -212,7 +212,7 @@ EXPORT void grid_product_norm(rgrid *dst, rgrid *src1, cgrid *src2) {
     ijnz = ij * nz;
     ijnz2 = ij * nzz;
     for(k = 0; k < nz; k++)
-      dvalue[ijnz2 + k] = s1value[ijnz2 + k] * sqnorm(s2value[ijnz + k]);
+      dvalue[ijnz2 + k] = s1value[ijnz2 + k] * csqnorm(s2value[ijnz + k]);
   }
 }
 
@@ -248,7 +248,7 @@ EXPORT void grid_division_norm(rgrid *dst, rgrid *src1, cgrid *src2, REAL eps) {
     ijnz = ij * nz;
     ijnz2 = ij * nzz;
     for(k = 0; k < nz; k++)
-      dvalue[ijnz2 + k] = s1value[ijnz2 + k] / (sqnorm(s2value[ijnz + k]) + eps);
+      dvalue[ijnz2 + k] = s1value[ijnz2 + k] / (csqnorm(s2value[ijnz + k]) + eps);
   }
 }
 
@@ -381,7 +381,7 @@ EXPORT REAL grid_grid_expectation_value(cgrid *dgrid, rgrid *opgrid) {
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++)
-	sum += sqnorm(cgrid_value_at_index(dgrid, i, j, k)) * rgrid_value_at_index(opgrid, i, j, k);
+	sum += csqnorm(cgrid_value_at_index(dgrid, i, j, k)) * rgrid_value_at_index(opgrid, i, j, k);
 
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;

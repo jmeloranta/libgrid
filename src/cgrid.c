@@ -928,7 +928,7 @@ EXPORT void cgrid_adaptive_map(cgrid *grid, REAL complex (*func)(void *arg, REAL
       for(ns = min_ns; ns <= max_ns; ns *= 2) {
         sum  = linearly_weighted_integralc(func, farg, xc, yc, zc, step, ns);
         sump = linearly_weighted_integralc(func, farg, xc, yc, zc, step, ns+1);
-        if (sqnorm(sum - sump) < tol2) break;
+        if (csqnorm(sum - sump) < tol2) break;
       }
       
       /*
@@ -1651,7 +1651,7 @@ EXPORT REAL cgrid_integral_of_square(cgrid *grid) {
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++)
-	sum += sqnorm(cgrid_value_at_index(grid, i, j, k));
+	sum += csqnorm(cgrid_value_at_index(grid, i, j, k));
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
@@ -1713,7 +1713,7 @@ EXPORT REAL complex cgrid_grid_expectation_value(cgrid *dgrid, cgrid *opgrid) {
   for (i = 0; i < nx; i++)
     for (j = 0; j < ny; j++)
       for (k = 0; k < nz; k++)
-	sum += sqnorm(cgrid_value_at_index(dgrid, i, j, k)) * cgrid_value_at_index(opgrid, i, j, k);
+	sum += csqnorm(cgrid_value_at_index(dgrid, i, j, k)) * cgrid_value_at_index(opgrid, i, j, k);
  
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
@@ -1753,7 +1753,7 @@ EXPORT REAL complex cgrid_grid_expectation_value_func(void *arg, REAL complex (*
       for (k = 0; k < nz; k++) {
 	z = ((REAL) (k - nz/2)) * step - z0;
 	tmp = cgrid_value_at_index(grida, i, j, k);
-	sum += sqnorm(tmp) * func(arg, tmp, x, y, z);
+	sum += csqnorm(tmp) * func(arg, tmp, x, y, z);
       }
     }
   }
@@ -1834,7 +1834,7 @@ EXPORT REAL cgrid_weighted_integral_of_square(cgrid *grid, REAL (*weight)(void *
       y = ((REAL) (j - ny / 2)) * step - y0;
       for (k = 0; k < nz; k++) {
 	z = ((REAL) (k - nz / 2)) * step - z0;
-	sum += weight(farg, x, y, z) * sqnorm(cgrid_value_at_index(grid, i, j, k));
+	sum += weight(farg, x, y, z) * csqnorm(cgrid_value_at_index(grid, i, j, k));
       }
     }
   }
@@ -2622,7 +2622,7 @@ EXPORT void cgrid_multiply_by_z(cgrid *grid) {
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length (REAL; input).
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include 4pi r^2 volume element or 0: just calculate average (char; input).
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2631,7 +2631,7 @@ EXPORT void cgrid_multiply_by_z(cgrid *grid) {
 EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, idx, nxy = nx * ny;
-  REAL step = input1->step, x0 = input1->x0, y0 = input1->y0, z0 = input1->z0, r, x, y, z;
+  REAL step = input1->step, x0 = input1->x0, y0 = input1->y0, z0 = input1->z0, r, x, y, z, nrm;
   REAL complex *value1 = input1->value, *value2, *value3;
   INT *nvals, ij, i, j, k, ijnz;
 
@@ -2654,7 +2654,6 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
 // TODO: Can't execute in parallel (reduction for bins[idx] needed
-//#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,nxy,step,value1,value2,value3,x0,y0,z0,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,x,y,z,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -2666,17 +2665,17 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
       r = SQRT(x * x + y * y + z * z);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + sqnorm(value1[ijnz + k]);
-        if(value2) bins[idx] = bins[idx] + sqnorm(value2[ijnz + k]);
-        if(value3) bins[idx] = bins[idx] + sqnorm(value3[ijnz + k]);
+        bins[idx] = bins[idx] + csqnorm(value1[ijnz + k]);
+        if(value2) bins[idx] = bins[idx] + csqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + csqnorm(value3[ijnz + k]);
         nvals[idx]++;
       }
     }
   }
   if(volel) {
-    for(k = 0, z = 0.0; k < nbins; k++, z += binstep) {
-      if(nvals[k]) bins[k] = bins[k] * 4.0 * M_PI * z * z / (REAL) nvals[k];
-    }
+    nrm = step * step * step / binstep;
+    for(k = 0; k < nbins; k++)
+      bins[k] *= nrm;
   } else {
     for(k = 0; k < nbins; k++)
       if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
@@ -2696,7 +2695,7 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length for k (REAL; input). 
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include 4\pi k^2 volume element or 0: just calculate average (char; input).
+ * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2707,10 +2706,10 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
 EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz, idx, nxy = nx * ny;
-  REAL step = input1->step, r, kx, ky, kz, norm2;
+  REAL step = input1->step, r, kx, ky, kz;
   REAL complex *value1 = input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
-  INT *nvals, ij, i, j, k, ijnz, nz2 = nz / 2;
+  INT *nvals, ij, i, j, k, ijnz, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
 
   if(input2) value2 = input2->value;
   else value2 = NULL;
@@ -2731,16 +2730,15 @@ EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgr
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
 // TODO: Can't execute in parallel (reduction for bins[idx] needed
-//#pragma omp parallel for firstprivate(nx,ny,nz,nz2,nxy,step,lx,ly,lz,value1,value2,value3,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
     j = ij % ny;
-    if(i < nx/2) 
+    if(i < nx2) 
       kx = ((REAL) i) * lx;
     else
       kx = -((REAL) (nx - i)) * lx;
-    if(j < ny/2)
+    if(j < ny2)
       ky = ((REAL) j) * ly;
     else
       ky = -((REAL) (ny - j)) * ly;
@@ -2752,20 +2750,19 @@ EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgr
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + 2.0 * sqnorm(value1[ijnz + k]);
-        if(value2) bins[idx] = bins[idx] + 2.0 * sqnorm(value2[ijnz + k]);
-        if(value3) bins[idx] = bins[idx] + 2.0 * sqnorm(value3[ijnz + k]);
+        bins[idx] += csqnorm(value1[ijnz + k]);
+        if(value2) bins[idx] += csqnorm(value2[ijnz + k]);
+        if(value3) bins[idx] += csqnorm(value3[ijnz + k]);
         nvals[idx]++;
       }
     }
   }
-  norm2 = input1->step * input1->step * input1->step; norm2 *= norm2;
   if(volel) {
-    for(k = 0, kz = 0.0; k < nbins; k++, kz += binstep)
-      if(nvals[k]) bins[k] = norm2 * bins[k] * 4.0 * M_PI * kz * kz / (REAL) nvals[k];
+    for(k = 0; k < nbins; k++)
+      bins[k] /= binstep;
   } else {
     for(k = 0; k < nbins; k++)
-      if(nvals[k]) bins[k] = norm2 * bins[k] / (REAL) nvals[k];
+      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
   }
   free(nvals);
 }
