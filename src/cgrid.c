@@ -2622,7 +2622,7 @@ EXPORT void cgrid_multiply_by_z(cgrid *grid) {
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length (REAL; input).
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
+ * volel   = 2: direct sum, 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2672,13 +2672,21 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
       }
     }
   }
-  if(volel) {
-    nrm = step * step * step / binstep;
-    for(k = 0; k < nbins; k++)
-      bins[k] *= nrm;
-  } else {
-    for(k = 0; k < nbins; k++)
-      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+  switch(volel) {
+    case 0: // radial average
+      for(k = 0; k < nbins; k++)
+        if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+      break;
+    case 1: // with volume element
+      nrm = step * step * step / binstep;
+      for(k = 0; k < nbins; k++)
+        bins[k] *= nrm;
+      break;
+    case 2: // just the direct sum
+      break;
+    default:
+      fprintf(stderr, "libgrid: illegal value for volel in spherial averaging.\n");
+      exit(1);
   }
   free(nvals);
 }
@@ -2695,7 +2703,7 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length for k (REAL; input). 
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
+ * volel   = 2: direct sum, 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2706,7 +2714,7 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
 EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz, idx, nxy = nx * ny;
-  REAL step = input1->step, r, kx, ky, kz;
+  REAL step = input1->step, r, kx, ky, kz, nrm;
   REAL complex *value1 = input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = 2.0 * M_PI / (((REAL) nz) * step);
   INT *nvals, ij, i, j, k, ijnz, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
@@ -2757,12 +2765,21 @@ EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgr
       }
     }
   }
-  if(volel) {
-    for(k = 0; k < nbins; k++)
-      bins[k] /= binstep;
-  } else {
-    for(k = 0; k < nbins; k++)
-      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+  switch(volel) {
+    case 0: // radial average
+      for(k = 0; k < nbins; k++)
+        if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+      break;
+    case 1: // with volume element
+      nrm = step * step * step / binstep;
+      for(k = 0; k < nbins; k++)
+        bins[k] *= nrm;
+      break;
+    case 2: // just the direct sum
+      break;
+    default:
+      fprintf(stderr, "libgrid: illegal value for volel in spherial averaging.\n");
+      exit(1);
   }
   free(nvals);
 }

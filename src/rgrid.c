@@ -2591,7 +2591,7 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length (REAL; input).
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
+ * volel   = 2: direct sum, 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2641,13 +2641,21 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
       }
     }
   }
-  if(volel) {
-    nrm = step * step * step / binstep;
-    for(k = 0; k < nbins; k++)
-      bins[k] *= nrm;
-  } else {
-    for(k = 0; k < nbins; k++)
-      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+  switch(volel) {
+    case 0: // radial average
+      for(k = 0; k < nbins; k++)
+        if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+      break;
+    case 1: // with volume element
+      nrm = step * step * step / binstep;
+      for(k = 0; k < nbins; k++)
+        bins[k] *= nrm;
+      break;
+    case 2: // just the direct sum
+      break;
+    default:
+      fprintf(stderr, "libgrid: illegal value for volel in spherial averaging.\n");
+      exit(1);
   }
   free(nvals);
 }
@@ -2664,7 +2672,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
  * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
  * binstep = Binning step length for k (REAL; input). 
  * nbins   = Number of bins requested (INT; input).
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
+ * volel   = 2: direct sum, 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
@@ -2675,7 +2683,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
 EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz2 / 2, idx, nxy = nx * ny;
-  REAL step = input1->step, r, kx, ky, kz;
+  REAL step = input1->step, r, kx, ky, kz, nrm;
   REAL complex *value1 = (REAL complex *) input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = M_PI / (((REAL) nz - 1) * step);
   INT *nvals, ij, i, j, k, ijnz, nz2 = nz / 2;
@@ -2699,7 +2707,6 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   bzero(bins, sizeof(REAL) * (size_t) nbins);
 
 // TODO: Can't execute in parallel (reduction for bins[idx] needed
-//#pragma omp parallel for firstprivate(nx,ny,nz,nz2,nxy,step,lx,ly,lz,value1,value2,value3,bins,nbins,binstep,nvals) private(i,j,ij,ijnz,k,kx,ky,kz,r,idx) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -2727,12 +2734,21 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       }
     }
   }
-  if(volel) {
-    for(k = 0; k < nbins; k++)
-      bins[k] /= binstep;
-  } else {
-    for(k = 0; k < nbins; k++)
-      if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+  switch(volel) {
+    case 0: // radial average
+      for(k = 0; k < nbins; k++)
+        if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+      break;
+    case 1: // with volume element
+      nrm = step * step * step / binstep;
+      for(k = 0; k < nbins; k++)
+        bins[k] *= nrm;
+      break;
+    case 2: // just the direct sum
+      break;
+    default:
+      fprintf(stderr, "libgrid: illegal value for volel in spherial averaging.\n");
+      exit(1);
   }
   free(nvals);
 }

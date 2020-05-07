@@ -598,7 +598,7 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, REAL eps, char volel) {
 
   INT i;
-  REAL nrm = SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
+  REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
@@ -642,7 +642,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
 EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps, char volel) {
 
   INT i;
-  REAL nrm = SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
+  REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
@@ -687,7 +687,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
 EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps, char volel) {
 
   INT i;
-  REAL nrm = SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
+  REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
@@ -725,7 +725,7 @@ EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nb
 
   cgrid_copy(cworkspace, gwf->grid);
   cgrid_fft(cworkspace);
-  cgrid_multiply(cworkspace, SQRT(gwf->grid->step * gwf->grid->step * gwf->grid->step / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz))));
+  cgrid_multiply(cworkspace, SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz))));
 
   cgrid_spherical_average_reciprocal(cworkspace, NULL, NULL, bins, binstep, nbins, volel);
 }
