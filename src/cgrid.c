@@ -2800,7 +2800,7 @@ EXPORT void cgrid_dealias(cgrid *grid, char rule) {
 
   switch (rule) {
     case 1:
-      cgrid_zero_index(grid, nx/2 - nx/3, nx/2 + nx/3 + 1, ny/2 - ny/3, ny/2 + ny/3 + 1, nz/2 - nz/3, nz/2 + nz/3 + 1);
+      cgrid_zero_index(grid, nx/2 - nx/6, nx/2 + nx/6 + 1, ny/2 - ny/6, ny/2 + ny/6 + 1, nz/2 - nz/6, nz/2 + nz/6 + 1);
       break;
     case 2:
       cgrid_zero_index(grid, nx/2 - nx/4, nx/2 + nx/4 + 1, ny/2 - ny/4, ny/2 + ny/4 + 1, nz/2 - nz/4, nz/2 + nz/4 + 1);
