@@ -38,6 +38,9 @@ static char *cuda_arch(int major) {
     case 7:
       strcpy(arch, "Volta");
     break;
+    case 8:
+      strcpy(arch, "Turing");
+    break;
   }
   return arch;
 }
