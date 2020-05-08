@@ -5,6 +5,7 @@
 
 #include "grid.h"
 #include "au.h"
+#include "cprivate.h"
 
 char grid_analyze_method = (char) -1; // 0 = FD and 1 = FFT, -1 = not set
 
@@ -801,3 +802,30 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
   if(nn != 1.0) rgrid_power(workspace4, workspace4, nn);
   return rgrid_integral(workspace4);
 }
+
+/*
+ * Calculate T_BEC for a given wave function according to T_BEC = T_l * ((n - ngnd) / n) ^ (2/3)
+ *
+ * wf         = Wave function for which the temperature is calculated (wf *; input).
+ * tl         = Lambda temperature (REAL; input).
+ * cworkspace = Complex workspace (cgrid *; input).
+ *
+ * Returns temperature in Kelvin.
+ *
+ * Note: This is only approximate for interacting superfluids (helium).
+ *
+ */
+
+EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl, cgrid *cworkspace) {
+
+  REAL n, ngnd;
+
+  cgrid_copy(cworkspace, gwf->grid);
+  cgrid_fft(cworkspace);
+  cgrid_multiply(cworkspace, SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz))));
+  
+  n = cgrid_integral_of_square(cworkspace);
+  ngnd = csqnorm(cgrid_value_at_index(cworkspace, 0, 0, 0));
+  return tl * POW((n - ngnd) / n, 2.0 / 3.0);
+}
+  
