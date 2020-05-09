@@ -3037,3 +3037,41 @@ EXPORT void rgrid_log(rgrid *dst, rgrid *src, REAL eps) {
       DST[ijnz + k] = LOG(FABS(SRC[ijnz + k]) + eps);
   }
 }
+
+/*
+ * Make histogram of the values in grid (from 0 to nbins * step).
+ *
+ * grid  = Grid of NON-NEGATIVE numbers (rgrid *; input).
+ * bins  = Historgram bins (REAL *; output).
+ * nbins = Number of bins (INT; input).
+ * step  = Bin step (REAL; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_histogram(rgrid *grid, REAL *bins, INT nbins, REAL step) {
+
+  REAL tmp;
+  INT i, j, k, idx;
+
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 1);
+#endif
+ 
+  bzero(bins, sizeof(REAL) * (size_t) nbins); 
+  for(i = 0; i < grid->nx; i++) {
+    for(j = 0; j < grid->ny; j++) {
+      for(k = 0; k < grid->nz; k++) {
+        tmp = rgrid_value_at_index(grid, i, j, k);
+        if(tmp < 0.0) {
+          fprintf(stderr, "libgrid: Negative values in rgrid_historgram().\n");
+          abort();
+        }
+        idx = (INT) (tmp / step);
+        if(idx < nbins) bins[idx] += 1.0;
+      }
+    }
+  }
+}
+
