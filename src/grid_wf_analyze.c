@@ -586,22 +586,29 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
  * bins       = Averages in k-space (REAL *; output). The array length is nbins.
  * binstep    = Step length in k-space in atomic units (REAL; input).
  * nbins      = Number of bins to use (INT; input).
- * workspace1 = Workspace 1 (rgrid *; input/output).
- * workspace2 = Workspace 2 (rgrid *; input/output).
- * workspace3 = Workspace 3 (rgrid *; input/output).
+ * workspace1 = Workspace 1 (rgrid *; input).
+ * workspace2 = Workspace 2 (rgrid *; input).
+ * workspace3 = Workspace 3 (rgrid *; input).
+ * workspace4 = Workspace 4 (rgrid *; input).
  * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, REAL eps, char volel) {
+EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
 
   INT i;
   REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
+
+  grid_wf_density(gwf, workspace4);
+  rgrid_power(workspace4, workspace4, 0.5);    // sqrt(rho)
+
+  rgrid_product(workspace1, workspace1, workspace4); // Multiply velocity field by sqrt(rho)
+  rgrid_product(workspace2, workspace2, workspace4);
+  rgrid_product(workspace3, workspace3, workspace4);
 
   rgrid_fft(workspace1);
   rgrid_fft_multiply(workspace1, nrm);
@@ -610,7 +617,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
   rgrid_fft(workspace3);
   rgrid_fft_multiply(workspace3, nrm);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, volel);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -619,7 +626,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
 /*
  * Calculate incompressible kinetic energy density as a function of wave vector k (atomic unis).
  *
- * E(k) = 4pi (m/2) k^2 \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
+ * E(k) = (m/2) k^2 \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
  *
  * where (m/2) |sqrt(rho)v|^2 corresponds to the incompressible part of kinetic energy.
  * Total incompressible K.E. is then int E(k) dk.
@@ -634,13 +641,12 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
  * workspace4 = Workspace 4 (rgrid *; input/output).
  * workspace5 = Workspace 5 (rgrid *; input/output).
  * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps, char volel) {
+EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps) {
 
   INT i;
   REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
@@ -649,14 +655,21 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
 
   rgrid_hodge_incomp(workspace1, workspace2, workspace3, workspace4, workspace5);
 
+  grid_wf_density(gwf, workspace4);
+  rgrid_power(workspace4, workspace4, 0.5);    // sqrt(rho)
+
+  rgrid_product(workspace1, workspace1, workspace4); // Multiply velocity field by sqrt(rho)
+  rgrid_product(workspace2, workspace2, workspace4);
+  rgrid_product(workspace3, workspace3, workspace4);
+
   rgrid_fft(workspace1);
-  rgrid_fft_multiply(workspace1, nrm);
+  rgrid_fft_multiply(workspace1, nrm);  
   rgrid_fft(workspace2);
   rgrid_fft_multiply(workspace2, nrm);
   rgrid_fft(workspace3);
   rgrid_fft_multiply(workspace3, nrm);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, volel);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
@@ -679,13 +692,12 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
  * workspace3 = Workspace 3 (rgrid *; input/output).
  * workspace4 = Workspace 4 (rgrid *; input/output).
  * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
- * volel   = 1: Include the volume element or 0: just calculate radial average (char; input).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps, char volel) {
+EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
 
   INT i;
   REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
@@ -694,6 +706,13 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 
   rgrid_hodge_comp(workspace1, workspace2, workspace3, workspace4);
 
+  grid_wf_density(gwf, workspace4);
+  rgrid_power(workspace4, workspace4, 0.5);    // sqrt(rho)
+
+  rgrid_product(workspace1, workspace1, workspace4); // Multiply velocity field by sqrt(rho)
+  rgrid_product(workspace2, workspace2, workspace4);
+  rgrid_product(workspace3, workspace3, workspace4);
+
   rgrid_fft(workspace1);
   rgrid_fft_multiply(workspace1, nrm);
   rgrid_fft(workspace2);
@@ -701,7 +720,7 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
   rgrid_fft(workspace3);
   rgrid_fft_multiply(workspace3, nrm);
 
-  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, volel);
+  rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
     bins[i] *= 0.5 * gwf->mass;
