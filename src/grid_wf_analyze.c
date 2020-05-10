@@ -828,7 +828,6 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
  *
  * wf         = Wave function for which the temperature is calculated (wf *; input).
  * tl         = Lambda temperature (REAL; input).
- * cworkspace = Complex workspace (cgrid *; input).
  *
  * Returns temperature in Kelvin.
  *
@@ -836,16 +835,21 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
  *
  */
 
-EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl, cgrid *cworkspace) {
+EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl) {
 
-  REAL n, ngnd;
+  REAL n, ngnd, tmp;
+  cgrid *grid = gwf->grid;
 
-  cgrid_copy(cworkspace, gwf->grid);
-  cgrid_fft(cworkspace);
-  cgrid_multiply(cworkspace, SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz))));
-  
-  n = cgrid_integral_of_square(cworkspace);
-  ngnd = csqnorm(cgrid_value_at_index(cworkspace, 0, 0, 0));
-  return tl * POW((n - ngnd) / n, 2.0 / 3.0);
+  cgrid_fft(grid);
+  ngnd = csqnorm(cgrid_value_at_index(grid, 0, 0, 0));
+  tmp = grid->step;
+  grid->step = 1.0;
+  n = cgrid_integral_of_square(grid);
+  grid->step = tmp;
+  cgrid_inverse_fft_norm(grid);
+
+  printf("n = " FMT_R " ngnd = " FMT_R "\n", n, ngnd); fflush(stdout);
+
+  return tl * POW((n - ngnd) / n, 2.0 / 3.0);  // All normalization constants cancel
 }
   
