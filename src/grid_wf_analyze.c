@@ -848,8 +848,6 @@ EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl) {
   grid->step = tmp;
   cgrid_inverse_fft_norm(grid);
 
-  printf("n = " FMT_R " ngnd = " FMT_R "\n", n, ngnd); fflush(stdout);
-
   return tl * POW((n - ngnd) / n, 2.0 / 3.0);  // All normalization constants cancel
 }
   
