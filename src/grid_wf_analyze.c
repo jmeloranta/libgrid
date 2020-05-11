@@ -851,3 +851,41 @@ EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl) {
   return tl * POW((n - ngnd) / n, 2.0 / 3.0);  // All normalization constants cancel
 }
   
+/*
+ * Calculate the superfluid fraction: n_s = n_gnd / n.
+ *
+ * wf         = Wave function for which the temperature is calculated (wf *; input).
+ *
+ * Returns the fraction between 0 and 1.
+ *
+ */
+
+EXPORT REAL grid_wf_superfluid(wf *gwf) {
+
+  REAL n, ngnd, tmp;
+  cgrid *grid = gwf->grid;
+
+  cgrid_fft(grid);
+  ngnd = csqnorm(cgrid_value_at_index(grid, 0, 0, 0));
+  tmp = grid->step;
+  grid->step = 1.0;
+  n = cgrid_integral_of_square(grid);
+  grid->step = tmp;
+  cgrid_inverse_fft_norm(grid);
+  return ngnd / n;
+}
+
+/*
+ * Calculate the normal fraction: n_n = 1 - n_gnd / n.
+ *
+ * wf         = Wave function for which the temperature is calculated (wf *; input).
+ *
+ * Returns the fraction between 0 and 1.
+ * 
+ */
+
+EXPORT REAL grid_wf_normalfluid(wf *gwf) {
+
+  return 1.0 - grid_wf_superfluid(gwf);
+}
+  
