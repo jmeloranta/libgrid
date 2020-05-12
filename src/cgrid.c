@@ -2072,8 +2072,11 @@ EXPORT inline REAL complex cgrid_value_at_index(cgrid *grid, INT i, INT j, INT k
         idx = j - ngpu1 * nny1;
         gpu = idx / nny2 + ngpu1;
         idx = idx % nny2;
-      } else idx = j % nny1;
-      cuda_get_element(grid->value, (int) gpu, (size_t) ((i * grid->ny + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+        cuda_get_element(grid->value, (int) gpu, (size_t) ((i * nny2 + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+      } else {
+        idx = j % nny1;
+        cuda_get_element(grid->value, (int) gpu, (size_t) ((i * nny1 + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+      }
     }
     return value;
   } else
@@ -2125,8 +2128,11 @@ EXPORT inline void cgrid_value_to_index(cgrid *grid, INT i, INT j, INT k, REAL c
         idx = j - ngpu1 * nny1;
         gpu = idx / nny2 + ngpu1;
         idx = idx % nny2;
-      } else idx = j % nny1;
-      cuda_set_element(grid->value, (int) gpu, (size_t) ((i * grid->ny + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+        cuda_set_element(grid->value, (int) gpu, (size_t) ((i * nny2 + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+      } else {
+        idx = j % nny1;
+        cuda_set_element(grid->value, (int) gpu, (size_t) ((i * nny1 + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+      }
     }
     return;
   } else
