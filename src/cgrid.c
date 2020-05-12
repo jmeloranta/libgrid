@@ -2047,16 +2047,34 @@ EXPORT inline REAL complex cgrid_value_at_index(cgrid *grid, INT i, INT j, INT k
     return grid->value_outside(grid, i, j, k);
 
 #ifdef USE_CUDA
+  /* There is too much CUDA stuff in here, needs to move to cuda.c eventually */
   REAL complex value;
-  if(cuda_find_block(grid->value)) {
-    INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
-    gpu = i / nnx1;
-    if(gpu >= ngpu1) {
-      idx = i - (ngpu1 * nnx1);
-      gpu = idx / nnx2 + ngpu1;
-      idx = idx % nnx2;
-    } else idx = i % nnx1;
-    cuda_get_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+  gpu_mem_block *ptr;
+  INT nx = grid->nx, ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1, nnx2, nnx1, nny2, nny1, gpu, idx;
+  if((ptr = cuda_find_block(grid->value))) {
+    if(ptr->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) { // Real space
+      ngpu1 = nx % ngpu2;
+      nnx2 = nx / ngpu2;
+      nnx1 = nnx2 + 1;
+      gpu = i / nnx1;
+      if(gpu >= ngpu1) {
+        idx = i - ngpu1 * nnx1;
+        gpu = idx / nnx2 + ngpu1;
+        idx = idx % nnx2;
+      } else idx = i % nnx1;
+      cuda_get_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+    } else {  // Reciprocal space
+      ngpu1 = ny % ngpu2;
+      nny2 = ny / ngpu2;
+      nny1 = nny2 + 1;
+      gpu = j / nny1;
+      if(gpu >= ngpu1) {
+        idx = j - ngpu1 * nny1;
+        gpu = idx / nny2 + ngpu1;
+        idx = idx % nny2;
+      } else idx = j % nny1;
+      cuda_get_element(grid->value, (int) gpu, (size_t) ((i * grid->ny + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+    }
     return value;
   } else
 #endif
@@ -2083,14 +2101,34 @@ EXPORT inline void cgrid_value_to_index(cgrid *grid, INT i, INT j, INT k, REAL c
   if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= grid->nz) return;
 
 #ifdef USE_CUDA
-  if(cuda_find_block(grid->value)) {
-    INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
-    gpu = i / nnx1;
-    if(gpu >= ngpu1) {
-      idx = i % (ngpu1 * nnx1);
-      gpu = idx / nnx2 + ngpu1;
-    } else idx = i % nnx1;
-    cuda_set_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+  /* There is too much CUDA stuff in here, needs to move to cuda.c eventually */
+  gpu_mem_block *ptr;
+  INT nx = grid->nx, ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1, nnx2, nnx1, nny2, nny1, gpu, idx;
+  if((ptr = cuda_find_block(grid->value))) {
+    if(ptr->gpu_info->subFormat == CUFFT_XT_FORMAT_INPLACE) { // Real space
+      ngpu1 = nx % ngpu2;
+      nnx2 = nx / ngpu2;
+      nnx1 = nnx2 + 1;
+      gpu = i / nnx1;
+      if(gpu >= ngpu1) {
+        idx = i - ngpu1 * nnx1;
+        gpu = idx / nnx2 + ngpu1;
+        idx = idx % nnx2;
+      } else idx = i % nnx1;
+      cuda_set_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+    } else {  // Reciprocal space (shuffled)
+      ngpu1 = ny % ngpu2;
+      nny2 = ny / ngpu2;
+      nny1 = nny2 + 1;
+      gpu = j / nny1;
+      if(gpu >= ngpu1) {
+        idx = j - ngpu1 * nny1;
+        gpu = idx / nny2 + ngpu1;
+        idx = idx % nny2;
+      } else idx = j % nny1;
+      cuda_set_element(grid->value, (int) gpu, (size_t) ((i * grid->ny + idx) * grid->nz + k), sizeof(REAL complex), (void *) &value);
+    }
+    return;
   } else
 #endif
    grid->value[(i * grid->ny + j) * grid->nz + k] = value;

@@ -888,4 +888,3 @@ EXPORT REAL grid_wf_normalfluid(wf *gwf) {
 
   return 1.0 - grid_wf_superfluid(gwf);
 }
-  

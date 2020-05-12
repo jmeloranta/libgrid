@@ -2031,9 +2031,18 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
     return grid->value_outside(grid, i, j, k);
 
 #ifdef USE_CUDA
+  // Too much cuda code here, move to cuda.c eventually */
   REAL value;
-  if(cuda_find_block(grid->value)) {
-    INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
+  INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1, nnx2, nnx1, gpu, idx;
+  gpu_mem_block *ptr;
+  if((ptr = cuda_find_block(grid->value))) {    
+    if(ptr->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+      fprintf(stderr, "libgrid: rgrid_value_at_index() GPU data in reciprocal space.\n");
+      abort();
+    }
+    ngpu1 = nx % ngpu2;
+    nnx2 = nx / ngpu2;
+    nnx1 = nnx2 + 1;
     gpu = i / nnx1;
     if(gpu >= ngpu1) {
       idx = i - ngpu1 * nnx1;
@@ -2044,7 +2053,7 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
     return value;
   } else
 #endif
-  return grid->value[(i * grid->ny + j) * grid->nz2 + k];
+    return grid->value[(i * grid->ny + j) * grid->nz2 + k];
 }
 
 /*
@@ -2064,17 +2073,31 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
 
 EXPORT inline void rgrid_value_to_index(rgrid *grid, INT i, INT j, INT k, REAL value) {
 
-  if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= grid->nz) return;
+  if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= grid->nz) {
+    fprintf(stderr, "libgrid: rgrid_value_to_index() access outside grid.\n");
+    abort();
+  }
 
 #ifdef USE_CUDA
-  if(cuda_find_block(grid->value)) {
-    INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1 = nx % ngpu2, nnx2 = nx / ngpu2, nnx1 = nnx2 + 1, gpu, idx;
+  // Too much cuda code here, move to cuda.c eventually */
+  INT nx = grid->nx, ngpu2 = cuda_ngpus(), ngpu1, nnx2, nnx1, gpu, idx;
+  gpu_mem_block *ptr;
+  if((ptr = cuda_find_block(grid->value))) {    
+    if(ptr->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE) {
+      fprintf(stderr, "libgrid: rgrid_value_to_index() GPU data in reciprocal space.\n");
+      abort();
+    }
+    ngpu1 = nx % ngpu2;
+    nnx2 = nx / ngpu2;
+    nnx1 = nnx2 + 1;
     gpu = i / nnx1;
     if(gpu >= ngpu1) {
-      idx = i % (ngpu1 * nnx1);
+      idx = i - ngpu1 * nnx1;
       gpu = idx / nnx2 + ngpu1;
+      idx = idx % nnx2;
     } else idx = i % nnx1;
     cuda_set_element(grid->value, (int) gpu, (size_t) ((idx * grid->ny + j) * grid->nz2 + k), sizeof(REAL), (void *) &value);
+    return;
   } else
 #endif
   grid->value[(i * grid->ny + j) * grid->nz2 + k] = value;
@@ -2102,9 +2125,18 @@ EXPORT inline REAL complex rgrid_cvalue_at_index(rgrid *grid, INT i, INT j, INT 
   if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= nzz) return 0.0;
 
 #ifdef USE_CUDA
+  // Too much cuda code here, move to cuda.c eventually */
   REAL complex value;
-  if(cuda_find_block(grid->value)) {
-    INT ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1 = ny % ngpu2, nny2 = ny / ngpu2, nny1 = nny2 + 1, gpu, idx;
+  INT ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1, nny2, nny1, gpu, idx;
+  gpu_mem_block *ptr;
+  if((ptr = cuda_find_block(grid->value))) {    
+    if(ptr->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+      fprintf(stderr, "libgrid: rgrid_cvalue_at_index() GPU data in real space.\n");
+      abort();
+    }
+    ngpu1 = ny % ngpu2;
+    nny2 = ny / ngpu2;
+    nny1 = nny2 + 1;
     gpu = j / nny1;
     if(gpu >= ngpu1) {
       idx = j - ngpu1 * nny1;
@@ -2117,6 +2149,57 @@ EXPORT inline REAL complex rgrid_cvalue_at_index(rgrid *grid, INT i, INT j, INT 
 #endif
   val = (REAL complex *) grid->value;
   return val[(i * grid->ny + j) * nzz + k];
+}
+
+/*
+ * Set grid point in Fourier space at given index.
+ *
+ * grid = grid to be accessed (rgrid *; input).
+ * i    = index along x (INT; input).
+ * j    = index along y (INT; input).
+ * k    = index along z (INT; input).
+ * value= value to be set at (i, j, k) (REAL comple; input).
+ *
+ * No return value.
+ *
+ * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ *
+ */
+
+EXPORT inline void rgrid_cvalue_to_index(rgrid *grid, INT i, INT j, INT k, REAL complex value) {
+
+  REAL complex *val;
+  INT nzz = grid->nz2 / 2;
+
+  if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= nzz) {
+    fprintf(stderr, "libgrid: rgrid_cvalue_to_index() access outside grid.\n");
+    abort();
+  }
+
+#ifdef USE_CUDA
+  // Too much cuda code here, move to cuda.c eventually */
+  INT ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1, nny2, nny1, gpu, idx;
+  gpu_mem_block *ptr;
+  if((ptr = cuda_find_block(grid->value))) {    
+    if(ptr->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+      fprintf(stderr, "libgrid: rgrid_cvalue_to_index() GPU data in real space.\n");
+      abort();
+    }
+    ngpu1 = ny % ngpu2;
+    nny2 = ny / ngpu2;
+    nny1 = nny2 + 1;
+    gpu = j / nny1;
+    if(gpu >= ngpu1) {
+      idx = j - ngpu1 * nny1;
+      gpu = idx / nny2 + ngpu1;
+      idx = idx % nny2;
+    } else idx = j % nny1;
+    cuda_set_element(grid->value, (int) gpu, (size_t) ((i * ny + idx) * nzz + k), sizeof(REAL complex), (void *) &value);
+    return;
+  } else
+#endif
+  val = (REAL complex *) grid->value;
+  val[(i * grid->ny + j) * nzz + k] = value;
 }
 
 /*
