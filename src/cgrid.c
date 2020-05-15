@@ -2854,3 +2854,56 @@ EXPORT void cgrid_dealias(cgrid *grid, char rule) {
       exit(1);
   }
 }
+
+/*
+ * Apply anti-alias to grid by a given k_max value (i.e., zero when |k| > k_max). Note that the grid must be in Fourier space.
+ * 
+ * grid   = Grid for the operation (cgrid *; input/output).
+ * kmax   = Maximum value for k (REAL; input).
+ *
+ * No return value.
+ * 
+ */
+
+EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
+
+  INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nxy, i, j, k, ij, ijnz, nx2, ny2, nz2;
+  REAL kx, ky, kz, r, lx, ly, lz, step = grid->step;
+
+  if(kmax < 0.0) {
+    fprintf(stderr, "libgrid: Negative kmax in cgrid_dealias2().\n");
+    abort();
+  }
+#ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_dealias2(grid, kmax)) return;
+#endif
+
+  nx2 = nx / 2;
+  ny2 = ny / 2;
+  nz2 = nz / 2;
+  nxy = nx * ny;
+  lx = 2.0 * M_PI / ((REAL) nx) * step;
+  ly = 2.0 * M_PI / ((REAL) ny) * step;
+  lz = 2.0 * M_PI / ((REAL) nz) * step;
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    i = ij / ny;
+    j = ij % ny;
+    if(i < nx2) 
+      kx = ((REAL) i) * lx;
+    else
+      kx = -((REAL) (nx - i)) * lx;
+    if(j < ny2)
+      ky = ((REAL) j) * ly;
+    else
+      ky = -((REAL) (ny - j)) * ly;
+    for(k = 0; k < nz; k++) {
+      if(k < nz2)
+        kz = ((REAL) k) * lz; /* - kz0; */
+      else
+        kz = -((REAL) (nz - k)) * lz; /* - kz0; */
+      r = SQRT(kx * kx + ky * ky + kz * kz);
+      if(r > kmax) grid->value[ijnz + k] = 0.0;
+    }
+  }
+}

@@ -1658,3 +1658,76 @@ extern "C" void cgrid_cuda_multiply_by_zW(gpu_mem_block *dst, CUREAL z0, CUREAL 
 
   cuda_error_check();
 }
+
+/*
+ * Zero beyond k_max (grid in Fourier space).
+ *
+ */
+
+__global__ void cgrid_cuda_dealias2_gpu(CUCOMPLEX *b, CUREAL kmax, CUREAL lx, CUREAL ly, CUREAL lz, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, jj = j + seg, idx;
+  CUREAL kx, ky, kz;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  
+  if (i <= nx2)
+    kx = lx * (CUREAL) i;
+  else 
+    kx = lx * (CUREAL) (i - nx);
+      
+  if (jj <= ny2)
+    ky = ly * (CUREAL) jj;
+  else 
+    ky = ly * (CUREAL) (jj - nyy);
+      
+  if (k <= nz2)
+    kz = lz * (CUREAL) k;
+  else 
+    kz = lz * (CUREAL) (k - nz);
+
+  if(SQRT(kx*kx + ky*ky + kz*kz) > kmax) b[idx] = CUMAKE(0.0, 0.0);
+}
+
+/*
+ * CUDA dealias2.
+ *
+ * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
+ * kmax     = Maximum k-value (CUREAL; input).
+ * step     = Grid step (CUREAL; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void cgrid_cuda_dealias2W(gpu_mem_block *dst, CUREAL kmax, CUREAL step, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES_SEG(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor;
+  INT nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2, segx = 0, segy = 0; // segx not used
+  REAL lx = 2.0 * M_PI / (((CUREAL) nx) * step), ly = 2.0 * M_PI / (((CUREAL) ny) * step), lz = 2.0 * M_PI / (((CUREAL) nz) * step);
+
+  if(dst->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): dealias2 wrong subFormat.\n");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    cgrid_cuda_dealias2_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], kmax, lx, ly, lz, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
+    segx += dsegx1;
+    segy += dsegy1;
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    cgrid_cuda_dealias2_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], kmax, lx, ly, lz, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
+    segx += dsegx2;
+    segy += dsegy2;
+  }
+
+  cuda_error_check();
+}

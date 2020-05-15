@@ -786,7 +786,6 @@ EXPORT char cgrid_cuda_multiply_by_y(cgrid *grid) {
   return 0;
 }
 
-
 /*
  * Multiply grid by coordinate z.
  *
@@ -804,6 +803,28 @@ EXPORT char cgrid_cuda_multiply_by_z(cgrid *grid) {
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
   cgrid_cuda_multiply_by_zW(cuda_block_address(grid->value), grid->z0, grid->step, grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}
+
+/*
+ * Apply anti-alias based on k_max.
+ *
+ * grid = Grid for the operation (cgrid *; output).
+ * kmax = Maximum k-value (REAL; input).
+ *
+ */
+
+EXPORT char cgrid_cuda_dealias2(cgrid *grid, REAL kmax) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+
+  cgrid_cuda_dealias2W(cuda_block_address(grid->value), kmax, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
