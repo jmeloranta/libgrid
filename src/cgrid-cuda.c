@@ -691,7 +691,7 @@ EXPORT char cgrid_cuda_zero_re(cgrid *grid) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_zero_reW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
   return 0;
@@ -711,7 +711,7 @@ EXPORT char cgrid_cuda_zero_im(cgrid *grid) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_zero_imW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
   return 0;
@@ -737,7 +737,7 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
   return 0;
@@ -757,13 +757,12 @@ EXPORT char cgrid_cuda_multiply_by_x(cgrid *grid) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_multiply_by_xW(cuda_block_address(grid->value), grid->x0, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
-
 
 /*
  * Multiply grid by coordinate x.
@@ -779,7 +778,7 @@ EXPORT char cgrid_cuda_multiply_by_y(cgrid *grid) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_multiply_by_yW(cuda_block_address(grid->value), grid->y0, grid->step, grid->nx, grid->ny, grid->nz);
 
@@ -800,7 +799,7 @@ EXPORT char cgrid_cuda_multiply_by_z(cgrid *grid) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_multiply_by_zW(cuda_block_address(grid->value), grid->z0, grid->step, grid->nx, grid->ny, grid->nz);
 
@@ -822,7 +821,7 @@ EXPORT char cgrid_cuda_dealias2(cgrid *grid, REAL kmax) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cgrid_cuda_dealias2W(cuda_block_address(grid->value), kmax, grid->step, grid->nx, grid->ny, grid->nz);
 

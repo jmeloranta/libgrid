@@ -1360,6 +1360,45 @@ EXPORT int cuda_fft_policy(void *host_mem, size_t length, cufftHandle cufft_hand
 }
 
 /*
+ * CUDA small operation memory policy.
+ *
+ * host_mem     = Host memory block (void *; input).
+ * length       = Host memory block length (size_t; input).
+ * cufft_handle = CUFFT handle (-1 if not available; cufftHandle).
+ * id           = String describing the block contents. Useful for debugging. (char *; input).
+ *
+ * Returns 0 if GPU operation can proceed
+ * or -1 if the operation is to be carried out in host memory.
+ *
+ * The FFT policy is as follows:
+ *
+ * 1. If block on GPU, execute on GPU.
+ * 2. If block on CPU, execute on CPU.
+ *
+ */
+
+EXPORT int cuda_misc_policy(void *host_mem, size_t length, cufftHandle cufft_handle, char *id) {
+
+  gpu_mem_block *ptr;
+
+  if(!enable_cuda) return -1;
+#ifdef CUDA_DEBUG
+  fprintf(stderr, "cuda: Misc policy check for host mem %lx (%s).\n", (unsigned long int) host_mem, id);
+#endif
+  if(!(ptr = cuda_find_block(host_mem))) {
+#ifdef CUDA_DEBUG
+    fprintf(stderr, "cuda: Check result = In host memory.\n");
+#endif
+    return -1;
+  }
+#ifdef CUDA_DEBUG
+  fprintf(stderr, "cuda: Check result = In GPU memory.\n");
+#endif
+  cuda_block_hit(ptr);
+  return 0;
+}
+
+/*
  * CUDA one memory block policy.
  *
  * host_mem     = Host memory block (void *; input).
