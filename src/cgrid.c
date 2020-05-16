@@ -2869,6 +2869,7 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
 
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nxy, i, j, k, ij, ijnz, nx2, ny2, nz2;
   REAL kx, ky, kz, r, lx, ly, lz, step = grid->step;
+  REAL complex *value = grid->value;
 
   if(kmax < 0.0) {
     fprintf(stderr, "libgrid: Negative kmax in cgrid_dealias2().\n");
@@ -2885,6 +2886,7 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
   lx = 2.0 * M_PI / ((REAL) nx) * step;
   ly = 2.0 * M_PI / ((REAL) ny) * step;
   lz = 2.0 * M_PI / ((REAL) nz) * step;
+#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,nxy,value,lx,ly,lz,kmax) private(ij,ijnz,k,r,i,j,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -2903,7 +2905,7 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
       else
         kz = -((REAL) (nz - k)) * lz; /* - kz0; */
       r = SQRT(kx * kx + ky * ky + kz * kz);
-      if(r > kmax) grid->value[ijnz + k] = 0.0;
+      if(r > kmax) value[ijnz + k] = 0.0;
     }
   }
 }
