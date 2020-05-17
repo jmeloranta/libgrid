@@ -876,8 +876,7 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
   nxy = nx * ny;
   step = grid->step;
   
-  /* int (delta FFT[f(x)] )^2 dk => delta^2 / N delta */
-
+  /* norm = step^3 / (nx ny nz) */
   norm = grid->fft_norm2;
   
   lx = 2.0 * M_PI / ((REAL) nx) * step;

@@ -50,11 +50,8 @@ int main(int argc, char **argv) {
   /* Map the right hand side to the grid */
   cgrid_map(grid, gaussian, NULL);
 
-  value = cgrid_integral(grid);
-  printf("Integral direct = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
-  cgrid_power(grid, grid, 0.5);
   value = cgrid_integral_of_square(grid);
-  printf("Integral using square = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
-
+  printf("Integral of square real space = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
+  
   return 0;
 }
