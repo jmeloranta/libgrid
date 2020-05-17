@@ -122,7 +122,7 @@ EXPORT void cgrid_gradient_z(cgrid *grid, cgrid *gradient) {
 
 /*
  * Calculate laplacian of the grid.
- * Use FD or FFT according to grid_analuze_method.
+ * Use FD or FFT according to grid_analyze_method.
  *
  * grid    = source grid (cgrid *; input).
  * laplace = output grid for the operation (cgrid *; output).
