@@ -137,7 +137,7 @@ EXPORT char cgrid_cuda_multiply(cgrid *grid, REAL complex c) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);

@@ -824,10 +824,11 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
 }
 
 /*
- * Calculate T_BEC for a given wave function according to T_BEC = T_l * ((n - ngnd) / n) ^ (2/3)
+ * Calculate T_BEC for a given wave function according to T_BEC = T_l * ((n - ngnd) / n) ^ (exponent)
  *
  * wf         = Wave function for which the temperature is calculated (wf *; input).
  * tl         = Lambda temperature (REAL; input).
+ * exponent   = Exponent (2/3 for BEC, 1/6 for superfluid 4He with tl = 2.19).
  *
  * Returns temperature in Kelvin.
  *
@@ -835,7 +836,7 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
  *
  */
 
-EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl) {
+EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl, REAL exponent) {
 
   REAL n, ngnd, tmp;
   cgrid *grid = gwf->grid;
@@ -848,7 +849,7 @@ EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl) {
   grid->step = tmp;
   cgrid_inverse_fft_norm(grid);
 
-  return tl * POW((n - ngnd) / n, 2.0 / 3.0);  // All normalization constants cancel
+  return tl * POW(1.0 - ngnd / n, exponent);  // All normalization constants cancel
 }
   
 /*

@@ -162,7 +162,7 @@ EXPORT char rgrid_cuda_multiply(rgrid *grid, REAL c) {
     return -1;
   }
 
-  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id, 1) < 0) return -1;
+  if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle_r2c, grid->id) < 0) return -1;
 
   rgrid_cuda_multiplyW(cuda_block_address(grid->value), c, grid->nx, grid->ny, grid->nz);
 
