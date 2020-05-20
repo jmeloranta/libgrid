@@ -173,6 +173,7 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
     fprintf(stderr, "libgrid: Out of memory in rgrid_clone().\n");
     abort();
   }
+
   bcopy((void *) grid, (void *) ngrid, sizeof(rgrid));
   strcpy(ngrid->id, id);
 
@@ -194,6 +195,12 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
   }
 #endif
   ngrid->plan = ngrid->iplan = NULL;
+
+#ifdef USE_CUDA
+  /* Clear host lock */
+  ngrid->host_lock = 0;
+#endif
+
   ngrid->flag = 0;
 
   return ngrid;
