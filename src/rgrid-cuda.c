@@ -72,6 +72,32 @@ EXPORT char rgrid_cuda_fft_product(rgrid *dst, rgrid *src1, rgrid *src2) {
 }
 
 /*
+ * Multiply conj(src1) * src2 in Fourier space.
+ *
+ * dst  = Destination (rgrid *; output).
+ * src1 = Source 1 (rgrid *; input).
+ * src2 = Source 2 (rgrid *; input).
+ *
+ */
+
+EXPORT char rgrid_cuda_fft_product_conj(rgrid *dst, rgrid *src1, rgrid *src2) {
+
+  if(dst->host_lock || src1->host_lock || src2->host_lock) {
+    cuda_remove_block(src1->value, 1);
+    cuda_remove_block(src2->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
+  if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle_c2r, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle_c2r, src2->id, 1, 
+                             dst->value, dst->grid_len, dst->cufft_handle_c2r, dst->id, 0) < 0) return -1;
+
+  rgrid_cuda_fft_product_conjW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), src1->nx, src1->ny, src1->nz);
+
+  return 0;
+}
+
+/*
  * Add two grids (in Fourier space).
  *
  * dst  = Destination (rgrid *; output).

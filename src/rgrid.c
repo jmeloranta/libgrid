@@ -417,52 +417,6 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
   return grid;
 }
 
-/* 
- * Read grid from disk in binary format. This is compatible with old libgrid binary grid format.
- * Due to in place FFT being used, the new grids have holes in them...
- *
- * grid = grid to be read (rgrid *; output). If NULL, a grid with the correct dimensions will be allocated.
- *        Note that the boundary condition will assigned to PERIODIC by default.
- * in   = file handle for reading the file (FILE *; input).
- *
- * Returns pointer to the grid (NULL on error).
- *
- */
-
-EXPORT rgrid *rgrid_read_compat(rgrid *grid, FILE *in) {
-
-  INT nx, ny, nz, i, j, k;
-  REAL step, val;
-  
-#ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 0);  // grid will be overwritten below
-#endif
-  fread(&nx, sizeof(INT), 1, in);
-  fread(&ny, sizeof(INT), 1, in);
-  fread(&nz, sizeof(INT), 1, in);
-  fread(&step, sizeof(REAL), 1, in);
-  
-  if (!grid) {
-    if(!(grid = rgrid_alloc(nx, ny, nz, step, RGRID_PERIODIC_BOUNDARY, NULL, "read_grid"))) {
-      fprintf(stderr, "libgrid: Failed to allocate grid in rgrid_read_compat().\n");
-      return NULL;
-    }
-  }
-
-  if (nx != grid->nx || ny != grid->ny || nz != grid->nz || step != grid->step) {
-    fprintf(stderr, "libgrid: Interpolation not supported for compatibility mode.\n");
-    abort();
-  }
-  
-  for (i = 0; i < nx; i++)
-    for (j = 0; j < ny; j++)
-      for (k = 0; k < nz; k++) {
-        fread(&val, sizeof(REAL), 1, in);
-        rgrid_value_to_index(grid, i, j, k, val);
-      }
-  return grid;
-}
-
 /*
  * Read in real grid from a binary file (.grd).
  *
@@ -486,33 +440,6 @@ EXPORT void rgrid_read_grid(rgrid *grid, char *file) {
     abort();
   }
   rgrid_read(grid, fp);
-  fclose(fp);
-  fprintf(stderr, "libgrid: Real grid read from %s.\n", file);
-}
-
-/*
- * Read in real grid from a binary file (.grd). Compatibility with old libgrid binary grid files.
- *
- * grid = place to store the read density (output, rgrid *).
- * file = filename for the file (char *). Note: the .grd extension must NOT be given (input, char *).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_read_grid_compat(rgrid *grid, char *file) {
-
-  FILE *fp;
-
-#ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 0);
-#endif
-
-  if(!(fp = fopen(file, "r"))) {
-    fprintf(stderr, "libgrid: Can't open real grid file %s.\n", file);
-    abort();
-  }
-  rgrid_read_compat(grid, fp);
   fclose(fp);
   fprintf(stderr, "libgrid: Real grid read from %s.\n", file);
 }
@@ -588,6 +515,94 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
   for(k = 0; k < nz; k++) {
     z = ((REAL) (k - nz / 2)) * step;
     fprintf(fp, FMT_R " " FMT_R "\n", z, rgrid_value_at_index(grid, i, j, k));
+  }
+  fclose(fp);
+}
+
+/*
+ * Write real grid to disk including cuts along x, y, and z axes (grid in reciprocal/Fourier space).
+ *
+ * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
+ * grid     = Grid to be written to disk (rgrid *; input).
+ * 
+ * No return value.
+ *
+ * See also rgrid_write().
+ *
+ */
+
+EXPORT void rgrid_write_grid_reciprocal(char *base, rgrid *grid) {
+
+  FILE *fp;
+  char file[2048];
+  INT i, j, k, nx = grid->nx, ny = grid->ny, nz = grid->nz2 / 2;
+  REAL x, y, z, step = grid->step;
+  REAL complex tmp;
+
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(grid->value, 1);
+#endif
+
+  /* Write binary grid */
+  sprintf(file, "%s.grd", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    abort();
+  }
+  rgrid_write(grid, fp);
+  fclose(fp);
+
+  /* Write cut along x-axis */
+  sprintf(file, "%s.x", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    abort();
+  }
+  j = 0;
+  k = 0;
+  for(i = 0; i < nx; i++) { 
+    if (i < nx / 2)
+      x = 2.0 * M_PI * ((REAL) i) / (((REAL) nx) * step) - grid->kx0;
+    else 
+      x = 2.0 * M_PI * ((REAL) (i - nx)) / (((REAL) nx) * step) - grid->kx0;
+    tmp = rgrid_cvalue_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", x, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+
+  /* Write cut along y-axis */
+  sprintf(file, "%s.y", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    abort();
+  }
+  i = 0;
+  k = 0;
+  for(j = 0; j < ny; j++) {
+    if (j < ny / 2)
+      y = 2.0 * M_PI * ((REAL) j) / (((REAL) ny) * step) - grid->ky0;
+    else 
+      y = 2.0 * M_PI * ((REAL) (j - ny)) / (((REAL) ny) * step) - grid->ky0;
+    tmp = rgrid_cvalue_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", y, CREAL(tmp), CIMAG(tmp));
+  }
+  fclose(fp);
+
+  /* Write cut along z-axis */
+  sprintf(file, "%s.z", base);
+  if(!(fp = fopen(file, "w"))) {
+    fprintf(stderr, "Can't open %s for writing.\n", file);
+    abort();
+  }
+  i = 0;
+  j = 0;
+  for(k = 0; k < nz; k++) {
+    if (k < nz / 2)
+      z = 2.0 * M_PI * ((REAL) k) / (((REAL) nz) * step) - grid->kz0;
+    else 
+      z = 2.0 * M_PI * ((REAL) (k - nz)) / (((REAL) nz) * step) - grid->kz0;
+    tmp = rgrid_cvalue_at_index(grid, i, j, k);
+    fprintf(fp, FMT_R " " FMT_R " " FMT_R "\n", z, CREAL(tmp), CIMAG(tmp));
   }
   fclose(fp);
 }
@@ -1993,6 +2008,41 @@ EXPORT void rgrid_fft_product(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
+ * Multiply conj(grida) * gridb in Fourier space.
+ *
+ * gridc = output (rgrid *; output).
+ * grida = 1st grid (rgrid *; input).
+ * gridb = 2nd grid (rgrid *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void rgrid_fft_product_conj(rgrid *gridc, rgrid *grida, rgrid *gridb) {
+
+  INT k, ij, ijnz, nx, ny, nz, nxy;
+  REAL complex *avalue, *bvalue, *cvalue;
+
+#ifdef USE_CUDA
+  if(cuda_status() && !rgrid_cuda_fft_product_conj(gridc, grida, gridb)) return;
+#endif
+
+  nx = gridc->nx;
+  ny = gridc->ny;
+  nz = gridc->nz2 / 2;  // nz2 = 2 * (nz / 2 + 1)
+  nxy = nx * ny;
+  avalue = (REAL complex *) grida->value;
+  bvalue = (REAL complex *) gridb->value;
+  cvalue = (REAL complex *) gridc->value;
+#pragma omp parallel for firstprivate(nx,ny,nz,nxy,avalue,bvalue,cvalue) private(ij,ijnz,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    for(k = 0; k < nz; k++)
+      cvalue[ijnz + k] = CONJ(avalue[ijnz + k]) * bvalue[ijnz + k];
+  }
+}
+
+/*
  * Multiply grid by a constant in Fourier space (grid->value is complex) 
  *
  * grid = Grid to be multiplied (rgrid *; input/output).
@@ -2823,9 +2873,9 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + 2.0 * (CREAL(value1[ijnz + k]) * CREAL(value1[ijnz + k]) + CIMAG(value1[ijnz + k]) * CIMAG(value1[ijnz + k]));
-        if(value2) bins[idx] = bins[idx] + 2.0 * (CREAL(value2[ijnz + k]) * CREAL(value2[ijnz + k]) + CIMAG(value2[ijnz + k]) * CIMAG(value2[ijnz + k]));
-        if(value3) bins[idx] = bins[idx] + 2.0 * (CREAL(value3[ijnz + k]) * CREAL(value3[ijnz + k]) + CIMAG(value3[ijnz + k]) * CIMAG(value3[ijnz + k]));
+        bins[idx] = bins[idx] + CREAL(value1[ijnz + k]) * CREAL(value1[ijnz + k] + CIMAG(value1[ijnz + k]) * CIMAG(value1[ijnz + k]); 
+        if(value2) bins[idx] = bins[idx] + CREAL(value2[ijnz + k]) * CREAL(value2[ijnz + k]) + CIMAG(value2[ijnz + k]) * CIMAG(value2[ijnz + k]);
+        if(value3) bins[idx] = bins[idx] + CREAL(value3[ijnz + k]) * CREAL(value3[ijnz + k]) + CIMAG(value3[ijnz + k]) * CIMAG(value3[ijnz + k]);
         nvals[idx]++;
       }
     }

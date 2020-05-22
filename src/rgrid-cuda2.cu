@@ -145,6 +145,64 @@ extern "C" void rgrid_cuda_fft_productW(gpu_mem_block *dst, gpu_mem_block *src1,
 
 /*
  *
+ * dst = conj(src1) * src2.
+ *
+ * Fourier space.
+ *
+ */
+
+__global__ void rgrid_cuda_fft_product_conj_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CUCOMPLEX *src2, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+  dst[idx] = CUCONJ(src1[idx]) * src2[idx];
+}
+
+/*
+ * Direct multiply of two grids in the Fourier space.
+ *
+ * Multiplication in GPU memory: dst = conj(src1) * src2
+ *
+ * dst   = output (gpu_mem_block *; output).
+ * src1  = 1st grid to be multiplied (gpu_mem_block *; input).
+ * src2  = 2nd grid to be multiplied (gpu_mem_block *; input).
+ * nx    = Grid dim x (INT; input).
+ * ny    = Grid dim y (INT; input).
+ * nz    = Grid dim z (INT; input).
+ *
+ * In Fourier space.
+ *
+ */
+
+extern "C" void rgrid_cuda_fft_product_conjW(gpu_mem_block *dst, gpu_mem_block *src1, gpu_mem_block *src2, INT nx, INT ny, INT nz) {
+
+  dst->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
+  SETUP_VARIABLES_RECIPROCAL(dst);
+  cudaXtDesc *DST = dst->gpu_info->descriptor, *SRC1 = src1->gpu_info->descriptor, *SRC2 = src2->gpu_info->descriptor;
+
+  if(src1->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED || src2->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): multiplication sources must be in Fourier space (INPLACE_SHUFFLED).");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_fft_product_conj_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny1, nzz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    rgrid_cuda_fft_product_conj_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC1->data[i], (CUCOMPLEX *) SRC2->data[i], nx, nny2, nzz);
+  }
+
+  cuda_error_check();
+}
+
+/*
+ *
  * dst = src1 * src2 but with alternating signs for FFT.
  *
  * Fourier space.

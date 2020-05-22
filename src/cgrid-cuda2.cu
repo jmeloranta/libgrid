@@ -1692,7 +1692,7 @@ __global__ void cgrid_cuda_dealias2_gpu(CUCOMPLEX *b, CUREAL kmax2, CUREAL lx, C
 }
 
 /*
- * CUDA dealias2.
+ * CUDA dealias2 (data in Fourier space).
  *
  * dst      = Source/destination grid for operation (gpu_mem_block *; input/output).
  * kmax     = Maximum k-value (CUREAL; input).
