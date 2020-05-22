@@ -600,7 +600,7 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
 
   INT i;
-  REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz))); // TODO: Do we need SQRT or not? integral in reciprocal space has step^3/(nx ny nz)...
+  REAL nrm = SQRT(1.0 / ((REAL) (gwf->grid->nx * gwf->grid->ny * gwf->grid->nz)));
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
