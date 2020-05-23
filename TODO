@@ -15,9 +15,11 @@ also fgrep TODO *.[ch] to find out more specific issues.
 
 =====================================
 
-CUDA next:
+CUDA performance next:
 
-We are creating too many small threads (kernel launch overhead and integer arithmetic for index calculations).
+1. Chcek if we have pointer aliasing issues (__restrict__)
+
+2. We are creating too many small threads (kernel launch overhead and integer arithmetic for index calculations).
 A quick test shows that at least simple kernels can be sped up by over 3X by scheduling the last index of the
 grid to the threads. Here is a sample code:
 
