@@ -10,9 +10,9 @@
 #include <grid/grid.h>
 
 /* Grid dimensions */
-#define NX 64
-#define NY 64
-#define NZ 64
+#define NX 256
+#define NY 256
+#define NZ 256
 #define STEP 0.2
 
 /* If using CUDA, use the following GPU allocation */
