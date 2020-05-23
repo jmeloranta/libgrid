@@ -45,8 +45,8 @@ __global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CU
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
-  dst[idx] = src1[idx] * src2[idx];
-  if((i + j + k) & 1) dst[idx] = -dst[idx];
+  if((i + j + k) & 1) dst[idx] = -src1[idx] * src2[idx];
+  else dst[idx] = src1[idx] * src2[idx];
 }
 
 /*

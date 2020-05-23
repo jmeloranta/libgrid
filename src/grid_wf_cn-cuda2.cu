@@ -53,7 +53,7 @@ extern "C" void cuda_error_check();
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_x_gpu(INT nx, INT ny, INT nz, INT nyz, INT ny2, __restrict__ CUCOMPLEX *psi, char bc, __restrict__ CUCOMPLEX *wrk, __restrict__ CUCOMPLEX *wrk2, __restrict__ CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL y0, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT i, k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, tid, ind, ntid;
   CUREAL y, tmp;
@@ -239,7 +239,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_xW(INT nx, INT ny, INT nz, CUC
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_y_gpu(INT nx, INT ny, INT nz, INT nyz, INT nx2, __restrict__ CUCOMPLEX *psi, char bc, __restrict__ CUCOMPLEX *wrk, __restrict__ CUCOMPLEX *wrk2, __restrict__ CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUCOMPLEX c3, CUREAL step, CUREAL x0, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind, ntid;
   CUREAL x, tmp;
@@ -425,7 +425,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, CUCOMPLEX *psi, char bc, CUCOMPLEX *wrk, CUCOMPLEX *wrk2, CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
+__global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, INT nyz, INT nxy, __restrict__ CUCOMPLEX *psi, char bc, __restrict__ CUCOMPLEX *wrk, __restrict__ CUCOMPLEX *wrk2, __restrict__ CUCOMPLEX *wrk3, CUCOMPLEX c, CUCOMPLEX c2, CUREAL step, CUCOMPLEX tstep, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   INT k, j = blockIdx.x * blockDim.x + threadIdx.x, i = blockIdx.y * blockDim.y + threadIdx.y, tid, ind, ntid;
   CUREAL tmp;
