@@ -1,7 +1,7 @@
 
 include ../make.conf
 
-all: fft cfft spherical cspherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson cgradient fspherical
+all: fft cfft spherical cspherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson cgradient fspherical bench
 
 decomp: decomp.o
 	$(CC) $(CFLAGS) -o decomp decomp.o $(LDFLAGS)
@@ -26,6 +26,9 @@ poisson: poisson.o
 
 cpoisson: cpoisson.o
 	$(CC) $(CFLAGS) -o cpoisson cpoisson.o $(LDFLAGS)
+
+bench: bench.o
+	$(CC) $(CFLAGS) -o bench bench.o $(LDFLAGS)
 
 wavepacket: wavepacket.o
 	$(CC) $(CFLAGS) -o wavepacket wavepacket.o $(LDFLAGS)
@@ -52,6 +55,6 @@ clean:
 	-rm fft fft.o spherical spherical.o poisson poisson.o *~ *.x *.y *.z *.grd *.dat
 	-rm wavepacket.o wavepacket gradient.o gradient cgradient.o cgradient comp.dat incomp.dat decomp decomp.o
 	-rm veloc veloc.o random random.o v{x,y,z}-fd.* v{x,y,z}-fft.* integrate integrate.o
-	-rm cfft cfft.o cintegrate cintegrate.o cpoisson cpoisson.o cspherical cspherical.o fspherical.o fspherical
+	-rm cfft cfft.o cintegrate cintegrate.o cpoisson cpoisson.o cspherical cspherical.o fspherical.o fspherical bench.o bench
 
 
