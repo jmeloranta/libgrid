@@ -2873,10 +2873,10 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       r = SQRT(kx * kx + ky * ky + kz * kz);
       idx = (INT) (0.5 + r / binstep);
       if(idx < nbins) {
-        bins[idx] = bins[idx] + CREAL(value1[ijnz + k]) * CREAL(value1[ijnz + k]) + CIMAG(value1[ijnz + k]) * CIMAG(value1[ijnz + k]); 
-        if(value2) bins[idx] = bins[idx] + CREAL(value2[ijnz + k]) * CREAL(value2[ijnz + k]) + CIMAG(value2[ijnz + k]) * CIMAG(value2[ijnz + k]);
-        if(value3) bins[idx] = bins[idx] + CREAL(value3[ijnz + k]) * CREAL(value3[ijnz + k]) + CIMAG(value3[ijnz + k]) * CIMAG(value3[ijnz + k]);
-        nvals[idx]++;
+        bins[idx] += 2.0 * CREAL(value1[ijnz + k]) * CREAL(value1[ijnz + k]) + CIMAG(value1[ijnz + k]) * CIMAG(value1[ijnz + k]);  // 2x = conjugate side from z
+        if(value2) bins[idx] += 2.0 * CREAL(value2[ijnz + k]) * CREAL(value2[ijnz + k]) + CIMAG(value2[ijnz + k]) * CIMAG(value2[ijnz + k]);
+        if(value3) bins[idx] += 2.0 * CREAL(value3[ijnz + k]) * CREAL(value3[ijnz + k]) + CIMAG(value3[ijnz + k]) * CIMAG(value3[ijnz + k]);
+        nvals[idx] += 2;
       }
     }
   }

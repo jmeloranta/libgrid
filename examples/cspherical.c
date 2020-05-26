@@ -17,7 +17,7 @@
 #define NZ 256
 
 /* Spatial step length of the grid */
-#define STEP 0.2
+#define STEP 0.1
 
 /* Binning info */
 #define BINSTEP 0.5
@@ -33,7 +33,7 @@ int gpus[NGPUS] = {0};
 /* Function to be mapped onto the grid */
 REAL complex func(void *NA, REAL x, REAL y, REAL z) {
 
-  return SQRT(x * x + y * y + z * z);
+  return EXP(-0.02*(x * x + y * y + z * z));
 }
 
 int main(int argc, char **argv) {

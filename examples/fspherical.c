@@ -14,11 +14,11 @@
 #define NZ 256
 
 /* Spatial step length of the grid */
-#define STEP 0.5
+#define STEP 0.2
 
 /* Binning info */
 #define BINSTEP (2.0 * M_PI / (NX * STEP))
-#define NBINS 200
+#define NBINS 256
 #define VOLEL 1   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
 
 /* If using CUDA, use the following GPU allocation */
@@ -30,7 +30,7 @@ int gpus[NGPUS] = {0};
 /* Function to be mapped onto the grid */
 REAL func(void *NA, REAL x, REAL y, REAL z) {
 
-  return x * x + y * y + z * z;
+  return EXP(-0.1*(x * x + y * y + z * z));
 }
 
 int main(int argc, char **argv) {
@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
 
   rgrid_fft_product_conj(grid, grid, grid);
    /* Write the data on disk before starting */
+  rgrid_fft_multiply(grid, 1.0 / (REAL) (NX * NY * NZ));
   rgrid_write_grid_reciprocal("before", grid);
 
   return 0;
