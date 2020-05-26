@@ -767,7 +767,7 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
 }
 
 /*
- * Calculate quantum pressure ( = (hbar * hbar / (2m)) |grad sqrt(rho)|^2).
+ * Calculate quantum pressure energy: \frac{\hbar^2}{2m} |\nabla \sqrt{\rho})|^2
  *
  * gwf        = Wavefunction (wf *; input).
  * workspace1 = Workspace (rgrid *; input).
@@ -775,6 +775,8 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
  * workspace3 = Workspace (rgrid *; input).
  * 
  * Returns the quantum kinetic energy (REAL).
+ *
+ * Notes: Ideally, classical + quantum = total kinetic energy (subject to numerical accuracy).
  *
  */
 
