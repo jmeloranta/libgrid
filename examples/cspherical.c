@@ -1,6 +1,8 @@
 /*
  * Example: Calculate spherical average of a real grid.
  *
+ * Compare after.dat with before.? (the latter must be ^2 for comparison).
+ *
  */
 
 #include <stdlib.h>
@@ -15,12 +17,12 @@
 #define NZ 256
 
 /* Spatial step length of the grid */
-#define STEP 0.5
+#define STEP 0.2
 
 /* Binning info */
 #define BINSTEP 0.5
 #define NBINS (NX / 2)
-#define VOLEL 0   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
+#define VOLEL 1   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
@@ -57,6 +59,8 @@ int main(int argc, char **argv) {
 
   /* Write the data on disk before starting */
   cgrid_write_grid("before", grid);
+
+  printf("Norm = " FMT_R "\n", cgrid_integral_of_square(grid));  
 
   /* Allocate memory for the bins */
   bins = (REAL *) malloc(sizeof(REAL) * NBINS);

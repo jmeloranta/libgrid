@@ -2778,7 +2778,7 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
     for(k = 0; k < nz; k++) {
       z = ((REAL) (k - nz2)) * step - z0;
       r = SQRT(x * x + y * y + z * z);
-      idx = (INT) (r / binstep);
+      idx = (INT) (0.5 + r / binstep);
       if(idx < nbins) {
         bins[idx] = bins[idx] + value1[ijnz + k];
         if(value2) bins[idx] = bins[idx] + value2[ijnz + k];
@@ -2822,14 +2822,14 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
  *
  * No return value.
  *
- * Note to compute E(k), grid should correspond to flux / sqrt(rho) = \sqrt(rho) * v.
+ * Notes: - to compute E(k), grid should correspond to flux / sqrt(rho) = \sqrt(rho) * v.
  *
  */
 
 EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgrid *input3, REAL *bins, REAL binstep, INT nbins, char volel) {
 
   INT nx = input1->nx, ny = input1->ny, nz = input1->nz2 / 2, idx, nxy = nx * ny;
-  REAL step = input1->step, r, kx, ky, kz, nrm;
+  REAL step = input1->step, r, kx, ky, kz, nrm = input1->fft_norm2 / binstep;
   REAL complex *value1 = (REAL complex *) input1->value, *value2, *value3;
   REAL lx = 2.0 * M_PI / (((REAL) nx) * step), ly = 2.0 * M_PI / (((REAL) ny) * step), lz = M_PI / (((REAL) nz - 1) * step);
   INT *nvals, ij, i, j, k, ijnz, nz2 = nz / 2;
@@ -2871,7 +2871,7 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
       else
         kz = -((REAL) (nz - k)) * lz; /* - kz0; */
       r = SQRT(kx * kx + ky * ky + kz * kz);
-      idx = (INT) (r / binstep);
+      idx = (INT) (0.5 + r / binstep);
       if(idx < nbins) {
         bins[idx] = bins[idx] + CREAL(value1[ijnz + k]) * CREAL(value1[ijnz + k]) + CIMAG(value1[ijnz + k]) * CIMAG(value1[ijnz + k]); 
         if(value2) bins[idx] = bins[idx] + CREAL(value2[ijnz + k]) * CREAL(value2[ijnz + k]) + CIMAG(value2[ijnz + k]) * CIMAG(value2[ijnz + k]);
@@ -2883,14 +2883,13 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
   switch(volel) {
     case 0: // radial average
       for(k = 0; k < nbins; k++)
-        if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+        if(nvals[k]) bins[k] = bins[k] / ((REAL) (nxy * nz * nvals[k]));
       break;
     case 1: // with volume element
-      nrm = step * step * step / binstep;
       for(k = 0; k < nbins; k++)
         bins[k] *= nrm;
       break;
-    case 2: // just the direct sum
+    case 2: // just the direct sum without normalization due to FFT
       break;
     default:
       fprintf(stderr, "libgrid: illegal value for volel in spherial averaging.\n");

@@ -18,8 +18,8 @@
 
 /* Binning info */
 #define BINSTEP (2.0 * M_PI / (NX * STEP))
-#define NBINS 20
-#define VOLEL 0   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
+#define NBINS 200
+#define VOLEL 1   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 
   /* Map function func() onto the grid */
   rgrid_map(grid, &func, NULL);
-  printf("Integral before = " FMT_R "\n", rgrid_integral(grid));
+  printf("Integral before = " FMT_R "\n", rgrid_integral_of_square(grid));
 
   /* FFT */
   rgrid_fft(grid);
