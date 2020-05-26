@@ -2882,9 +2882,9 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
   ny2 = ny / 2;
   nz2 = nz / 2;
   nxy = nx * ny;
-  lx = 2.0 * M_PI / ((REAL) nx) * step;
-  ly = 2.0 * M_PI / ((REAL) ny) * step;
-  lz = 2.0 * M_PI / ((REAL) nz) * step;
+  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  lz = 2.0 * M_PI / (((REAL) nz) * step);
 #pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,nxy,value,lx,ly,lz,kmax) private(ij,ijnz,k,r,i,j,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;

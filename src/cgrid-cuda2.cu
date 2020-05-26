@@ -1688,7 +1688,7 @@ __global__ void cgrid_cuda_dealias2_gpu(CUCOMPLEX *b, CUREAL kmax2, CUREAL lx, C
   else 
     kz = lz * (CUREAL) (k - nz);
 
-  if(kx*kx + ky*ky + kz*kz > kmax2) b[idx] = CUMAKE(0.0, 0.0);
+  if(kx * kx + ky * ky + kz * kz > kmax2) b[idx] = CUMAKE(0.0, 0.0);
 }
 
 /*
