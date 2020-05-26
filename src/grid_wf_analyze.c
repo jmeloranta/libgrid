@@ -767,24 +767,51 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
 }
 
 /*
- * Calculate quantum pressure ( = -(hbar * hbar / (2m)) sqrt(rho) laplace sqrt(rho)).
+ * Calculate quantum pressure ( = (hbar * hbar / (2m)) |grad sqrt(rho)|^2).
  *
  * gwf        = Wavefunction (wf *; input).
  * workspace1 = Workspace (rgrid *; input).
  * workspace2 = Workspace (rgrid *; input).
+ * workspace3 = Workspace (rgrid *; input).
  * 
  * Returns the quantum kinetic energy (REAL).
  *
  */
 
-EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3) {
 
   grid_wf_density(gwf, workspace1);
   rgrid_power(workspace1, workspace1, 0.5);
-  if(grid_analyze_method) rgrid_fft_laplace(workspace1, workspace2);
-  else rgrid_fd_laplace(workspace1, workspace2);
-  rgrid_product(workspace1, workspace2, workspace1);
-  return -(HBAR * HBAR / (2.0 * gwf->mass)) * rgrid_integral(workspace1);
+  rgrid_zero(workspace2);
+  if(grid_analyze_method) {
+    rgrid_fft(workspace1); // |grad sqrt(rho)|^2
+
+    rgrid_fft_gradient_x(workspace1, workspace3);
+    rgrid_inverse_fft_norm(workspace3);
+    rgrid_power(workspace3, workspace3, 2.0);
+    rgrid_sum(workspace2, workspace2, workspace3);
+
+    rgrid_fft_gradient_y(workspace1, workspace3);
+    rgrid_inverse_fft_norm(workspace3);
+    rgrid_power(workspace3, workspace3, 2.0);
+    rgrid_sum(workspace2, workspace2, workspace3);
+
+    rgrid_fft_gradient_z(workspace1, workspace3);
+    rgrid_inverse_fft_norm(workspace3);
+    rgrid_power(workspace3, workspace3, 2.0);
+    rgrid_sum(workspace2, workspace2, workspace3);
+  } else {
+    rgrid_fd_gradient_x(workspace1, workspace3);
+    rgrid_power(workspace3, workspace3, 2.0);
+    rgrid_sum(workspace2, workspace2, workspace3);
+    rgrid_fd_gradient_y(workspace1, workspace3);
+    rgrid_power(workspace3, workspace3, 2.0);
+    rgrid_sum(workspace2, workspace2, workspace3);
+    rgrid_fd_gradient_z(workspace1, workspace3);
+    rgrid_power(workspace3, workspace3, 2.0);
+    rgrid_sum(workspace2, workspace2, workspace3);
+  }
+  return (HBAR * HBAR / (2.0 * gwf->mass)) * rgrid_integral(workspace2);
 }
 
 /*
