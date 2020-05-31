@@ -2693,7 +2693,7 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
 
 EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace, rgrid *workspace2) {
 
-  if(grid_analyze_method == 1) { /* FFT */
+  if(grid_analyze_method) { /* FFT */
     rgrid_fft(vx);
     rgrid_fft(vy);
     rgrid_fft(vz);

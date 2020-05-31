@@ -6,6 +6,8 @@
 #include "grid.h"
 #include "cprivate.h"
 
+extern char grid_analyze_method;
+
 /*
  * Allocate wavefunction.
  *
@@ -224,8 +226,10 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, INT lx, INT hx, INT ly, INT hy, 
 
 EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 
-  if (gwf->propagator == WF_2ND_ORDER_CN || gwf->propagator == WF_4TH_ORDER_CN) return grid_wf_energy_cn(gwf, potential);
-  else return grid_wf_energy_fft(gwf, potential); /* else FFT */
+  if (gwf->propagator == WF_2ND_ORDER_CN || gwf->propagator == WF_4TH_ORDER_CN || !grid_analyze_method)
+    return grid_wf_energy_cn(gwf, potential);  /* If CN or finite difference analysis requested */
+  else
+    return grid_wf_energy_fft(gwf, potential); /* else FFT */
 }
 
 /*
