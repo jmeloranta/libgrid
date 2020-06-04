@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
   wrk3 = rgrid_clone(wrk1, "wrk3");
 
   grid_wf_velocity(gwf, wrk1, wrk2, wrk3, 1E-5);
+
   rgrid_write_grid("vx", wrk1);
   rgrid_write_grid("vy", wrk2);
   rgrid_write_grid("vz", wrk3);

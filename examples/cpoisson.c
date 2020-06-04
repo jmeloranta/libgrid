@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   /* Solve the Poisson equation (result written over the right hand side in grid) */
   cgrid_fft(grid);
   cgrid_fft_poisson(grid);   // include normalization
-  printf("Laplace expec = " FMT_R "\n", cgrid_fft_laplace_expectation_value(grid, wrk));
+  printf("Laplace expec = " FMT_R "\n", cgrid_fft_laplace_expectation_value(grid));
   cgrid_inverse_fft_norm(grid);
 
   /* Write output file (solution) */

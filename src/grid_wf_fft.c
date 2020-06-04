@@ -5,93 +5,87 @@
 
 #include "grid.h"
 
+extern char grid_analyze_method;
+
 /*
- * Calculate the momentum x component.
+ * Calculate the momentum x component: -i\hbar d/dx
  * 
  * gwf        = wavefunction for the operation (wf *).
- * momentum_x = output grid containing the momentum (rgrid *).
+ * momentum_x = output grid containing the momentum (cgrid *).
  *
  * No return value.
  *
- * TODO: Could do just half-transform so that workspace would not have to be complex.
- *
  */
 
-EXPORT void grid_wf_momentum_x(wf *gwf, rgrid *momentum_x) {
+EXPORT void grid_wf_momentum_x(wf *gwf, cgrid *momentum_x) {
 
-  cgrid *grid = gwf->grid, *cworkspace;
+  if(grid_analyze_method) {
+    cgrid_copy(momentum_x, gwf->grid);
+    cgrid_fft(momentum_x);
+    cgrid_fft_gradient_x(momentum_x, momentum_x);
+    cgrid_inverse_fft_norm(momentum_x);
+  } else cgrid_fd_gradient_x(gwf->grid, momentum_x);
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  cworkspace = gwf->cworkspace;
-  cgrid_copy(cworkspace, grid);
-  cgrid_fft(cworkspace);
-  cgrid_fft_gradient_x(cworkspace, cworkspace);
-  cgrid_inverse_fft_norm(cworkspace);
-  cgrid_multiply(cworkspace, -I * HBAR / (2.0 * gwf->mass));
-  grid_complex_re_to_real(momentum_x, cworkspace);
+  cgrid_multiply(momentum_x, -I * HBAR);
 }
 
 /*
- * Calculate the momentum y component.
+ * Calculate the momentum y component: -i\hbar d/dy
  * 
  * gwf        = wavefunction for the operation (wf *).
- * momentum_y = output grid containing the momentum (rgrid *).
+ * momentum_y = output grid containing the momentum (cgrid *).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_momentum_y(wf *gwf, rgrid *momentum_y) {
+EXPORT void grid_wf_momentum_y(wf *gwf, cgrid *momentum_y) {
 
-  cgrid *grid = gwf->grid, *cworkspace;
+  if(grid_analyze_method) {
+    cgrid_copy(momentum_y, gwf->grid);
+    cgrid_fft(momentum_y);
+    cgrid_fft_gradient_y(momentum_y, momentum_y);
+    cgrid_inverse_fft_norm(momentum_y);
+  } else cgrid_fd_gradient_x(gwf->grid, momentum_y);
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  cworkspace = gwf->cworkspace;
-  cgrid_copy(cworkspace, grid);
-  cgrid_fft(cworkspace);
-  cgrid_fft_gradient_y(cworkspace, cworkspace);
-  cgrid_inverse_fft_norm(cworkspace);
-  cgrid_multiply(cworkspace, -I * HBAR / (2.0 * gwf->mass));
-  grid_complex_re_to_real(momentum_y, cworkspace);
+  cgrid_multiply(momentum_y, -I * HBAR);
 }
 
 /*
- * Calculate the probability momentum z component.
+ * Calculate the momentum z component: -i\hbar d/dz
  * 
  * gwf        = wavefunction for the operation (wf *).
- * momentum_z = output grid containing the momentum (rgrid *).
+ * momentum_z = output grid containing the momentum (cgrid *).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_momentum_z(wf *gwf, rgrid *momentum_z) {
+EXPORT void grid_wf_momentum_z(wf *gwf, cgrid *momentum_z) {
 
-  cgrid *grid = gwf->grid, *cworkspace;
+  if(grid_analyze_method) {
+    cgrid_copy(momentum_z, gwf->grid);
+    cgrid_fft(momentum_z);
+    cgrid_fft_gradient_z(momentum_z, momentum_z);
+    cgrid_inverse_fft_norm(momentum_z);
+  } else cgrid_fd_gradient_z(gwf->grid, momentum_z);
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace");
-  cworkspace = gwf->cworkspace;
-  cgrid_copy(cworkspace, grid);
-  cgrid_fft(cworkspace);
-  cgrid_fft_gradient_z(cworkspace, cworkspace);
-  cgrid_inverse_fft_norm(cworkspace);
-  cgrid_multiply(cworkspace, -I*HBAR / (2.0 * gwf->mass));
-  grid_complex_re_to_real(momentum_z, cworkspace);
+  cgrid_multiply(momentum_z, -I * HBAR);
 }
 
 /*
- * Calculate the momentum.
+ * Calculate the momentum: -i\hbar (d/dx, d/dy, d/dz)
  *
  * gwf        = wavefunction for the operation (wf *).
- * momentum_x = x output grid containing the momentum (rgrid *).
- * momentum_y = y output grid containing the momentum (rgrid *).
- * momentum_z = z output grid containing the momentum (rgrid *).
+ * momentum_x = x output grid containing the momentum (cgrid *).
+ * momentum_y = y output grid containing the momentum (cgrid *).
+ * momentum_z = z output grid containing the momentum (cgrid *).
  *
  * No return value.
  *
  */
 
-EXPORT void grid_wf_momentum(wf *gwf, rgrid *momentum_x, rgrid *momentum_y, rgrid *momentum_z) {
+EXPORT void grid_wf_momentum(wf *gwf, cgrid *momentum_x, cgrid *momentum_y, cgrid *momentum_z) {
   
   grid_wf_momentum_x(gwf, momentum_x);
   grid_wf_momentum_y(gwf, momentum_y);
@@ -130,15 +124,14 @@ EXPORT REAL grid_wf_energy_fft(wf *gwf, rgrid *potential) {
 
 EXPORT REAL grid_wf_kinetic_energy_fft(wf *gwf) {
 
-  cgrid *cworkspace, *grid = gwf->grid;
+  cgrid *grid = gwf->grid;
+  REAL tmp;
 
-  if(!gwf->cworkspace) gwf->cworkspace = cgrid_clone(grid, "WF cworkspace");
-  cworkspace = gwf->cworkspace;
   /* delta (- k^2) fft[f(x)] / N */
-  cgrid_copy(cworkspace, gwf->grid);
-  cgrid_fft(cworkspace);
-  
-  return -HBAR * HBAR / (2.0 * gwf->mass) * cgrid_fft_laplace_expectation_value(cworkspace, cworkspace);
+  cgrid_fft(grid);  
+  tmp = -HBAR * HBAR / (2.0 * gwf->mass) * cgrid_fft_laplace_expectation_value(grid);
+  cgrid_inverse_fft_norm(grid);
+  return tmp;
 }
 
 /*
@@ -283,13 +276,15 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
 }
 
 /*
- * Calculate square of potential gradient.
+ * Calculate square of potential gradient: |\nabla V|^2 = |(dV/dx)|^2 + |(dV/dy)|^2 + |(dV/dz)|^2.
  *
  * gwf         = wavefunction (wf *).
  * sq_grad_pot = output grid (cgrid *).
  * potential   = potental input grid (cgrid *).
  *
  * No return value.
+ *
+ * TODO: Write a specific routine for this so that cworkspaces can be eliminate completely.
  *
  */
 
@@ -303,13 +298,19 @@ EXPORT void grid_wf_square_of_potential_gradient(wf *gwf, cgrid *sq_grad_pot, cg
   cworkspace2 = gwf->cworkspace2;
 
   cgrid_copy(sq_grad_pot, potential);
-  cgrid_fft(sq_grad_pot);
-  cgrid_fft_gradient_x(sq_grad_pot, cworkspace);
-  cgrid_fft_gradient_y(sq_grad_pot, cworkspace2);
-  cgrid_fft_gradient_z(sq_grad_pot, sq_grad_pot);  
-  cgrid_inverse_fft_norm(sq_grad_pot);
-  cgrid_inverse_fft_norm(cworkspace);
-  cgrid_inverse_fft_norm(cworkspace2);
+  if(grid_analyze_method) {
+    cgrid_fft(sq_grad_pot);
+    cgrid_fft_gradient_x(sq_grad_pot, cworkspace);
+    cgrid_fft_gradient_y(sq_grad_pot, cworkspace2);
+    cgrid_fft_gradient_z(sq_grad_pot, sq_grad_pot);  
+    cgrid_inverse_fft_norm(sq_grad_pot);
+    cgrid_inverse_fft_norm(cworkspace);
+    cgrid_inverse_fft_norm(cworkspace2);
+  } else {
+    cgrid_fd_gradient_x(sq_grad_pot, cworkspace);
+    cgrid_fd_gradient_y(sq_grad_pot, cworkspace2);
+    cgrid_fd_gradient_z(sq_grad_pot, sq_grad_pot);
+  }
   
   cgrid_conjugate_product(sq_grad_pot, sq_grad_pot, sq_grad_pot);
   cgrid_conjugate_product(cworkspace, cworkspace, cworkspace);

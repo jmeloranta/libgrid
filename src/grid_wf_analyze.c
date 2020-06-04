@@ -378,9 +378,9 @@ EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
 }
 
 /*
- * Calculate linear momentum expectation value <p_x>.
+ * Calculate linear momentum expectation value: <p> = mass * <probability flux>
  *
- * wf        = Wafecuntion (wf *; input).
+ * wf        = Wavefunction (wf *; input).
  * workspace = Workspace (rgrid *; input).
  *
  * Return <p_x>.
@@ -390,11 +390,11 @@ EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
 EXPORT REAL grid_wf_px(wf *gwf, rgrid *workspace) {
 
   grid_wf_probability_flux_x(gwf, workspace);
-  return rgrid_integral(workspace);
+  return rgrid_integral(workspace) * gwf->mass;
 }
 
 /*
- * Calculate linear momentum expectation value <p_y>.
+ * Calculate linear momentum expectation value: <p> = mass * <probability flux>
  *
  * wf        = Wafecuntion (wf *; input).
  * workspace = Workspace (rgrid *; input).
@@ -406,11 +406,11 @@ EXPORT REAL grid_wf_px(wf *gwf, rgrid *workspace) {
 EXPORT REAL grid_wf_py(wf *gwf, rgrid *workspace) {
 
   grid_wf_probability_flux_y(gwf, workspace);
-  return rgrid_integral(workspace);
+  return rgrid_integral(workspace) * gwf->mass;
 }
 
 /*
- * Calculate linear momentum expectation value <p_z>.
+ * Calculate linear momentum expectation value: <p> = mass * <probability flux>
  *
  * wf        = Wafecuntion (wf *; input).
  * workspace = Workspace (rgrid *; input).
@@ -422,7 +422,7 @@ EXPORT REAL grid_wf_py(wf *gwf, rgrid *workspace) {
 EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
 
   grid_wf_probability_flux_z(gwf, workspace);
-  return rgrid_integral(workspace);
+  return rgrid_integral(workspace) * gwf->mass;
 }
 
 /*
@@ -430,104 +430,104 @@ EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
  *
  * wf         = Wavefunction (wf *; input).
  * dst        = Destination for the operation (rgrid *; input).
- * workspace  = Workspace required for the operation (rgrid *; input).
+ * workspace  = Workspace required for the operation (cgrid *; input).
  *
  */
 
-EXPORT void grid_wf_lx_op(wf *wf, rgrid *dst, rgrid *workspace) {
+EXPORT void grid_wf_lx_op(wf *wf, cgrid *dst, cgrid *workspace) {
 
-  grid_wf_pz(wf, dst);       // p_z
-  rgrid_multiply_by_y(dst);   // yp_z
-  grid_wf_py(wf, workspace);       // p_y
-  rgrid_multiply_by_z(workspace);   // zp_y    
-  rgrid_difference(dst, dst, workspace); // yp_z - zp_y
+  grid_wf_momentum_z(wf, dst);       // p_z
+  cgrid_multiply_by_y(dst);   // yp_z
+  grid_wf_momentum_y(wf, workspace);       // p_y
+  cgrid_multiply_by_z(workspace);   // zp_y    
+  cgrid_difference(dst, dst, workspace); // yp_z - zp_y
 }
 
 /*
  * Calculate angular momentum L_y.
  *
  * wf         = Wavefunction (gwf *).
- * dst        = Destination for the operation (rgrid *; input).
- * workspace  = Workspace required for the operation (rgrid *; input).
+ * dst        = Destination for the operation (cgrid *; input).
+ * workspace  = Workspace required for the operation (cgrid *; input).
  *
  */
  
-EXPORT void grid_wf_ly_op(wf *wf, rgrid *dst, rgrid *workspace) {
+EXPORT void grid_wf_ly_op(wf *wf, cgrid *dst, cgrid *workspace) {
 
-  grid_wf_px(wf, dst);       // p_x
-  rgrid_multiply_by_z(dst);   // zp_x
-  grid_wf_pz(wf, workspace);       // p_z
-  rgrid_multiply_by_x(workspace);   // xp_z
-  rgrid_difference(dst, dst, workspace); // zp_x - xp_z
+  grid_wf_momentum_x(wf, dst);       // p_x
+  cgrid_multiply_by_z(dst);   // zp_x
+  grid_wf_momentum_z(wf, workspace);       // p_z
+  cgrid_multiply_by_x(workspace);   // xp_z
+  cgrid_difference(dst, dst, workspace); // zp_x - xp_z
 }
 
 /*
  * Calculate angular momentum operator L_z.
  *
  * wf         = Wavefunction (gwf *).
- * dst        = Destination for the operation (rgrid *; input).
- * workspace  = Workspace required for the operation (rgrid *; input).
+ * dst        = Destination for the operation (cgrid *; input).
+ * workspace  = Workspace required for the operation (cgrid *; input).
  *
  */
  
-EXPORT void grid_wf_lz_op(wf *wf, rgrid *dst, rgrid *workspace) {
+EXPORT void grid_wf_lz_op(wf *wf, cgrid *dst, cgrid *workspace) {
 
-  grid_wf_py(wf, dst);       // p_y
-  rgrid_multiply_by_x(dst);   // xp_y
-  grid_wf_px(wf, workspace);       // p_x
-  rgrid_multiply_by_y(workspace);   // yp_x
-  rgrid_difference(dst, dst, workspace); // xp_y - yp_x
+  grid_wf_momentum_y(wf, dst);       // p_y
+  cgrid_multiply_by_x(dst);   // xp_y
+  grid_wf_momentum_x(wf, workspace);       // p_x
+  cgrid_multiply_by_y(workspace);   // yp_x
+  cgrid_difference(dst, dst, workspace); // xp_y - yp_x
 }
 
 /*
  * Calculate angular momentum expectation value <L_x>.
  *
  * wf         = Wavefunction (wf *; input).
- * workspace1 = Workspace required for the operation (rgrid *; input).
- * workspace2 = Workspace required for the operation (rgrid *; input).
+ * workspace1 = Workspace required for the operation (cgrid *; input).
+ * workspace2 = Workspace required for the operation (cgrid *; input).
  *
  * Return <L_x> (L_x = y p_z - z p_y).
  *
  */
 
-EXPORT REAL grid_wf_lx(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_lx(wf *wf, cgrid *workspace1, cgrid *workspace2) {
 
   grid_wf_lx_op(wf, workspace1, workspace2);
-  return rgrid_integral(workspace1);
+  return CREAL(cgrid_integral_of_conjugate_product(wf->grid, workspace1));
 }
 
 /*
  * Calculate angular momentum expectation value <L_y>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace1 = Workspace required for the operation (rgrid *; input).
- * workspace2 = Workspace required for the operation (rgrid *; input).
+ * workspace1 = Workspace required for the operation (cgrid *; input).
+ * workspace2 = Workspace required for the operation (cgrid *; input).
  *
  * Return <L_y> (L_y = z * p_x - x * p_z).
  *
  */
  
-EXPORT REAL grid_wf_ly(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_ly(wf *wf, cgrid *workspace1, cgrid *workspace2) {
 
   grid_wf_ly_op(wf, workspace1, workspace2);
-  return rgrid_integral(workspace1);
+  return CREAL(cgrid_integral_of_conjugate_product(wf->grid, workspace1));
 }
 
 /*
  * Calculate angular momentum expectation value <L_z>.
  *
  * wf         = Wavefunction (gwf *).
- * workspace1 = Workspace required for the operation (rgrid *; input).
- * workspace2 = Workspace required for the operation (rgrid *; input).
+ * workspace1 = Workspace required for the operation (cgrid *; input).
+ * workspace2 = Workspace required for the operation (cgrid *; input).
  *
  * Return <L_z> (L_z = x p_y - y p_x).
  *
  */
  
-EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_lz(wf *wf, cgrid *workspace1, cgrid *workspace2) {
 
   grid_wf_lz_op(wf, workspace1, workspace2);
-  return rgrid_integral(workspace1);
+  return CREAL(cgrid_integral_of_conjugate_product(wf->grid, workspace1));
 }
 
 /*
@@ -537,8 +537,8 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  * lx         = Value of l_x (REAL *).
  * ly         = Value of l_y (REAL *).
  * lz         = Value of l_z (REAL *).
- * workspace1 = Workspace required for the operation (rgrid *; input).
- * workspace2 = Workspace required for the operation (rgrid *; input).
+ * workspace1 = Workspace required for the operation (cgrid *; input).
+ * workspace2 = Workspace required for the operation (cgrid *; input).
  *
  * NOTE: The old df_driver_L() routine returned angular momentum * mass.
  *       This routine does not include the mass.
@@ -547,7 +547,7 @@ EXPORT REAL grid_wf_lz(wf *wf, rgrid *workspace1, rgrid *workspace2) {
  *
  */
  
-EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace1, rgrid *workspace2) {
+EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, cgrid *workspace1, cgrid *workspace2) {
 
   *lx = grid_wf_lx(wf, workspace1, workspace2);
   *ly = grid_wf_ly(wf, workspace1, workspace2);
@@ -561,19 +561,19 @@ EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, rgrid *workspace1, r
  * omega_x    = angular frequency in a.u., x-axis (REAL, input)
  * omega_y    = angular frequency in a.u., y-axis (REAL, input)
  * omega_z    = angular frequency in a.u., z-axis (REAL, input)
- * workspace1 = Workspace required for the operation (rgrid *).
- * workspace2 = Workspace required for the operation (rgrid *).
+ * workspace1 = Workspace required for the operation (cgrid *).
+ * workspace2 = Workspace required for the operation (cgrid *).
  *
  * Returns the rotational energy.
  *
  */
 
-EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL omega_z, rgrid *workspace1, rgrid *workspace2) {
+EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL omega_z, cgrid *workspace1, cgrid *workspace2) {
 
   REAL lx, ly, lz;
 
   grid_wf_l(gwf, &lx, &ly, &lz, workspace1, workspace2);
-  return -(omega_x * lx * gwf->mass) - (omega_y * ly * gwf->mass) - (omega_z * lz * gwf->mass);
+  return -(omega_x * lx + omega_y * ly + omega_z * lz);
 }
 
 /*

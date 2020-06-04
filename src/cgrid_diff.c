@@ -851,22 +851,19 @@ EXPORT void cgrid_fft_laplace_z(cgrid *grid, cgrid *laplace)  {
  * Calculate expectation value of laplace operator in the Fourier space (int grid^* grid'').
  *
  * grid    = source grid for the operation (in Fourier space) (cgrid *; input).
- * laplace = laplacian of the grid (input) (cgrid *; output).
  *
  * Returns the expectation value (REAL).
  *
  */
 
-EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid, cgrid *laplace)  {
+EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid)  {
 
   INT i, j, k, ij, ijnz, nx, ny, nz, nxy, nx2, ny2, nz2;
   REAL kx, ky, kz, lx, ly, lz, step, norm, sum = 0.0, ssum;
-  REAL complex *lvalue = laplace->value;
-
-  if(grid != laplace) cgrid_copy(laplace, grid);
+  REAL complex *lvalue = grid->value;
 
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_fft_laplace_expectation_value(laplace, &sum)) return sum;
+  if(cuda_status() && !cgrid_cuda_fft_laplace_expectation_value(grid, &sum)) return sum;
 #endif
 
   /* int f*(x) f''(x) dx */
