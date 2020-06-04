@@ -18,7 +18,7 @@
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
 #define NGPUS 1
-int gpus[NGPUS] = {3};
+int gpus[NGPUS] = {0};
 #endif
 
 /* Equation to be integrated */
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   /* Map the right hand side to the grid */
   cgrid_map(grid, gaussian, NULL);
 
-  value = cgrid_integral_of_square(grid);
+  value = cgrid_integral(grid);
   printf("Integral of square real space = (" FMT_R "," FMT_R ")\n", CREAL(value), CIMAG(value));
   
   return 0;

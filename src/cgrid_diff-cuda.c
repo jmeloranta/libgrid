@@ -368,8 +368,7 @@ EXPORT char cgrid_cuda_fft_laplace_z(cgrid *src, cgrid *dst) {
 
 EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value) {
 
-  REAL step = laplace->step, norm = laplace->fft_norm;
-  REAL complex value2;
+  CUCOMPLEX value2;
 
   if(laplace->host_lock) {
     cuda_remove_block(laplace->value, 1);
@@ -378,13 +377,9 @@ EXPORT char cgrid_cuda_fft_laplace_expectation_value(cgrid *laplace, REAL *value
 
   if(cuda_one_block_policy(laplace->value, laplace->grid_len, laplace->cufft_handle, laplace->id, 1) < 0) return -1;
 
-  cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->step, laplace->nx, laplace->ny, laplace->nz, (CUCOMPLEX *) &value2);
-  *value = CREAL(value2);
+  cgrid_cuda_fft_laplace_expectation_valueW(cuda_block_address(laplace->value), laplace->step, laplace->nx, laplace->ny, laplace->nz, &value2);
 
-  if(laplace->nx != 1) *value *= step;
-  if(laplace->ny != 1) *value *= step;
-  if(laplace->nz != 1) *value *= step;
-  *value *= norm;
+  *value = value2.x * laplace->fft_norm2;
 
   return 0;
 }

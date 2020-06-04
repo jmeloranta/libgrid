@@ -2978,9 +2978,9 @@ EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REA
   nxy = nx * ny;
   step = grid->step;
   
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = M_PI / (((REAL) nz - 1) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = M_PI / (step * (REAL) (nz - 1));
 
 #pragma omp parallel for firstprivate(nx2,ny2,nz2,func,farg,nx,ny,nz,nxy,step,value,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {

@@ -162,9 +162,9 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_fft(gwf, time_mass)) return;
 #endif
   
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = 2.0 * M_PI / (((REAL) nz) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = 2.0 * M_PI / (step * (REAL) nz);
 #pragma omp parallel for firstprivate(lx,ly,lz,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;
@@ -228,9 +228,9 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
   if(cuda_status() && !grid_cuda_wf_propagate_kinetic_cfft(gwf, time_mass, cnorm)) return;
 #endif
   
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = 2.0 * M_PI / (((REAL) nz) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = 2.0 * M_PI / (step * (REAL) nz);
 #pragma omp parallel for firstprivate(lx,ly,lz,nx,ny,nz,nx2,ny2,nz2,nxy,step,value,time_mass,kx0,ky0,kz0,cnorm) private(i,j,ij,ijnz,k,kx,ky,kz,ii,jj,kk,tot) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     i = ij / ny;

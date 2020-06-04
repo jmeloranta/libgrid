@@ -486,7 +486,7 @@ EXPORT void rgrid_fft_gradient_x(rgrid *grid, rgrid *gradient_x) {
   nz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
   nx2 = nx / 2;
 
 #pragma omp parallel for firstprivate(nx2,nx,ny,nz,nxy,step,gxvalue,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
@@ -532,7 +532,7 @@ EXPORT void rgrid_fft_gradient_y(rgrid *grid, rgrid *gradient_y) {
   nz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
   ny2 = ny / 2;
 
 #pragma omp parallel for firstprivate(ny2,nx,ny,nz,nxy,step,gyvalue,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
@@ -578,7 +578,7 @@ EXPORT void rgrid_fft_gradient_z(rgrid *grid, rgrid *gradient_z) {
   nz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
-  lz = M_PI / (((REAL) nz - 1) * step);
+  lz = M_PI / (step * (REAL) (nz - 1));
   nz2 = nz / 2;
 
 #pragma omp parallel for firstprivate(nz2,nx,ny,nz,nxy,step,gzvalue,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
@@ -628,9 +628,9 @@ EXPORT void rgrid_fft_laplace(rgrid *grid, rgrid *laplace)  {
   nz2 = nz / 2;
   nxy = nx * ny;
   step = grid->step;
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = M_PI / (((REAL) nz - 1) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = M_PI / (step * (REAL) (nz - 1));
   
 #pragma omp parallel for firstprivate(nx2,ny2,nz2,nx,ny,nz,nxy,step,lvalue,lx,ly,lz) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
@@ -688,7 +688,7 @@ EXPORT void rgrid_fft_laplace_x(rgrid *grid, rgrid *laplace_x) {
   nz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
   nx2 = nx / 2;
 
 #pragma omp parallel for firstprivate(nx2,nx,ny,nz,nxy,step,gxvalue,lx) private(i,ij,ijnz,k,kx) default(none) schedule(runtime)
@@ -734,7 +734,7 @@ EXPORT void rgrid_fft_laplace_y(rgrid *grid, rgrid *laplace_y) {
   nz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
   ny2 = ny / 2;
 
 #pragma omp parallel for firstprivate(ny2,nx,ny,nz,nxy,step,gyvalue,ly) private(j,ij,ijnz,k,ky) default(none) schedule(runtime)
@@ -780,7 +780,7 @@ EXPORT void rgrid_fft_laplace_z(rgrid *grid, rgrid *laplace_z) {
   nz = grid->nz2 / 2;
   nxy = nx * ny;
   step = grid->step;
-  lz = M_PI / (((REAL) nz - 1) * step);
+  lz = M_PI / (step * (REAL) (nz - 1));
   nz2 = nz / 2;
 
 #pragma omp parallel for firstprivate(nz2,nx,ny,nz,nxy,step,gzvalue,lz) private(ij,ijnz,k,kz) default(none) schedule(runtime)
@@ -829,9 +829,9 @@ EXPORT REAL rgrid_fft_laplace_expectation_value(rgrid *grid, rgrid *laplace)  {
   nxy = nx * ny;
   step = grid->step;
 
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = M_PI / (((REAL) nz - 1) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = M_PI / (step * (REAL) (nz - 1));
   
 #pragma omp parallel for firstprivate(nx2,ny2,nz2,norm,nx,ny,nz,nxy,step,lvalue,lx,ly,lz) private(ssum,i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime) reduction(+:sum)
   for(ij = 0; ij < nxy; ij++) {
@@ -963,9 +963,9 @@ EXPORT void rgrid_fft_div(rgrid *div, rgrid *fx, rgrid *fy, rgrid *fz) {
   nz = div->nz2 / 2;
   nxy = nx * ny;
   step = div->step;
-  lx = 2.0 * M_PI / (((REAL) nx) * step);
-  ly = 2.0 * M_PI / (((REAL) ny) * step);
-  lz = M_PI / (((REAL) nz - 1) * step);
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = M_PI / (step * (REAL) (nz - 1));
   nx2 = nx / 2;
   ny2 = ny / 2;
   nz2 = nz / 2;

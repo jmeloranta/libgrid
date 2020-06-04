@@ -15,6 +15,8 @@
 #define NZ 256
 #define STEP 0.2
 
+#undef USE_CUDA
+
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
 #define NGPUS 1
@@ -33,7 +35,7 @@ REAL complex gaussian(void *arg, REAL x, REAL y, REAL z) {
 
 int main(int argc, char **argv) {
   
-  cgrid *grid;
+  cgrid *grid, *wrk;
   
   /* Initialize with all OpenMP threads */
   grid_threads_init(0);
@@ -45,6 +47,7 @@ int main(int argc, char **argv) {
   
   /* Allocate real grid for the right hand side (and the solution) */
   grid = cgrid_alloc(NX, NY, NZ, STEP, CGRID_PERIODIC_BOUNDARY, NULL, "Poisson1");
+  wrk = cgrid_clone(grid, "workspace");
 
   /* Map the right hand side to the grid */
   cgrid_map(grid, gaussian, NULL);
@@ -55,6 +58,7 @@ int main(int argc, char **argv) {
   /* Solve the Poisson equation (result written over the right hand side in grid) */
   cgrid_fft(grid);
   cgrid_fft_poisson(grid);   // include normalization
+  printf("Laplace expec = " FMT_R "\n", cgrid_fft_laplace_expectation_value(grid, wrk));
   cgrid_inverse_fft_norm(grid);
 
   /* Write output file (solution) */
