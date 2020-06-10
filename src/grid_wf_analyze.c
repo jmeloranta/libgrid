@@ -738,7 +738,7 @@ EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nb
 }
 
 /*
- * Calculate total classical kinetic energy minus the quantum pressure: int 1/2 * mass * rho * |v|^2 d^3
+ * Calculate classical kinetic energy: int 1/2 * mass * rho * |v|^2 d^3
  * This is the kinetic energy due to classical flow / motion.
  *
  * wf         = Wavefunction (wf *; input).
@@ -767,7 +767,7 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
 }
 
 /*
- * Calculate quantum pressure energy: \frac{\hbar^2}{2m} |\nabla \sqrt{\rho})|^2
+ * Calculate quantum pressure energy: \frac{\hbar^2}{2m} \int |\nabla \sqrt{\rho})|^2
  *
  * gwf        = Wavefunction (wf *; input).
  * workspace1 = Workspace (rgrid *; input).
@@ -878,9 +878,13 @@ EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl, REAL exponent) {
 
 EXPORT REAL grid_wf_superfluid(wf *gwf) {
 
-  REAL n, ngnd, tmp;
   cgrid *grid = gwf->grid;
 
+#if 1 // Real space
+  // |\int\psi d^3r|^2 / (N * V)
+  return (csqnorm(cgrid_integral(gwf->grid)) / (grid_wf_norm(gwf) * (grid->step * grid->step * grid->step * (REAL) (grid->nx * grid->ny * grid->nz))));
+#else // Reciprocal space, amplitude of the DC component
+  REAL n, ngnd, tmp;
   cgrid_fft(grid);
   ngnd = csqnorm(cgrid_value_at_index(grid, 0, 0, 0));
   tmp = grid->step;
@@ -889,6 +893,23 @@ EXPORT REAL grid_wf_superfluid(wf *gwf) {
   grid->step = tmp;
   cgrid_inverse_fft_norm(grid);
   return ngnd / n;
+#endif
+}
+
+/*
+ * Calculate the superfluid fraction: n_s = n_gnd / n given the ground state wave function (condensate).
+ *
+ * wf         = Wave function for which the temperature is calculated (wf *; input).
+ * gnd        = Wave function for the ground state (condensate) (wf *; input).
+ *
+ * Returns the fraction between 0 and 1.
+ *
+ */
+
+EXPORT REAL grid_wf_superfluid2(wf *gwf, wf *gnd) {
+
+  // \frac{1}{N_gwf} \frac{1}{N_gnd} |\int gwf^* x gnd d^3r|^2
+  return csqnorm(cgrid_integral_of_conjugate_product(gnd->grid, gwf->grid)) / (grid_wf_norm(gwf) * grid_wf_norm(gnd));
 }
 
 /*
