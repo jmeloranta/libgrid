@@ -2909,3 +2909,53 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
     }
   }
 }
+
+/*
+ * Map function onto grid in the Fourier space.
+ *
+ * grid = destination grid for the operation (cgrid *; output).
+ * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL); input).
+ *        The first argument (void *) is for external user specified data
+ *        and kx,ky,kz are the coordinates (REAL) where the function is evaluated.
+ * farg = pointer to user specified data (void *; input).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void cgrid_mapk(cgrid *grid, REAL complex (*func)(void *arg, REAL kx, REAL ky, REAL kz), void *farg) {
+
+  INT i, j, k, ij, ijnz, nx = grid->nx, ny = grid->ny, nxy = nx * ny, nz = grid->nz, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
+  REAL kx, ky, kz, step = grid->step, lx, ly, lz;
+  REAL kx0 = grid->kx0, ky0 = grid->ky0, kz0 = grid->kz0;
+  REAL complex *value = grid->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status()) cuda_remove_block(value, 0);
+#endif
+  lx = 2.0 * M_PI / (step * (REAL) nx);
+  ly = 2.0 * M_PI / (step * (REAL) ny);
+  lz = 2.0 * M_PI / (step * (REAL) nz);
+#pragma omp parallel for firstprivate(farg,nx,ny,nz,nxy,step,func,value,kx0,ky0,kz0,lx,ly,lz,nx2,ny2,nz2) private(i,j,ij,ijnz,k,kx,ky,kz) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    i = ij / ny;
+    j = ij % ny;
+    if (i <= nx2)
+      kx = ((REAL) i) * lx - kx0;
+    else
+      kx = ((REAL) (i - nx)) * lx - kx0;
+
+    if (j <= ny2)
+      ky = ((REAL) j) * ly - ky0;
+    else
+      ky = ((REAL) (j - ny)) * ly - ky0;
+    for(k = 0; k < nz; k++) {
+      if (k <= nz2)
+        kz = ((REAL) k) * lz - kz0; 
+      else
+        kz = ((REAL) (k - nz)) * lz - kz0;
+      value[ijnz + k] = func(farg, kx, ky, kz);
+    }
+  }
+}
