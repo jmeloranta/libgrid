@@ -882,7 +882,7 @@ EXPORT REAL grid_wf_superfluid(wf *gwf) {
 
 #if 1 // Real space
   // |\int\psi d^3r|^2 / (N * V)
-  return (csqnorm(cgrid_integral(gwf->grid)) / (grid_wf_norm(gwf) * (grid->step * grid->step * grid->step * (REAL) (grid->nx * grid->ny * grid->nz))));
+  return (csqnorm(cgrid_integral(grid)) / (grid_wf_norm(gwf) * (grid->step * grid->step * grid->step * (REAL) (grid->nx * grid->ny * grid->nz))));
 #else // Reciprocal space, amplitude of the DC component
   REAL n, ngnd, tmp;
   cgrid_fft(grid);

@@ -2717,13 +2717,13 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
       }
     }
   }
+  nrm = step * step * step / binstep;
   switch(volel) {
     case 0: // radial average
       for(k = 0; k < nbins; k++)
-        if(nvals[k]) bins[k] = bins[k] / (REAL) nvals[k];
+        if(nvals[k]) bins[k] *= nrm / (binstep * binstep * (REAL) nvals[k]);
       break;
     case 1: // with volume element
-      nrm = step * step * step / binstep;
       for(k = 0; k < nbins; k++)
         bins[k] *= nrm;
       break;
@@ -2813,7 +2813,7 @@ EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgr
   switch(volel) {
     case 0: // radial average
       for(k = 0; k < nbins; k++)
-        if(nvals[k]) bins[k] = bins[k] / ((REAL) (nxy * nz * nvals[k])); // divide by nx * ny * nz due to FFT
+        if(nvals[k]) bins[k] *= nrm / (binstep * binstep * (REAL) nvals[k]);
       break;
     case 1: // with volume element
       for(k = 0; k < nbins; k++)
