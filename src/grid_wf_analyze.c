@@ -600,6 +600,7 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
 
   INT i;
+  REAL step = gwf->grid->step;
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
@@ -617,7 +618,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
   rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
-    bins[i] *= 0.5 * gwf->mass;
+    bins[i] *= 0.5 * gwf->mass * step * step * step / binstep;
 }
 
 /*
@@ -646,6 +647,7 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
 EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, rgrid *workspace5, REAL eps) {
 
   INT i;
+  REAL step = gwf->grid->step;
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
@@ -665,7 +667,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
   rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
-    bins[i] *= 0.5 * gwf->mass;
+    bins[i] *= 0.5 * gwf->mass * step * step * step / binstep;
 }
 
 /*
@@ -693,6 +695,7 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
 EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *workspace1, rgrid *workspace2, rgrid *workspace3, rgrid *workspace4, REAL eps) {
 
   INT i;
+  REAL step = gwf->grid->step;
 
   grid_wf_velocity(gwf, workspace1, workspace2, workspace3, eps);
 
@@ -712,11 +715,11 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
   rgrid_spherical_average_reciprocal(workspace1, workspace2, workspace3, bins, binstep, nbins, 1);
 
   for(i = 0; i < nbins; i++)
-    bins[i] *= 0.5 * gwf->mass;
+    bins[i] *= 0.5 * gwf->mass * step * step * step / binstep;
 }
 
 /*
- * Calculate total spherical occupation numbers in the Fourier space, n(|k|). Integral over n(|k|) dk
+ * Calculate average spherical occupation numbers in the Fourier space, n(|k|). Sum over n(|k|)
  * gives the total number of particles.
  *
  * gwf        = Wave function to be analyzed (wf *; input).
@@ -731,10 +734,42 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 
 EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nbins, cgrid *cworkspace) {
 
+  INT i;
+  REAL step = gwf->grid->step;
+
+  cgrid_copy(cworkspace, gwf->grid);
+  cgrid_fft(cworkspace);
+
+  cgrid_spherical_average_reciprocal(cworkspace, NULL, NULL, bins, binstep, nbins, 0);
+  for (i = 0; i < nbins; i++)
+    bins[i] *= step * step * step;
+}
+
+/*
+ * Calculate total spherical occupation numbers in the Fourier space, n(|k|). Sum over n(|k|)
+ * gives the total number of particles.
+ *
+ * gwf        = Wave function to be analyzed (wf *; input).
+ * bins       = Averages in k-space (REAL *; output). The array length is nbins.
+ * binstep    = Step length in k-space in atomic units (REAL; input).
+ * nbins      = Number of bins to use (INT; input).
+ * cworkspace = Workspace (cgrid *).
+ *
+ * No return value.
+ *
+ */
+
+EXPORT void grid_wf_total_occupation(wf *gwf, REAL *bins, REAL binstep, INT nbins, cgrid *cworkspace) {
+
+  INT i;
+  REAL step = gwf->grid->step;
+
   cgrid_copy(cworkspace, gwf->grid);
   cgrid_fft(cworkspace);
 
   cgrid_spherical_average_reciprocal(cworkspace, NULL, NULL, bins, binstep, nbins, 1);
+  for (i = 0; i < nbins; i++)
+    bins[i] *= step * step * step;
 }
 
 /*
