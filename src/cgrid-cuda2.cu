@@ -45,8 +45,12 @@ __global__ void cgrid_cuda_fft_convolute_gpu(CUCOMPLEX *dst, CUCOMPLEX *src1, CU
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
+
+  dst[idx] = (1.0 - 2.0 * (CUREAL) ((i + j + k) & 1)) * src1[idx] * src2[idx];  // avoid branching
+#if 0
   if((i + j + k) & 1) dst[idx] = -src1[idx] * src2[idx];
   else dst[idx] = src1[idx] * src2[idx];
+#endif
 }
 
 /*
@@ -854,30 +858,55 @@ extern "C" void cgrid_cuda_constantW(gpu_mem_block *dst, CUCOMPLEX c, INT nx, IN
  * Block init (zero elements).
  *
  * blocks  = Block table (CUCOMPLEX *; output).
- * nblocks = Number of blocks in table (INT; input).
  *
  */
 
-__global__ void cgrid_cuda_block_init(CUCOMPLEX *blocks, INT nblocks) {
+__global__ void cgrid_cuda_block_init(CUCOMPLEX *blocks) {
 
-  INT i;
-
-  for(i = 0; i < nblocks; i++) blocks[i].x = blocks[i].y = 0.0;
+  blocks[blockIdx.x * blockDim.x + threadIdx.x] = CUMAKE(0.0, 0.0);
 }
 
 /*
- * Block reduction.
+ * Reduce single block by CUDA_THREADS_PER_BLOCK^3.
  *
- * blocks  = Block list to reduce (CUCOMPLEX *; input/output). blocks[0] will contain the reduced value.
- * nblocks = Number of blocks (INT; input).
+ * blocks  = Block to reduce (CUCOMPLEX *; input/output).
+ *
+ * TODO: There are more efficient ways to do this (nvidia reduction PDF).
  *
  */
 
-__global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks, INT nblocks) {
+__global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks) {
 
-  INT i;
+  INT s;
+  extern __shared__ CUCOMPLEX shdata[];  // size number of threads
 
-  for(i = 1; i < nblocks; i++) blocks[0] = blocks[0] + blocks[i];
+  shdata[threadIdx.x] = blocks[blockIdx.x * blockDim.x + threadIdx.x];
+  __syncthreads();
+
+  for (s = blockDim.x / 2; s > 0; s >>= 1) {
+    if(threadIdx.x < s) shdata[threadIdx.x] = shdata[threadIdx.x] + shdata[threadIdx.x + s];
+    __syncthreads();
+  }
+
+  if(threadIdx.x == 0) blocks[blockIdx.x] = shdata[0];
+}
+
+/*
+ * Reduce all blocks.
+ *
+ * blocks  = Blocks to be reduced (CUCOMPLEX; input/output). blocks[0] will contain the reduced value.
+ * nblocks = Total number of blocks (INT; input).
+ *
+ */
+
+extern "C" void cgrid_cuda_reduce_all(CUCOMPLEX *blocks, INT nblocks) {
+
+  INT i, thrs = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
+
+  for(i = nblocks / thrs; i > 0; i /= thrs) {
+    cgrid_cuda_block_reduce<<<i, thrs, sizeof(CUCOMPLEX) * thrs>>>(blocks);
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK; // make sure we get to the end...
+  }
 }
 
 /*
@@ -933,18 +962,18 @@ extern "C" void cgrid_cuda_integralW(gpu_mem_block *grid, INT nx, INT ny, INT nz
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);  // reduce over blocks
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs
@@ -1029,22 +1058,22 @@ extern "C" void cgrid_cuda_integral_regionW(gpu_mem_block *grid, INT il, INT iu,
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_region_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], il, iu, jl, ju, kl, ku, nnx1, nny1, nz, segx, segy);
     segx += dsegx1;
     segy += dsegy1;
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_region_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], il, iu, jl, ju, kl, ku, nnx2, nny2, nz, segx, segy);
     segx += dsegx2;
     segy += dsegy2;
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs
@@ -1111,18 +1140,18 @@ extern "C" void cgrid_cuda_integral_of_squareW(gpu_mem_block *grid, INT nx, INT 
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_square_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_square_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs
@@ -1196,18 +1225,18 @@ extern "C" void cgrid_cuda_integral_of_conjugate_productW(gpu_mem_block *grid, g
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_conjugate_product_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) SRC->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_integral_of_conjugate_product_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) GRID->data[i], (CUCOMPLEX *) SRC->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs
@@ -1281,18 +1310,18 @@ extern "C" void cgrid_cuda_grid_expectation_valueW(gpu_mem_block *dgrid, gpu_mem
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DGRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DGRID->data[i], (CUCOMPLEX *) OPGRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx1, nny1, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DGRID->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUCOMPLEX)>>>((CUCOMPLEX *) DGRID->data[i], (CUCOMPLEX *) OPGRID->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], nnx2, nny2, nz);
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs

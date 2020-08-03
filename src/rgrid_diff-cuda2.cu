@@ -906,8 +906,8 @@ __global__ void rgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUREA
  *
  */
 
-extern __global__ void rgrid_cuda_block_init(CUREAL *, INT);
-extern __global__ void rgrid_cuda_block_reduce(CUREAL *, INT);
+extern __global__ void rgrid_cuda_block_init(CUREAL *);
+extern "C" void rgrid_cuda_reduce_all(CUREAL *, INT);
 
 extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace, CUREAL step, INT nx, INT ny, INT nz, CUREAL *value) {
 
@@ -924,23 +924,23 @@ extern "C" void rgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *laplace
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(LAPLACE->GPUs[i]);
-    rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
+    rgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUREAL *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     rgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) LAPLACE->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], 
                                2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step),
                                step, nx, nny1, nzz, ny, nx / 2, ny / 2, nzz / 2, seg);
-    rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
+    rgrid_cuda_reduce_all((CUREAL *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
     seg += nny1;
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(LAPLACE->GPUs[i]);
-    rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
+    rgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUREAL *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     rgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) LAPLACE->data[i], (CUREAL *) grid_gpu_mem_addr->data[i], 
                                2.0 * M_PI / (((REAL) nx) * step), 2.0 * M_PI / (((REAL) ny) * step), M_PI / (((REAL) nzz - 1) * step),
                                step, nx, nny2, nzz, ny, nx / 2, ny / 2, nzz / 2, seg);
-    rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
+    rgrid_cuda_reduce_all((CUREAL *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
     seg += nny2;
   }
 

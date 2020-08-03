@@ -889,8 +889,8 @@ __global__ void cgrid_cuda_fft_laplace_expectation_value_gpu(CUCOMPLEX *b, CUCOM
  *
  */
 
-extern __global__ void cgrid_cuda_block_init(CUCOMPLEX *, INT);
-extern __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *, INT);
+extern __global__ void cgrid_cuda_block_init(CUCOMPLEX *);
+extern "C" void cgrid_cuda_reduce_all(CUCOMPLEX *, INT);
 
 extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CUREAL step, INT nx, INT ny, INT nz, CUCOMPLEX *value) {
 
@@ -909,22 +909,22 @@ extern "C" void cgrid_cuda_fft_laplace_expectation_valueW(gpu_mem_block *dst, CU
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], lx, ly, lz, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx1;
     segy += dsegy1;
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DST->GPUs[i]);
-    cgrid_cuda_block_init<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     cgrid_cuda_fft_laplace_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) grid_gpu_mem_addr->data[i], lx, ly, lz, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx2;
     segy += dsegy2;
-    cgrid_cuda_block_reduce<<<1,1>>>((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32);
+    cgrid_cuda_reduce_all((CUCOMPLEX *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs

@@ -547,8 +547,8 @@ __global__ void grid_cuda_grid_expectation_value_gpu(CUCOMPLEX *dgrid, CUREAL *o
  *
  */
 
-extern __global__ void rgrid_cuda_block_init(CUREAL *, INT);
-extern __global__ void rgrid_cuda_block_reduce(CUREAL *, INT);
+extern __global__ void rgrid_cuda_block_init(CUREAL *);
+extern "C" void rgrid_cuda_reduce_all(CUREAL *, INT);
 
 extern "C" void grid_cuda_grid_expectation_valueW(gpu_mem_block *dgrid, gpu_mem_block *opgrid, INT nx, INT ny, INT nz, CUREAL *value) {
 
@@ -565,20 +565,20 @@ extern "C" void grid_cuda_grid_expectation_valueW(gpu_mem_block *dgrid, gpu_mem_
 
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(DGRID->GPUs[i]);
-    rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
+    rgrid_cuda_block_init<<<b31/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUREAL *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     grid_cuda_grid_expectation_value_gpu<<<blocks1,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) DGRID->data[i], (CUREAL *) OPGRID->data[i], 
                                                                                 (CUREAL *) grid_gpu_mem_addr->data[i], nnx1, ny, nz, nzz);
-    rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b31);
+    rgrid_cuda_reduce_all((CUREAL *) grid_gpu_mem_addr->data[i], b31); // reduce over blocks
   }
 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(DGRID->GPUs[i]);
-    rgrid_cuda_block_init<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
+    rgrid_cuda_block_init<<<b32/CUDA_THREADS_PER_BLOCK,CUDA_THREADS_PER_BLOCK>>>((CUREAL *) grid_gpu_mem_addr->data[i]);
     // Blocks, Threads, dynamic memory size
     grid_cuda_grid_expectation_value_gpu<<<blocks2,threads,s*sizeof(CUREAL)>>>((CUCOMPLEX *) DGRID->data[i], (CUREAL *) OPGRID->data[i], 
                                                                                 (CUREAL *) grid_gpu_mem_addr->data[i], nnx2, ny, nz, nzz);
-    rgrid_cuda_block_reduce<<<1,1>>>((CUREAL *) grid_gpu_mem_addr->data[i], b32);
+    rgrid_cuda_reduce_all((CUREAL *) grid_gpu_mem_addr->data[i], b32); // reduce over blocks
   }
 
   // Reduce over GPUs

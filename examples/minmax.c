@@ -1,7 +1,7 @@
 /*
- * Example: Integrate over gaussian.
+ * Example: minimum and maximum values of grid.
  *
- * The result should be equal to 1.
+ * The result should be equal to -1 (min) and +1 (max).
  *
  */
 
@@ -14,6 +14,8 @@
 #define NY 256
 #define NZ 256
 #define STEP 0.2
+
+//#undef USE_CUDA
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
@@ -44,12 +46,13 @@ int main(int argc, char **argv) {
 #endif
   
   /* Allocate real grid for the right hand side (and the solution) */
-  grid = rgrid_alloc(NX, NY, NZ, STEP, RGRID_PERIODIC_BOUNDARY, NULL, "Poisson1");
+  grid = rgrid_alloc(NX, NY, NZ, STEP, RGRID_PERIODIC_BOUNDARY, NULL, "minmax");
 
   /* Map the right hand side to the grid */
   rgrid_map(grid, gaussian, NULL);
 
-  printf("Integral = " FMT_R "\n", rgrid_integral(grid));
+  printf("Minimum = " FMT_R "\n", rgrid_min(grid));
+  printf("Maximum = " FMT_R "\n", rgrid_max(grid));
 
   return 0;
 }

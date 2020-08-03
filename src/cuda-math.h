@@ -138,3 +138,6 @@ __device__ inline CUREAL CUCSQNORM(CUCOMPLEX val) {
 
   return val.x * val.x + val.y * val.y;
 }
+
+#define MAX(x,y) ((x > y)?(x):(y))
+#define MIN(x,y) ((x < y)?(x):(y))
