@@ -14,6 +14,8 @@
  * based on the value of space variable. The latter also keeps track of the actual index so that
  * routines that need to access proper grid indices can do so.
  *
+ * TODO: These are far from optimal and slow.
+ *
  */
 
 #include <stdio.h>

@@ -101,12 +101,14 @@ extern "C" void cgrid_cuda_fft_convoluteW(gpu_mem_block *dst, gpu_mem_block *src
 __global__ void cgrid_cuda_abs_power_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, CUREAL x, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  CUCOMPLEX s;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
 
-  dst[idx].x = POW(CUCREAL(src[idx]) * CUCREAL(src[idx]) + CUCIMAG(src[idx]) * CUCIMAG(src[idx]), x / 2.0);
+  s = src[idx];
+  dst[idx].x = POW(s.x * s.x + s.y * s.y, x / 2.0);
   dst[idx].y = 0.0;
 }
 
@@ -1690,6 +1692,8 @@ extern "C" void cgrid_cuda_multiply_by_zW(gpu_mem_block *dst, CUREAL z0, CUREAL 
 
 /*
  * Zero beyond k_max (grid in Fourier space).
+ *
+ * TODO: Can we eliminate if's?
  *
  */
 

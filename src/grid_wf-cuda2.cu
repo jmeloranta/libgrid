@@ -111,13 +111,15 @@ extern "C" void grid_cuda_wf_propagate_potentialW(gpu_mem_block *grid, gpu_mem_b
 __global__ void grid_cuda_wf_density_gpu(CUCOMPLEX *grid, CUREAL *dens, INT nx, INT ny, INT nz, INT nzz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  CUCOMPLEX d;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;  // complex
   idx2 = (i * ny + j) * nzz + k; // real
 
-  dens[idx2] = CUCREAL(grid[idx]) * CUCREAL(grid[idx]) + CUCIMAG(grid[idx]) * CUCIMAG(grid[idx]);
+  d = grid[idx];
+  dens[idx2] = d.x * d.x + d.y * d.y;
 }
 
 /*
