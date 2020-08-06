@@ -35,7 +35,7 @@ REAL complex gaussian(void *arg, REAL x, REAL y, REAL z) {
 
 int main(int argc, char **argv) {
   
-  cgrid *grid, *wrk;
+  cgrid *grid;
   
   /* Initialize with all OpenMP threads */
   grid_threads_init(0);
@@ -47,7 +47,6 @@ int main(int argc, char **argv) {
   
   /* Allocate real grid for the right hand side (and the solution) */
   grid = cgrid_alloc(NX, NY, NZ, STEP, CGRID_PERIODIC_BOUNDARY, NULL, "Poisson1");
-  wrk = cgrid_clone(grid, "workspace");
 
   /* Map the right hand side to the grid */
   cgrid_map(grid, gaussian, NULL);

@@ -358,7 +358,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cn_yW(INT nx, INT ny, INT nz, CUC
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
   dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
-              (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
+              (nx + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3?wrk3->gpu_info->descriptor:NULL;
   CUCOMPLEX c, c2, c3;
   INT nyz = ny * nz, nx2 = nx / 2;
@@ -539,8 +539,8 @@ __global__ void grid_cuda_wf_propagate_kinetic_cn_z_gpu(INT nx, INT ny, INT nz, 
 extern "C" void grid_cuda_wf_propagate_kinetic_cn_zW(INT nx, INT ny, INT nz, CUCOMPLEX tstep, gpu_mem_block *gwf, char bc, REAL mass, REAL step, REAL kz0, gpu_mem_block *wrk, gpu_mem_block *wrk2, gpu_mem_block *wrk3, INT lx, INT hx, INT ly, INT hy, INT lz, INT hz) {
 
   dim3 threads(CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK, CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK);
-  dim3 blocks((nz + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
-              (ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
+  dim3 blocks((ny + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK), 
+              (nx + CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK - 1) / (CUDA_CN_THRADJ*CUDA_THREADS_PER_BLOCK));
   cudaXtDesc *GWF = gwf->gpu_info->descriptor, *WRK = wrk->gpu_info->descriptor, *WRK2 = wrk2->gpu_info->descriptor, *WRK3 = wrk3?wrk3->gpu_info->descriptor:NULL;
   CUCOMPLEX c, c2;
   INT nyz = ny * nz, nxy = nx * ny;

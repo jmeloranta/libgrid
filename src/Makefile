@@ -56,7 +56,7 @@ grid_wf.o: grid_wf.c grid.h cprivate.h
 grid_wf_analyze.o: grid_wf_analyze.c grid.h au.h
 grid_wf_cn.o: grid_wf_cn.c grid.h
 grid_wf_cn-cuda.o: grid_wf_cn-cuda.c grid.h
-grid_wf_cn-cuda2.o: grid_wf_cn-cuda2.cu linalg-cuda.h cuda.h cuda-math.h defs.h grid_wf-cuda.h
+grid_wf_cn-cuda2.o: grid_wf_cn-cuda2.cu linalg-cuda.h cuda.h cuda-math.h defs.h grid_wf-cuda.h cuda-vars.h
 grid_wf_diag.o: grid_wf_diag.c grid.h
 grid_wf_fft.o: grid_wf_fft.c grid.h
 grid_wf_fft-cuda2.o: grid_wf_fft-cuda2.cu cuda.h cuda-math.h cuda-vars.h
@@ -74,6 +74,8 @@ rgrid_fft.o: rgrid_fft.c grid.h
 rgrid_fft-cuda.o: rgrid_fft-cuda.c grid.h
 grid_fft.o: grid_fft.c grid.h
 threads.o: threads.c grid.h
+rand-cuda2.o: rand-cuda2.cu cuda-vars.h cuda-math.h cuda.h
+rgrid_diff-cuda2.o: rgrid_diff-cuda2.cu cuda-math.h rgrid_bc-cuda.h cuda-vars.h cuda.h
 ext-cuda/func1c.o: ext-cuda/func1c.c grid.h ext-cuda/func1.h
 ext-cuda/func1cu.o: ext-cuda/func1cu.cu ext-cuda/func1.h
 ext-cuda/func2c.o: ext-cuda/func2c.c grid.h ext-cuda/func2.h
