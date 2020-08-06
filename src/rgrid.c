@@ -44,6 +44,8 @@ extern char grid_analyze_method;
  *
  * Note: We keep the grid in padded form, which can be directly used for in-place FFT.
  *
+ * For CUDA, the dimensions must be powers of two.
+ *
  */
 
 EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outside)(rgrid *grid, INT i, INT j, INT k), void *outside_params_ptr, char *id) {
@@ -100,6 +102,10 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
   grid->plan = grid->iplan = NULL;  // No need to allocate these yet
 #ifdef USE_CUDA  
   if(cuda_status()) {
+    if((nx & (nx-1)) || (ny & (ny-1)) || (nz & (nz-1))) {
+      fprintf(stderr, "libgrid(cuda): Grid dimensions must be powers of two (performance & reduction).\n");
+      abort();
+    }
     rgrid_cufft_alloc_r2c(grid);
     rgrid_cufft_alloc_c2r(grid);
   }

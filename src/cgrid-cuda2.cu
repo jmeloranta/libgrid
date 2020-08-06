@@ -899,15 +899,19 @@ __global__ void cgrid_cuda_block_reduce(CUCOMPLEX *blocks) {
  * blocks  = Blocks to be reduced (CUCOMPLEX; input/output). blocks[0] will contain the reduced value.
  * nblocks = Total number of blocks (INT; input).
  *
+ * Requires the number of elements to be a power of two.
+ *
  */
 
 extern "C" void cgrid_cuda_reduce_all(CUCOMPLEX *blocks, INT nblocks) {
 
   INT i, thrs = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
 
-  for(i = nblocks / thrs; i > 0; i /= thrs) {
+  for(i = nblocks / thrs; i > 0; i /= thrs) { // thrs = elements per block
     cgrid_cuda_block_reduce<<<i, thrs, sizeof(CUCOMPLEX) * thrs>>>(blocks);
-    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK; // make sure we get to the end...
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = 2;
   }
 }
 

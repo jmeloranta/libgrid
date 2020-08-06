@@ -118,8 +118,13 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
   grid->plan = grid->iplan = NULL;
 
 #ifdef USE_CUDA
-  if(cuda_status())
+  if(cuda_status()) {
+    if((nx & (nx-1)) || (ny & (ny-1)) || (nz & (nz-1))) {
+      fprintf(stderr, "libgrid(cuda): Grid dimensions must be powers of two (performance & reduction).\n");
+      abort();
+    }
     cgrid_cufft_alloc(grid); // We have to allocate these for cuda.c to work
+  }
 #endif
   
 #ifdef USE_CUDA

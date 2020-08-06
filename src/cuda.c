@@ -186,6 +186,10 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
   }
   use_ngpus = ngpus;
   fprintf(stderr, "libgrid(cuda): Initialized with %d GPU(s).\n", ngpus);
+
+// Change L1 cache behavior? (cudaFuncCachePreferNone, cudaFuncCachePreferShared, cudaFuncCachePreferL1).
+// TODO: could set for each function? (CUFFT probably has its own preference)
+//  cudaDeviceSetCacheConfig(cudaFuncCachePreferShared);
 }
 
 /*

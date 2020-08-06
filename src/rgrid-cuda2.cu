@@ -1097,7 +1097,9 @@ extern "C" void rgrid_cuda_reduce_all(CUREAL *blocks, INT nblocks) {
 
   for(i = nblocks / thrs; i > 0; i /= thrs) {
     rgrid_cuda_block_reduce<<<i, thrs, sizeof(CUREAL) * thrs>>>(blocks);
-    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK; // make sure we get to the end...
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = 2;
   }
 }
 
@@ -1581,7 +1583,9 @@ extern "C" void rgrid_cuda_reduce_all_max(CUREAL *blocks, INT nblocks) {
 
   for(i = nblocks / thrs; i > 0; i /= thrs) {
     rgrid_cuda_block_reduce_max<<<i, thrs, sizeof(CUREAL) * thrs>>>(blocks);
-    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK; // make sure we get to the end...
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = 2;
   }
 }
 
@@ -1705,7 +1709,9 @@ extern "C" void rgrid_cuda_reduce_all_min(CUREAL *blocks, INT nblocks) {
 
   for(i = nblocks / thrs; i > 0; i /= thrs) {
     rgrid_cuda_block_reduce_min<<<i, thrs, sizeof(CUREAL) * thrs>>>(blocks);
-    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK; // make sure we get to the end...
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK * CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = CUDA_THREADS_PER_BLOCK;
+    if(i < thrs) thrs = 2;
   }
 }
 
