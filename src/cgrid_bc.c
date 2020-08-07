@@ -8,14 +8,13 @@
 #include "grid.h"
 
 /*
- * Dirichlet (or constant boundary value) boundary condition.
- *
- * grid = grid to be evaluated (cgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
+ * @FUNC{cgrid_value_outside_dirichlet, "Dirichlet boundary condition"}
+ * @DESC{"Dirichlet (or constant boundary value) boundary condition function"}
+ * @ARG1{cgrid *grid, "Grid to be evaluated"}
+ * @ARG2{INT i, "1st grid index"}
+ * @ARG3{INT j, "2nd grid index"}
+ * @ARG4{INT k, "3rd grid index"}
+ * @RVAL{REAL complex, "Grid value subject to the boundary condition"}
  *
  */
 
@@ -25,14 +24,13 @@ EXPORT REAL complex cgrid_value_outside_dirichlet(cgrid *grid, INT i, INT j, INT
 }
 
 /*
- * Neumann boundary condition.
- *
- * grid = grid to be evaluated (cgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
+ * @FUNC{cgrid_value_outside_neumann, "Neumann boundary condition"}
+ * @DESC{"Neumann boundary condition function"}
+ * @ARG1{cgrid *grid, "Grid to be evaluated"}
+ * @ARG2{INT i, "1st grid index"}
+ * @ARG3{INT j, "2nd grid index"}
+ * @ARG4{INT k, "3rd grid index"}
+ * @RVAL{REAL complex, "Grid value subject to the boundary condition"}
  * 
  * NOTE: For efficiency, this does not roll over if the indices are too large.
  *
@@ -58,15 +56,13 @@ EXPORT REAL complex cgrid_value_outside_neumann(cgrid *grid, INT i, INT j, INT k
 }
 
 /*
- * FFT fully periodic boundary condition. The symmetry points are 0 and N.
- * This is to be used with regular FFT.
- *
- * grid = grid to be evaluated (cgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
+ * @FUNC{REAL complex cgrid_value_outside_periodic, "Periodic boundary condition"}
+ * @DESC{"Periodic boundary condition (FFT). The symmetry points are 0 and N"}
+ * @ARG1{cgrid *grid, "Grid to be evaluated"}
+ * @ARG2{INT i, "1st grid index"}
+ * @ARG3{INT j, "2nd grid index"}
+ * @ARG4{INT k, "3rd grid index"}
+ * @RVAL{REAL complex, "Grid value subject to the boundary condition"}
  * 
  */
 

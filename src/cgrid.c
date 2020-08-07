@@ -29,25 +29,16 @@ static char cgrid_bc_conv(cgrid *grid) {
 #endif
 
 /*
- * Allocate complex grid.
- *
- * nx                 = number of points on the grid along x (INT; input).
- * ny                 = number of points on the grid along y (INT; input).
- * nz                 = number of points on the grid along z (INT; input).
- * step               = spatial step length on the grid (REAL; input).
- * value_outside      = condition for accessing boundary points (input):
- *                      CGRID_DIRICHLET_BOUNDARY: Dirichlet boundary
- *                      or CGRID_NEUMANN_BOUNDARY: Neumann boundary
- *                      or CGRID_PERIODIC_BOUNDARY: Periodic boundary
- *                      or user supplied function with pointer to grid and
- *                         grid index as parameters to provide boundary access.
- * outside_params_ptr = pointer for passing parameters for the given boundary
- *                      access function. Use 0 to with the predefined boundary
- *                      functions (void *; input).
- * id                 = String ID describing the grid (char *; input).
- *
- * Return value: pointer to the allocated grid (cgrid *). Returns NULL on
- * error.
+ * @FUNC{cgrid_alloc, "Allocate complex grid"}
+ * @DESC{"This function allocates a complex grid"}
+ * @ARG1{INT nx, "Number of points on the grid along x"}
+ * @ARG2{INT ny, "Number of points on the grid along y"}
+ * @ARG3{INT nz, "Number of points on the grid along z"}
+ * @ARG4{REAL step, "Spatial step length on the grid"}
+ * @ARG5{value_outside, "Condition for accessing boundary points: CGRID_DIRICHLET_BOUNDARY, CGRID_NEUMANN_BOUNDARY, CGRID_PERIODIC_BOUNDARY, or user supplied function"}
+ * @ARG6{void *outside_params_ptr, "Pointer for passing parameters for the given boundary access function. Use 0 to with the predefined boundary functions"}
+ * @ARG7{char *id, "String ID describing the grid (for debugging)"}
+ * @RVAL{cgrid *, "Pointer to the allocated grid. Returns NULL on error."}
  *
  */
 
@@ -167,12 +158,11 @@ EXPORT cgrid *cgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL complex (*valu
 }
 
 /*
- * "Clone" a complex grid with the parameters identical to the given grid (except new grid->value is allocated and new id is used).
- *
- * grid = Grid to be cloned (cgrid *; input).
- * id   = ID string describing the new grid (char *; input);
- *
- * Returns pointer to the new grid (rgrid *).
+ * @FUNC{cgrid_clone, "Clone a grid"}
+ * @DESC{"Clone a complex grid with the parameters identical to the given grid (except new grid->value is allocated and new id is used)"}
+ * @ARG1{cgrid *grid, "Grid to be cloned"}
+ * @ARG2{char *id, "ID string describing the new grid"}
+ * @RVAL{cgrid *, "Pointer to the new grid"}
  *
  */
 
@@ -220,11 +210,10 @@ EXPORT cgrid *cgrid_clone(cgrid *grid, char *id) {
 }
 
 /*
- * Claim grid (simple locking system when using the workspace model).
- *
- * grid = Grid to be claimed (cgrid *; input).
- *
- * No return value.
+ * @FUNC{cgrid_claim, "Claim grid"}
+ * @DESC{"Claim grid (simple locking system when using the workspace model)"}
+ * @ARG1{cgrid *input, "Grid to be claimed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -242,11 +231,10 @@ EXPORT void cgrid_claim(cgrid *grid) {
 }
 
 /*
- * Release grid (simple locking system for the workspace model).
- *
- * grid = Grid to be claimed (cgrid *; input).
- *
- * No return value.
+ * @FUNC{cgrid_release, "Release grid"}
+ * @DESC{"Release grid (simple locking system for the workspace model)"}
+ * @ARG1{cgrid *grid, "Grid to be claimed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -260,17 +248,16 @@ EXPORT void cgrid_release(cgrid *grid) {
 }
 
 /*
- * Set the origin of coordinates. The coordinates of the grid will be:
- * 	x(i)  = (i - nx/2) * step - x0
- * 	y(j)  = (j - ny/2) * step - y0
- * 	z(k)  = (k - nz/2) * step - z0
- *
- * grid = grid whose origin will be set (cgrid *; input).
- * x0   = X origin (REAL; input).
- * y0   = Y origin (REAL; input).
- * z0   = Z origin (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_set_origin, "Set grid origin"}
+ * @DESC{"Set the origin of coordinates. The coordinates of the grid will be:\\
+         x(i) = (i - nx/2) * step - x0,\\ 
+         y(j) = (j - ny/2) * step - y0,\\ 
+         z(k) = (k - nz/2) * step - z0"}
+ * @ARG1{cgrid *grid, "Grid whose origin will be set"}
+ * @ARG2{REAL x0, "X origin"}
+ * @ARG3{REAL y0, "Y origin"}
+ * @ARG4{REAL z0, "Z origin"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -282,14 +269,13 @@ EXPORT void cgrid_set_origin(cgrid *grid, REAL x0, REAL y0, REAL z0) {
 }
 
 /*
- * Shift the origin to (x0, y0, z0).
- *
- * grid = grid whose origin is to be shifted (cgrid *; input).
- * x0 = X shift (REAL; input).
- * y0 = Y shift (REAL; input).
- * z0 = Z shift (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_shift_origin, "Shift grid origin"}
+ * @DESC{"Shift the origin to (x0, y0, z0)"}
+ * @ARG1{cgrid *grid, "Grid whose origin is to be shifted"}
+ * @ARG2{REAL x0, "X shift"}
+ * @ARG3{REAL y0, "Y shift"}
+ * @ARG4{REAL z0, "Z shift"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -301,17 +287,16 @@ EXPORT void cgrid_shift_origin(cgrid *grid , REAL x0, REAL y0, REAL z0) {
 }
 
 /*
- * Set the origin in the momentum space (or the moving frame of reference).
- * kx0, ky0 and kz0 should be multiples of
- *  kx0min = 2.0 * M_PI / (NX * STEP) 
- *  ky0min = 2.0 * M_PI / (NY * STEP) 
- *  kz0min = 2.0 * M_PI / (NZ * STEP)
- *
- * kx0 = Momentum origin along x (REAL; input). 
- * ky0 = Momentum origin along y (REAL; input). 
- * kz0 = Momentum origin along z (REAL; input). 
- *
- * No return value.
+ * @FUNC{cgrid_set_momentum, "Set momentum origin of grid"}
+ * @DESC{"Set the origin in the momentum space (or the moving frame of reference). Note that kx0, ky0 and kz0
+         should be multiples of:\\
+         kx0min = 2.0 * M_PI / (NX * STEP)\\
+         ky0min = 2.0 * M_PI / (NY * STEP)\\
+         kz0min = 2.0 * M_PI / (NZ * STEP)"}
+ * @ARG1{REAL kx0, "Momentum origin along x"}
+ * @ARG2{REAL ky0, "Momentum origin along y"}
+ * @ARG3{REAL kz0, "Momentum origin along z"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -323,12 +308,11 @@ EXPORT void cgrid_set_momentum(cgrid *grid, REAL kx0, REAL ky0, REAL kz0) {
 }
 
 /*
- * Set the rotation about the Z-axis.
- *
- * grid  = grid for operation (cgrid *; input).
- * omega = rotation frequency about the Z axis (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_set_rotation, "Set angular momentum constaint for grid"}
+ * @DESC{"Set angular rotation constraing about the Z-axis."}
+ * @ARG1{cgrid *grid, "Grid for operation"}
+ * @ARG2{REAL omega, "Rotation frequency about the Z axis"}
+ * RVAL{void, "No return value"}
  *
  */
 
@@ -338,11 +322,10 @@ EXPORT void cgrid_set_rotation(cgrid *grid, REAL omega) {
 }
 
 /*
- * Free grid.
- *
- * grid = pointer to grid to be freed (cgrid *; input).
- *
- * No return value.
+ * @FUNC{cgrid_free, "Free complex grid"}
+ * @DESC{"Free complex grid."}
+ * @ARG1{cgrid *grid, "Pointer to grid to be freed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -366,12 +349,11 @@ EXPORT void cgrid_free(cgrid *grid) {
 }
 
 /* 
- * Write grid to disk in binary format.
- *
- * grid = grid to be written (cgrid *; input).
- * out  = file handle for the file (FILE * as defined in stdio.h; input).
- *
- * No return value.
+ * @FUNC{cgrid_write, "Write grid to disk"}
+ * @DESC{"Write grid to disk in binary format."}
+ * @ARG1{cgrid *grid, "Grid to be written"}
+ * @ARG2{FILE *out, "File handle for the file (FILE * as defined in stdio.h)."}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -388,13 +370,13 @@ EXPORT void cgrid_write(cgrid *grid, FILE *out) {
 }
 
 /* 
- * Read complex grid from disk in binary format. If the grids are of different sizes,
- * this will automatically interpolate the data.
- *
- * grid = grid to be read (cgrid *; input).
- * in   = file handle for reading the file (FILE * as defined in stdio.h; input).
- *
- * Returns pointer to the grid (NULL on error).
+ * @FUNC{cgrid_read, "Read complex grid from disk"}
+ * @DESC{"Read complex grid from disk in binary format. 
+          If the allocated grid is different size than the one on disk,
+          this will automatically interpolate the data"}
+ * @ARG1{cgrid *grid, "Grid to be read"}
+ * @ARG2{FILE *in, "File handle for reading the file (FILE * as defined in stdio.h)"}
+ * @RVAL{cgrid *, "Returns pointer to the grid or NULL on error"}
  *
  */
 
@@ -438,14 +420,12 @@ EXPORT cgrid *cgrid_read(cgrid *grid, FILE *in) {
 }
 
 /*
- * Write complex grid to disk including cuts along x, y, and z axes.
- *
- * basename = Base filename where suffixes .x, .y, .z, and .grd are appended (char *; input).
- * grid     = Grid to be written to disk (cgrid *; input).
- * 
- * No return value.
- *
- * See also cgrid_write().
+ * @FUNC{cgrid_write_grid, "Write grid to disk with cuts along x, y, z"}
+ * @DESC{"Write complex grid to disk (.grd) including cuts along x, y, and z axes. The latter files are
+          in ASCII format and have .x, .y and .z extensions"}
+ * @ARG1{char *basename, "Base filename"}
+ * @ARG2{cgrid *grid, "Grid to be written to disk"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -517,12 +497,12 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
 }
 
 /*
- * Write complex (momentum space) grid to disk including cuts along x, y, and z axes.
- *
- * basename = Base filename where suffixes .x, .y, .z, and .grd are added (char *; input).
- * grid     = Grid to be written to disk (cgrid *; input).
- * 
- * No return value.
+ * @FUNC{cgrid_write_grid_reciprocal, "Write complex reciprocal space grid to disk"}
+ * @DESC{Write complex (momentum space) grid to disk including cuts along x, y, and z axes.
+         Suffixes .x, .y, .z, and .grd are added to the given file name}
+ * @ARG1{char *basename, "Base filename"}
+ * @ARG2{cgrid *grid, "Grid to be written to disk"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -603,12 +583,11 @@ EXPORT void cgrid_write_grid_reciprocal(char *base, cgrid *grid) {
 }
 
 /*
- * Read in a grid from a binary file (.grd).
- *
- * grid = grid where the data is placed (cgrid *, output).
- * file = filename for the file (char *, input). Note: the .grd extension must be included.
- *
- * No return value.
+ * @FUNC{cgrid_read_grid, "Read grid from disk"}
+ * @DESC{"Read in a grid from a binary file (.grd)"}
+ * @ARG1{cgrid *grid, "Grid where the data is placed"}
+ * @ARG2{char *file, "File name to be read. Note that the .grd extension must be included"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -625,12 +604,11 @@ EXPORT void cgrid_read_grid(cgrid *grid, char *file) {
 }
 
 /*
- * Copy grid from one grid to another.
- *
- * dst = destination grid (cgrid *; input).
- * src = source grid (cgrid *; input).
- *
- * No return value.
+ * @FUNC{cgrid_copy, "Copy grid"}
+ * @DESC{"Copy grid to another grid"}
+ * @ARG1{cgrid *dst, "Destination grid"}
+ * @ARG2{cgrid *src, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -663,15 +641,12 @@ EXPORT void cgrid_copy(cgrid *dst, cgrid *src) {
 }
 
 /*
- * Take complex conjugate of grid.
- * 
- * conjugate = destination for complex conjugated grid (cgrid *; input).
- * grid      = source grid for the operation (cgrid *; input).
+ * @FUNC{cgrid_conjugate, "Complex conjugate of grid"}
+ * @DESC{"Take complex conjugate of grid. Note that the source and destination may be the same"}
+ * @ARG1{cgrid *conjugate, "Destination for the operation"}
+ * @ARG2{cgrid *grid, "Source grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
- * No return value.
- *
- * Note: source and destination may be the same grid.
- * 
  */
 
 EXPORT void cgrid_conjugate(cgrid *conjugate, cgrid *grid) {
@@ -698,15 +673,14 @@ EXPORT void cgrid_conjugate(cgrid *conjugate, cgrid *grid) {
 }
 
 /*
- * Shift grid by given amount spatially.
- *
- * shifted = destination grid for the operation (cgrid *; output).
- * grid    = source grid for the operation (cgrid *; input).
- * x       = shift spatially by this amount in x (REAL; input).
- * y       = shift spatially by this amount in y (REAL; input).
- * z       = shift spatially by this amount in z (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_shift, "Spatial shift of grid"}
+ * @DESC{"Shift grid by given amount spatially"}
+ * @ARG1{cgrid *shifted, "Destination grid for the operation"}
+ * @ARG2{cgrid *grid, "Source grid for the operation"}
+ * @ARG3{REAL x, "Shift spatially by this amount in x"}
+ * @ARG4{REAL y, "Shift spatially by this amount in y"}
+ * @ARG5{REAL z, "Shift spatially by this amount in z"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -727,11 +701,10 @@ EXPORT void cgrid_shift(cgrid *shifted, cgrid *grid, REAL x, REAL y, REAL z) {
 }
 
 /* 
- * Zero grid.
- *
- * grid = grid to be zeroed (cgrid *; ouput).
- *
- * No return value.
+ * @FUNC{cgrid_zerp, "Zero grid"}
+ * @DESC{"Zero grid values"}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @RVAL{void, "No return value"}
  * 
  */
 
@@ -741,12 +714,11 @@ EXPORT void cgrid_zero(cgrid *grid) {
 }
 
 /* 
- * Set grid to a constant value.
- *
- * grid = grid to be set (cgrid *; output).
- * c    = value (REAL complex; input).
- *
- * No return value.
+ * @FUNC{cgrid_constant, "Set grid value to constant"}
+ * @DESC{"Set grid values to constant"}
+ * @ARG1{cgrid *grid, "Grid to be set"}
+ * @ARG2{REAL complex c, "Constant value"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -769,16 +741,15 @@ EXPORT void cgrid_constant(cgrid *grid, REAL complex c) {
 }
 
 /*
- * Multiply grid by a function.
- *
- * grid = destination grid for the operation (cgrid *; input/output).
- * func = function providing the mapping (REAL complex (*)(void *, REAL complex, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data, next is the grid value,
- *        the next argument is the value at the current grid point, 
- *        and x,y,z are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- *
- * No return value.
+ * @FUNC{cgrid_product_func, "Multiple grid by function"}
+ * @DESC{"Multiply grid by a given function. The arguments to the user supplied function are:
+          (void *arg) is for external user specified data (may be NULL), 
+          (REAL complex val) the grid value (REAL complex),
+          and (REAL) x, y, z are the coordinates where the function is evaluated"}
+ * @ARG1{cgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL complex (*func), "Function providing the mapping."}
+ * @ARG3{void *farg, "Pointer to user specified data"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -808,15 +779,14 @@ EXPORT void cgrid_product_func(cgrid *grid, REAL complex (*func)(void *arg, REAL
 }
 
 /*
- * Map function onto grid.
- *
- * grid = destination grid for the operation (cgrid *; output).
- * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data
- *        and x,y,z are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- *
- * No return value.
+ * @FUNC{cgrid_map, "Map function onto grid"}
+ * @DESC{"Map a given function onto a grid. The arguments to the user specified function are:
+          (void *farg) pointer to user specified data (may be NULL)
+          and x, y, z are the current coordinates where the function is evaluated"}
+ * @ARG1{cgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL complex (*func), "Function providing the mapping"}
+ * @ARG3{void *, "Pointer to user specified data"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -845,18 +815,17 @@ EXPORT void cgrid_map(cgrid *grid, REAL complex (*func)(void *arg, REAL x, REAL 
 }
 
 /*
- * Map a given function onto grid with linear "smoothing".
- * This can be used to weight the values at grid points to produce more
- * accurate integration over the grid.
- * *
- * grid = destination grid for the operation (cgrid *; output).
- * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data
- *        and (x, y, z) is the point (REALs) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- * ns   = number of intermediate points to be used in smoothing (INT; input).
- *
- * No return value.
+ * @FUNC{cgrid_smooth_map, "Map function onto grid with linear smoothing"}
+ * @DESC{"Map a given function onto grid with linear smoothing.
+         This can be used to weight the values at grid points to produce more
+         accurate integration over the grid. The arguments to the user specified function are:
+         (void *farg) pointer to user specified data (may be NULL)
+         and x, y, z are the current coordinates where the function is evaluated"}
+ * @ARG1{cgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL complex (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data"}
+ * @ARG4{INT ns, "Number of intermediate points to be used in smoothing"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -886,21 +855,20 @@ EXPORT void cgrid_smooth_map(cgrid *grid, REAL complex (*func)(void *arg, REAL x
 }
 
 /*
- * Map a given function onto grid with linear "smoothing".
- * This can be used to weight the values at grid points to produce more
- * accurate integration over the grid. Limits for intermediate steps and
- * tolerance can be given.
- *
- * grid   = destination grid for the operation (cgrid *; output).
- * func   = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL); input).
- *          The first argument (void *) is for external user specified data
- *          and x,y,z are the coordinates (REAL) where the function is evaluated.
- * farg   = pointer to user specified data (void *; input).
- * min_ns = minimum number of intermediate points to be used in smoothing (INT; input).
- * max_ns = maximum number of intermediate points to be used in smoothing (INT; input).
- * tol    = tolerance for weighing (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_adaptive_map, "Map function onto grid with adaptive smoothing"}
+ * @DESC{"Map a given function onto grid with adaptive linear smoothing.
+          This can be used to weight the values at grid points to produce more
+          accurate integration over the grid. Limits for intermediate steps and
+          tolerance can be given. The arguments to the user specified function are:
+          (void *farg) pointer to user specified data (may be NULL)
+          and x, y, z are the current coordinates where the function is evaluated"}
+ * @ARG1{cgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL complex (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data"}
+ * @ARG4{INT min_ns, "Minimum number of intermediate points to be used in smoothing"}
+ * @ARG5{INT max_ns, "Maximum number of intermediate points to be used in smoothing"}
+ * @ARG6{REAL tol, "Tolerance for weighing"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -953,15 +921,13 @@ EXPORT void cgrid_adaptive_map(cgrid *grid, REAL complex (*func)(void *arg, REAL
 }
 
 /*
- * Add two grids: gridc = grida + gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st of the grids to be added (cgrid *; input).
- * gridb = 2nd of the grids to be added (cgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{cgrid_sum, "Add two grids"}
+ * @DESC{"Add two grids: gridc = grida + gridb. 
+          Note that the source and destination grids may be the same grid"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1st grid to be added"}
+ * @ARG3{cgrid *gridb, "2nd grid to be added"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -985,15 +951,13 @@ EXPORT void cgrid_sum(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 }
 
 /* 
- * Subtract two grids: gridc = grida - gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- *
- * No return value.
- *
- * Note: both source and destination may be the same.
+ * @FUNC{cgrid_difference, "Subtract two grids"}
+ * @DESC{Subtract two grids: gridc = grida - gridb. 
+         Note that both source and destination may be the same grid."}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1st source grid"}
+ * @ARG3{cgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1017,15 +981,13 @@ EXPORT void cgrid_difference(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 }
 
 /* 
- * Calculate product of two grids: gridc = grida * gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * FUNC{cgrid_product, "Product of two grids"}
+ * @DESC{Calculate product of two grids: gridc = grida * gridb. 
+         Note that the source and destination grids may be the same."}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1st source grid"}
+ * @ARG3{cgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1048,18 +1010,14 @@ EXPORT void cgrid_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 }
 
 /* 
- * Rise absolute value of a grid to given power.
- *
- * gridb    = destination grid (cgrid *; output).
- * grida    = 1st source grid (cgrid *; input).
- * exponent = exponent to be used (REAL; input).
- *
- * No return value.
- *
- * Notes: - Source and destination grids may be the same.
- *        - This routine uses pow() so that the exponent can be
- *          fractional but this is slow! Do not use this for integer
- *          exponents.
+ * @FUNC{cgrid_abs_power, "Power of absolute value of grid"}
+ * @DESC{"Rise absolute value of a grid to a given power.
+          Note that the source and destination grids may be the same grid.
+          This routine uses pow() so that the exponent can be fractional."}
+ * @ARG1{cgrid *gridb, "Destination grid"}
+ * @ARG2{cgrid *grida, "Source grid"}
+ * @ARG3{REAL exponent, "Exponent to be used"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1082,15 +1040,13 @@ EXPORT void cgrid_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
 }
 
 /* 
- * Rise grid to given power.
- *
- * gridb    = destination grid (cgrid *; output).
- * grida    = 1st source grid (cgrid *; input).
- * exponent = exponent to be used (REAL; input).
- *
- * No return value.
- *
- * Notes: - Source and destination grids may be the same.
+ * @FUNC{cgrid_power, "Rise grid to given power"}
+ * @DESC{"Rise grid to given power. The exponent can be fractional as this uses pow().
+          Note that the source and destination grids may be the same grid"}
+ * @ARG1{cgrid *gridb, "Destination grid"}
+ * @ARG2{cgrid *grida, "Source grid"}
+ * @ARG3{REAL exponent, "Exponent to be used"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1113,15 +1069,12 @@ EXPORT void cgrid_power(cgrid *gridb, cgrid *grida, REAL exponent) {
 }
 
 /*
- * Divide two grids: gridc = grida / gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- *
- * No return value.
- *
- * Note: Source and destination grids may be the same.
+ * @FUNC{cgrid_division, "Divide two grids"}
+ * @DESC{Divide two grids: gridc = grida / gridb. Note that the source and destination grids may be the same."}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1st source grid"}
+ * @ARG3{cgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1145,16 +1098,14 @@ EXPORT void cgrid_division(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 }
 
 /*
- * "Safely" divide two grids: gridc = grida / gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- * eps   = epsilon to add to the divisor.
- *
- * No return value.
- *
- * Note: Source and destination grids may be the same.
+ * @FUNC{cgrid_division_eps, "Numerically safe division of two grids"}
+ * @DESC{"Numerically stable division of two grids: gridc = grida / (gridb + eps). 
+          Note that the source and destination grids may be the same"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1st source grid"}
+ * @ARG3{cgrid *gridb, "2nd source grid"}
+ * @ARG4{REAL eps, "Epsilon to add to the divisor"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1178,15 +1129,13 @@ EXPORT void cgrid_division_eps(cgrid *gridc, cgrid *grida, cgrid *gridb, REAL ep
 }
 
 /* 
- * Conjugate product of two grids: gridc = CONJ(grida) * gridb
- *
- * gridc = destination grid (cgrid *; output).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- *
- * No return value.
- * 
- * Note: source and destination grids may be the same.
+ * @FUNC{cgrid_conjugate_product, "Product of two grids with conjugation"}
+ * @DESC{"Conjugate product of two grids: gridc = CONJ(grida) * gridb.
+          Note that the source and destination grids may be the same"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1st source grid"}
+ * @ARG3{cgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1210,12 +1159,11 @@ EXPORT void cgrid_conjugate_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 }
 
 /*
- * Add a constant to a grid.
- *
- * grid = grid where the constant is added (cgrid *; output).
- * c    = constant to be added (REAL complex; input).
- *
- * No return value.
+ * @FUNC{cgrid_add, "Add constant to grid"}
+ * @DESC{"Add a constant to a grid."}
+ * @ARG1{cgrid *grid, "Grid where the constant is added"}
+ * @ARG2{REAL complex c, "Constant to be added"}
+ * @RVAL{void, "No return value"}
  *
  */
 
