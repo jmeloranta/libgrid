@@ -1840,34 +1840,6 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
 }
 
 /*
- * Print the grid into file (ASCII format).
- *
- * grid = grid to be printed out (rgrid *; input).
- * out  = output file pointer (FILE *; input).
- *
- * No return value.
- *
- */
-
-EXPORT void rgrid_print(rgrid *grid, FILE *out) {
-
-  INT i, j, k;
-
-#ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
-#endif
-
-  for(i = 0; i < grid->nx; i++) {
-    for(j = 0; j < grid->ny; j++) {
-      for(k = 0; k < grid->nz; k++)
-        fprintf(out, FMT_R "   ", rgrid_value_at_index(grid, i, j, k));
-      fprintf(out, "\n");
-    }
-    fprintf(out, "\n");
-  }
-}
-
-/*
  * Perform Fast Fourier Transformation of a grid.
  *
  * grid = grid to be Fourier transformed (input/output) (rgrid *; input/output).

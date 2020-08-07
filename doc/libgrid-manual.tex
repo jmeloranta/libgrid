@@ -61,7 +61,7 @@ ROOT & Root installation directory (default /usr)\\
 CUDA & Set to "yes" if CUDA is installed and "no" if not. The default is to auto-detect, so changing this is not usually required.\\
 CUDAINC & Include file directory for CUDA C header files (default /usr/include/cuda; Fedora). Will also search /usr/include (Debian).\\
 CUDALIB & Directory containing the CUDA libraries (default /usr/lib64).\\
-CUDA\_HOSTCC & GCC version that is compatible with the current installation of CUDA (default is to auto detect; works on Fedora and Debian).\\
+CUDA\_HOSTCC & GCC version that is compatible with the current installation of CUDA (default is to auto detect; works on Fedora and to some extent on Debian).\\
 CUDA\_ARCH & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
 CUDA\_FASTMATH & "yes" adds NVCC options: --ftz=true --prec-div=false --prec-sqrt=false --fmad=true and "no" implies options: --ftz=false --prec-div=true --prec-sqrt=true --fmad=true (default no). Seems to provide no performance improvement.\\
 CUDA\_TPB & Number of CUDA threads per block (GPU architecture dependent; default 8).\\
@@ -283,26 +283,26 @@ INT nz & Number of points on the grid along $z$ (3rd index).\\
 REAL step & Spatial step length for the grid.\\
 REAL *(value\_outside)() & Function for accessing boundary points: RGRID\_DIRICHLET\_BOUNDARY = Dirichlet boundary, RGRID\_NEUMANN\_BOUNDARY = Neumann boundary, RGRID\_PERIODIC\_BOUNDARY  = Periodic boundary. This can also be a user supplied function.\\
 void *outside\_params\_ptr & Pointer for passing parameters for the given boundary access function. Use NULL to with the predefined boundary functions.\\
-char *id & String ID describing the grid.
+char *id & String ID describing the grid (useful for debugging).
 \end{longtable}
 \noindent
 The return value is a pointer to the allocated grid (rgrid *) or NULL on allocation error. \textit{Note that the grid data is kept in padded form, which can be directly used for in-place FFT.}
 
 \subsection{rgrid\_clone() -- Allocate a new grid using existing grid as template}
 
-``Clone" a real grid with the parameters identical to the grid given as argument,  except that new grid data is allocated. This function takes the following arguments:
+``Clone" a real grid with the parameters identical to the grid given as argument, except that new grid data is allocated. This function takes the following arguments:
 \begin{longtable}{p{.28\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be used as a template.\\
-char *id & ID string describing the grid (comment; useful for debugging).\\
+char *id & ID string describing the grid (useful for debugging).\\
 \end{longtable}
 \noindent
 This function returns a pointer to the new grid (rgrid *).
 
 \subsection{rgrid\_claim() -- Mark grid to be in use}
 
-This function sets the flag field in given grid (argument; rgrid *) to non-zero. If the flag was already non-zero, it aborts the program execution. This allows a simple locking of grids when using the ``workspace" model (as in libdft).
+This function sets the flag field in given grid (argument; rgrid *) to non-zero value. If the flag was already non-zero, it aborts the program execution. This allows a simple locking of grids when using the ``workspace" model (as in libdft).
 
 \subsection{rgrid\_release() -- Mark grid not in use}
 
@@ -398,19 +398,7 @@ Argument & Description\\
 rgrid *grid & Grid where the data is to be read. If NULL, a grid with the correct dimensions will be allocated. Note that the boundary condition will assigned to periodic by default.\\
 FILE *in & File handle for reading the file I/O.\\
 \end{longtable}
-This function returns a pointer to the grid or NULL pointer on error. Note that there is also a function called rgrid\_read\_compat(), which takes the same arguments as above. This should only be used for grids prepared with old versions of libgrid (change in grid structure due to in-place FFT in new libgrid).
-
-\subsection{rgrid\_write\_grid() -- Write grid to disk with cutoffs along axes}
-
-Write real grid to disk including cuts along the $x$, $y$, and $z$ axes. This function takes the following arguments:
-\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
-Argument & Description\\
-\cline{1-2}
-char *basename & Base filename where the suffixes (.x, .y, .z, and .grd) are added.\\
-rgrid *grid & Grid to be written to disk.\\
-\end{longtable}
-\noindent
-This function does not return any value.
+This function returns a pointer to the grid or NULL pointer on error. Note that there is also a function called rgrid\_read\_compat(), which takes the same arguments as above. This should only be used for grids prepared with old versions of libgrid (change in grid structure due to in-place FFT in new libgrid). For backwards compatibility, there is also a function called rgrid\_read\_compat() that can read the old grid file format. 
 
 \subsection{rgrid\_read\_grid() -- Read grid from disk}
 
@@ -422,7 +410,31 @@ rgrid *grid & Grid to be stored in memory.\\
 char *file & File name for the file.\\
 \end{longtable}
 \noindent
-This function does not return any value. See also grid\_read(). Note that there is also a function called rgrid\_read\_grid\_compat(), which takes the same arguments as above. This should only be used for grids prepared with old versions of libgrid (change in grid structure due to in-place FFT in new libgrid).
+This function does not return any value. See also grid\_read(). Note that there is also a function called rgrid\_read\_grid\_compat(), which takes the same arguments as above. This should only be used for grids prepared with old versions of libgrid (change in grid structure due to in-place FFT in new libgrid). There is also compatibility routine rgrid\_read\_grid\_compat() for reading the old grid file format.
+
+\subsection{rgrid\_write\_grid() -- Write grid to disk with cuts along axes}
+
+Write real grid to disk including cuts along the $x$, $y$, and $z$ axes. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+char *basename & Base filename where the suffixes (.x, .y, .z, and .grd) are added.\\
+rgrid *grid & Grid to be written to disk.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_write\_grid\_reciprocal() -- Write reciprocal space grid to disk with cuts along axes}
+
+Write reciprocal space real grid to disk including cuts along the $x$, $y$, and $z$ axes. This function takes the following arguments:
+\begin{longtable}{p{.2\textwidth} p{.7\textwidth}}
+Argument & Description\\
+\cline{1-2}
+char *basename & Base filename where the suffixes (.x, .y, .z, and .grd) are added.\\
+rgrid *grid & Grid to be written to disk.\\
+\end{longtable}
+\noindent
+This function does not return any value.
 
 \subsection{rgrid\_copy() -- Copy grid}
 
@@ -615,7 +627,7 @@ REAL exponent & Exponent for power operation.\\
 \noindent
 This function has no return value. Note this function uses math library routine POW().
 
-\subsection{rgrid\_division() -- Divide two grids}
+ \subsection{rgrid\_division() -- Divide two grids}
 
 This function divides two grids and stores the output in a third grid (``gridc = grida / gridb"). It takes the grid pointers as arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
@@ -939,6 +951,88 @@ REAL z & Current $z$ coordinate.\\
 \noindent
 Function rgrid\_weighted\_integral\_of\_square() returns the value of the integral (REAL).
 
+\subsection{rgrid\_gradient() -- Gradient of a grid}
+
+This function calculates gradient of a given grid. Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *gradx & Destination grid for gradient x-component.\\
+rgrid *grady & Destination grid for gradient y-component.\\
+rgrid *gradz & Destination grid for gradient z-component.\\
+\end{longtable}
+
+\subsection{rgrid\_gradient\_x() -- x component of grid gradient}
+
+This function calculates the $x$ component of gradient for a given grid. Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *gradx & Destination grid for gradient x-component.\\
+\end{longtable}
+
+\subsection{rgrid\_gradient\_y() -- y component of grid gradient}
+
+This function calculates the $y$ component of gradient for a given grid. Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *grady & Destination grid for gradient y-component.\\
+\end{longtable}
+
+\subsection{rgrid\_gradient\_z() -- z component of grid gradient}
+
+This function calculates the $z$ component of gradient for a given grid. Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *gradz & Destination grid for gradient z-component.\\
+\end{longtable}
+
+\subsection{rgrid\_laplace() -- Laplace of grid}
+
+This function calculates the laplacian for a given grid. Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *laplace & Destination grid for laplace.\\
+\end{longtable}
+
+\subsection{rgrid\_laplace\_x() -- Laplace x component of grid}
+
+This function calculates the laplacian $x$ component for a given grid (i.e., second derivative with respect to $x$). Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *laplace & Destination grid for $x$ laplace.\\
+\end{longtable}
+
+\subsection{rgrid\_laplace\_y() -- Laplace y component of grid}
+
+This function calculates the laplacian $y$ component for a given grid (i.e., second derivative with respect to $y$). Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *laplace & Destination grid for $y$ laplace.\\
+\end{longtable}
+
+\subsection{rgrid\_laplace\_z() -- Laplace z component of grid}
+
+This function calculates the laplacian $z$ component for a given grid (i.e., second derivative with respect to $z$). Depending grid\_analyze\_method setting, it may be done using finite difference or FFT. The arguments to this function are given below. This function does not have return value.\\
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Source grid for gradient.\\
+rgrid *laplace & Destination grid for $z$ laplace.\\
+\end{longtable}
+
 \subsection{rgrid\_fd\_gradient\_x() -- Differentiate grid with respect to x}
 
 Differentiate a grid with respect to $x$ (central difference). The function takes the following arguments:
@@ -1037,79 +1131,79 @@ rgrid *laplacez & Grid containing the 2nd derivative.\\
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_fft\_gradient\_x() -- Differentiate grid with respect to x (FFT)}
+\subsection{rgrid\_fft\_gradient\_x() -- Differentiate real grid in the Fourier space along $x$}
 
-Differentiate a grid with respect to $x$ (evaluated in Fourier space). The function takes the following arguments:
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient & Grid containing the derivative (output).\\
+rgrid *gradient\_x & Output grid.\\
 \end{longtable}
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_fft\_gradient\_y() -- Differentiate grid with respect to y (FFT)}
+\subsection{rgrid\_fft\_gradient\_y() -- Differentiate real grid in the Fourier space along $y$}
 
-Differentiate a grid with respect to $y$ (evaluated in Fourier space). The function takes the following arguments:
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient & Grid containing the derivative (output).\\
+rgrid *gradient\_y & Output grid.\\
 \end{longtable}
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_fft\_gradient\_z() -- Differentiate grid with respect to z (FFT)}
+\subsection{rgrid\_fft\_gradient\_z() -- Differentiate real grid in the Fourier space along $z$}
 
-Differentiate a grid with respect to $z$ (evaluated in Fourier space). The function takes the following arguments:
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
 rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient & Grid containing the derivative (output).\\
+rgrid *gradient\_z & Output grid.\\
 \end{longtable}
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_fft\_gradient() -- gradient of a grid (FFT)}
+\subsection{rgrid\_fft\_gradient() -- Calculate gradient of real grid in the Fourier space}
 
-Calculate gradient of a grid (evaluated in Fourier space). The function takes the following arguments:
+Differentiate real grid in the reciprocal space. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
-rgrid *grid & grid to be differentiated.\\
-rgrid *gradient\_x & $x$ component derivative grid.\\
-rgrid *gradient\_y & $y$ component derivative grid.\\
-rgrid *gradient\_z & $z$ component derivative grid.\\
+rgrid *grid & Grid to be differentiated.\\
+rgrid *gradient\_x & Output grid ($x$).\\
+rgrid *gradient\_y & Output grid ($y$).\\
+rgrid *gradient\_z & Output grid ($z$).\\
 \end{longtable}
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_fd\_gradient\_dot\_gradient() -- Dot product of gradient of grid with itself}
+\subsection{rgrid\_fft\_laplace() -- Calculate Laplacian of real grid in the Fourier space}
 
-This function calculates dot product of the gradient of the grid with itself: $\nabla$ grid $\cdot$ $\nabla$ grid (finite difference). It takes the following arguments:
+Calculate Laplacian of a real grid in the reciprocal space. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
-rgrid *grid  & Source grid for the operation.\\
-rgrid *grad\_dot\_grad & Destination grid.\\
+rgrid *grid & Grid to be differentiated.\\
+rgrid *laplace & Output grid.\\
 \end{longtable}
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_print() -- Print contents of grid in ASCII}
+\subsection{rgrid\_fft\_laplace\_expectation\_value() -- Calculate expectation value of laplacian over real grid in the Fourier space}
 
-This function print a given grid into file in ASCII format. The arguments are as follows:
+Calculate expectation value of Laplacian (real grid) in the reciprocal space. This function takes the following arguments:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
-rgrid *grid & Grid to be printed.\\
-FILE *out & Output file pointer.\\
+rgrid *grid & Grid to be differentiated.\\
+rgrid *laplace & Output grid (calculated in addition to the expectation value).\\
 \end{longtable}
 \noindent
-This function does not return any value.
+This function returns the expectation value (REAL).
 
 \subsection{rgrid\_fft() -- Fast forward Fourier transform of grid}
 
@@ -1126,6 +1220,10 @@ Perform scaled inverse Fourier transformation of a grid. The grid for FFT is giv
 \subsection{rgrid\_inverse\_fft\_norm() -- Normalized fast inverse Fourier transform of grid}
 
 Perform normalized inverse Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. The output is normalized (i.e., doing forward FFT followed by this yields the original data). The function does not return any value.
+
+\subsection{rgrid\_inverse\_fft\_norm2() -- Normalized fast inverse Fourier transform of grid}
+
+Perform normalized inverse Fourier transformation of a grid. The grid for FFT is given as the only argument (rgrid *). The grid is overwritten by the result. The output is normalized with respect to grid dimensions as well as the grid step. The function does not return any value.
 
 \subsection{rgrid\_fft\_convolute() -- Convolution in reciprocal space}
 
@@ -1147,7 +1245,46 @@ rgrid *gridc & Output.\\
 \noindent
 This function does not return any value.
 
-\subsection{rgrid\_multiply\_fft() -- Multiply grid in reciprocal space by constant}
+\subsection{rgrid\_fft\_sum() -- Add grids in reciprocal space}
+
+Add two grids in reciprocal space. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *gridc & Destination for the operation.\\
+rgrid *grida & First grid for the sum.\\
+rgrid *gridb & Second grid for the sum.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_product() -- Product of grids in reciprocal space}
+
+Product of two grids in reciprocal space. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *gridc & Destination for the operation.\\
+rgrid *grida & First grid for the product.\\
+rgrid *gridb & Second grid for the product.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_product\_conj() -- Conjugate product of grids in reciprocal space}
+
+Product of two grids in reciprocal space. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *gridc & Destination for the operation.\\
+rgrid *grida & First grid for the product (conjugated).\\
+rgrid *gridb & Second grid for the product.\\
+\end{longtable}
+\noindent
+This function does not return any value.
+
+\subsection{rgrid\_fft\_multiply() -- Multiply grid in reciprocal space by constant}
 
 Multiply grid in reciprocal space by a constant (grid-$>$value is complex). The arguments are:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
@@ -1202,6 +1339,21 @@ INT k & 3rd index ($z$).\\
 \noindent
 The function returns (REAL complex) value at grid point (i, j, k). Note that in CUDA this function is very slow as it transfers every element individually.
 
+\subsection{rgrid\_cvalue\_to\_index() -- Set value to grid at given index in reciprocal space}
+
+This function puts a specified value to a given index location in a grid, which is in reciprocal space. It takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid to be accessed.\\
+INT i & 1st index ($x$).\\
+INT j & 2nd index ($y$).\\
+INT k & 3rd index ($z$).\\
+REAL complex value & Value to be set at grid location (i, j, k).\\
+\end{longtable}
+\noindent
+This function does not return any value. Note that in CUDA this function is very slow as it transfers every element individually.
+
 \subsection{rgrid\_value() -- Access grid point at (x, y, z)}
 
 This function returns grid point at given (x, y, z) point where linear interpolation is used between the grid points. The arguments are as follows:
@@ -1245,13 +1397,41 @@ This function does not return any value.
 
 Return the largest value contained in a grid (REAL). This function takes only one argument (rgrid *grid), which specifies the grid to be searched.
 
-\subsection{rgrid\_max() -- Smallest value on grid}
+\subsection{rgrid\_min() -- Smallest value on grid}
 
 Return the smallest value contained in a grid (REAL). This function takes only one argument (rgrid *grid), which specifies the grid to be searched.
 
-\subsection{rgrid\_random() -- Add random noise to grid}
+\subsection{rgrid\_zero\_index() -- Zero grid between given indices}
 
-Add random numbers to given grid within [-scale,+scale[. The arguments are:
+Zero elements within $[lx, hx[$ X $[ly, hy[$ X $[lz, hz[$. The function takes the following arguments:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid for the operation.\\ 
+INT lx & Low index for $x$ (first index).\\
+INT hx & High index for $x$ (first index).\\
+INT ly & Low index for $y$ (middle index).\\
+INT hy & High index for $y$ (middle index).\\
+INT lz & Low index for $z$ (last index).\\
+INT hz & High index for $z$ (last index).\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsection{grid\_random\_seed() -- Set random number generator seed}
+
+Set the random number generator seed. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+INT seed & Random number seed.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsection{rgrid\_random\_uniform() -- Add uniform random noise to grid}
+
+Add uniformly distributed random numbers to given grid within [-scale,+scale[. The arguments are:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
@@ -1261,14 +1441,54 @@ REAL scale & Specify the scale for random numbers.\\
 \noindent
 This function does not return any value. 
 
-\subsection{rgrid\_poisson() -- Solve Poisson equation}
+\subsection{rgrid\_random\_normal() -- Add normal random noise to grid}
+
+Add normal distributed random numbers to given grid with distribution width [-scale,+scale[. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid where random numbers will be added.\\
+REAL scale & Specify the scale for random numbers.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsection{rgrid\_fft\_poisson() -- Solve Poisson equation}
 
 This routine solves Poisson equation ($\Delta f = u$) subject to periodic boundaries. It
 uses finite difference for Laplacian (7 point) and FFT. It takes one grid (rgrid *) as argument, which on entry describes the right hand side function ($u$). On exit, this grid is replaced by the solution ($f$). The function does not return any value.
 
 \subsection{rgrid\_div() -- Divergence of vector field}
 
-Calculate divergence of a given vector field. The arguments are:
+Calculate divergence of a given vector field. This may use finite difference or FFT depending on grid\_analyze\_method. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *div & Result grid.\\
+rgrid *fx  & $x$ component of the vector field.\\
+rgrid *fy  & $y$ component of the vector field.\\
+rgrid *fz  & $z$ component of the vector field.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsection{rgrid\_fft\_div() -- Divergence of vector field (FFT)}
+
+Calculate divergence of a given vector field. This routine uses FFT. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *div & Result grid.\\
+rgrid *fx  & $x$ component of the vector field.\\
+rgrid *fy  & $y$ component of the vector field.\\
+rgrid *fz  & $z$ component of the vector field.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsection{rgrid\_fd\_div() -- Divergence of vector field (FD)}
+
+Calculate divergence of a given vector field. This routine uses finite difference. The arguments are:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
@@ -1401,7 +1621,7 @@ rgrid *input3 & Input grid 3 ($f_3$) for spherical averaging (may be NULL).\\
 REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
 REAL binstep & Binning step length.\\
 INT nbins & Number of bins allocated in bins.\\
-char volel & Whether to include multiplication by the volume element ($4\pi r^2$). 1 = Multiply by the volume element; 0 = no multiplication (i.e., calculate radial average).\\
+char volel & 1 = direct sum or 0 = radial average.\\
 \end{longtable}
 \noindent
 This function does not return any value.
@@ -1420,7 +1640,7 @@ rgrid *input3 & Input grid for spherical averaging, but this is complex data (i.
 REAL *bins & 1-D array for the spherically averaged values. This is an array with dimenion equal to nbins (below).\\
 REAL binstep & Binning step length for $k$.\\
 INT nbins & Number of bins allocated in bins.\\
-char volel & Whether to include multiplication by the volume element ($4\pi k^2$). 1 = Multiply by the volume element; 0 = no multiplication (i.e., calculate radial average).\\
+char volel & 2: direct sum, 1: Include the volume element or 0: just calculate radial average.\\
 \end{longtable}
 \noindent
 This function does not return any value. 
@@ -1437,80 +1657,6 @@ INT npts & Number of points to be used in taking the running average. This smoot
 \end{longtable}
 \noindent
 This function does not return any value.
-
-\subsection{rgrid\_fft\_gradient\_x() -- Differentiate real grid in the Fourier space along $x$}
-
-Differentiate real grid in the reciprocal space. This function takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
-Argument & Description\\
-\cline{1-2}
-rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient\_x & Output grid.\\
-\end{longtable}
-\noindent
-This function does not return any value.
-
-\subsection{rgrid\_fft\_gradient\_y() -- Differentiate real grid in the Fourier space along $y$}
-
-Differentiate real grid in the reciprocal space. This function takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
-Argument & Description\\
-\cline{1-2}
-rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient\_y & Output grid.\\
-\end{longtable}
-\noindent
-This function does not return any value.
-
-\subsection{rgrid\_fft\_gradient\_z() -- Differentiate real grid in the Fourier space along $z$}
-
-Differentiate real grid in the reciprocal space. This function takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
-Argument & Description\\
-\cline{1-2}
-rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient\_z & Output grid.\\
-\end{longtable}
-\noindent
-This function does not return any value.
-
-\subsection{rgrid\_fft\_gradient() -- Calculate gradient of real grid in the Fourier space}
-
-Differentiate real grid in the reciprocal space. This function takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
-Argument & Description\\
-\cline{1-2}
-rgrid *grid & Grid to be differentiated.\\
-rgrid *gradient\_x & Output grid ($x$).\\
-rgrid *gradient\_y & Output grid ($y$).\\
-rgrid *gradient\_z & Output grid ($z$).\\
-\end{longtable}
-\noindent
-This function does not return any value.
-
-\subsection{rgrid\_fft\_laplace() -- Calculate Laplacian of real grid in the Fourier space}
-
-Calculate Laplacian of a real grid in the reciprocal space. This function takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
-Argument & Description\\
-\cline{1-2}
-rgrid *grid & Grid to be differentiated.\\
-rgrid *laplace & Output grid.\\
-\end{longtable}
-\noindent
-This function does not return any value.
-
-\subsection{rgrid\_fft\_laplace\_expectation\_value() -- Calculate expectation value of laplacian over real grid in the Fourier space}
-
-Calculate expectation value of Laplacian (real grid) in the reciprocal space. This function takes the following arguments:
-\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
-Argument & Description\\
-\cline{1-2}
-rgrid *grid & Grid to be differentiated.\\
-rgrid *laplace & Output grid (calculated in addition to the expectation value).\\
-\end{longtable}
-\noindent
-This function returns the expectation value (REAL).
 
 \subsection{rgrid\_fft\_filter() -- Apply a user defined filter function in the Fourier space}
 
@@ -1533,6 +1679,66 @@ This function can be used to lock or unlock a given grid into host memory (i.e.,
 \subsection{rgrid\_fft\_space() -- Set real or reciprocal space for a grid on GPU}
 
 On pure CPU based systems this function does nothing. On GPU systems it will set the data ordering of the grid. CUFFT changes the data distribution on GPUs after FFT/IFFT operations. For this reason, it is not possible to do two FFT's on the same grid. One has to apply always FFT and IFFT in pairs. Especially when using temporary grids, it may be necessary to tell CUFFT in which space the data is given. This function takes the grid (rgrid *) as the first argument and space (char) as the second argument. The space argument specifies: 0 for real space (CUFFT\_XT\_FORMAT\_INPLACE) or 1 reciprocal space (CUFFT\_XT\_FORMAT\_INPLACE\_SHUFFLED). This function does not return any value.
+
+\subsection{rgrid\_multiply\_by\_x() -- Multiply grid by coordinate x}
+
+Multiply given grid by coordinate $x$. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid for the operation.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
+
+\subsection{rgrid\_multiply\_by\_y() -- Multiply grid by coordinate y}
+
+Multiply given grid by coordinate $y$. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid for the operation.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
+
+\subsection{rgrid\_multiply\_by\_z() -- Multiply grid by coordinate z}
+
+Multiply given grid by coordinate $z$. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid for the operation.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
+
+\subsection{rgrid\_log() -- Natural logarithm of grid}
+
+Compute natural logarithm of a grid. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *dst & Destination grid for the operation.\\
+rgrid *src & Source grid.\\
+REAL eps & Epsilon to avoid infinities.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
+
+\subsection{rgrid\_histogram() -- Produce histogram of values in grid}
+
+Compute histogram of values in the grid. This function takes the following arguments:
+\begin{longtable}{p{.45\textwidth} p{.45\textwidth}}
+Argument & Description\\
+\cline{1-2}
+rgrid *grid & Grid for the values.\\
+REAL *bins & Bin array.\\
+INT nbins & Number of bins in the array.\\
+REAL step & X-axis step for binning.\\
+\end{longtable}
+\noindent
+This function does not return any value.\\
 
 \section{Complex grid routines}
 
@@ -2565,9 +2771,21 @@ cgrid src & Source (complex) grid.\\
 \noindent
 This function does not return any value.
 
-\subsection{cgrid\_random() -- Add random noise to grid}
+\subsection{cgrid\_random\_uniform() -- Add uniform random noise to grid}
 
-Add random numbers to given grid within [-scale,+scale[ separately to both real and imaginary parts. The arguments are:
+Add uniformly distributed random numbers to given grid within [-scale,+scale[. The arguments are:
+\begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
+Argument & Description\\
+\cline{1-2}
+cgrid *grid & Grid where random numbers will be added.\\
+REAL scale & Specify the scale for random numbers.\\
+\end{longtable}
+\noindent
+This function does not return any value. 
+
+\subsection{cgrid\_random\_normal() -- Add normal random noise to grid}
+
+Add normal distributed random numbers to given grid with distribution width [-scale,+scale[. The arguments are:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
@@ -2628,7 +2846,7 @@ This function does not return any value.
 
 \subsection{cgrid\_zero\_index() -- Zero given range in grid}
 
-Zero a given index range of a complex grid over [lx, hx[ X [ly, hy[ X [lz, hz[. The arguments are:
+Zero a given index range of a complex grid over $[lx, hx[$ X $[ly, hy[$ X $[lz, hz[$. The arguments are:
 \begin{longtable}{p{.25\textwidth} p{.65\textwidth}}
 Argument & Description\\
 \cline{1-2}
