@@ -29,12 +29,13 @@ cufft_plan_data grid_plan_data[MAX_PLANS];
 #define EXPORT
 
 /*
- * CUDA error checking.
- *
- * Calls abort() if something is wrong, so that the stack trace
- * can be used to locate the problem.
- *
- * NOTE: This will also do device synchronize! (= can slow things down)
+ * @FUNC{cuda_error_check, "CUDA error check"}
+ * @DESC{"Check and print CUDA errors that may have occurred previously. This will call
+          abort() if something is wrong, so that the stack tracecan be used to locate the problem.
+          Note that this will also do device synchronize! (= can slow things down).
+          Users do not need to usally call this as libgrid makes periodic calls to check
+          that everything is OK"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -59,13 +60,15 @@ EXPORT inline void cuda_error_check() {
 }
 
 /*
- * CUFFT error check.
- *
- * value = Error code (cufftResult; input).
+ * @FUNC{cuda_cufft_error_check, "CUDA-CUFFT error status check"}
+ * @DESC{"Check and print CUFFT error codes.
+          Users do not need to usally call this as libgrid makes periodic calls to check
+          that everything is OK"}
+ * @RVAL{cufftResult, "Returns the error code"}
  *
  */
 
-EXPORT void cufft_error_check(int value) {  /* Should be cufftResult enum but this would fail on CPU-only systems */
+EXPORT void cuda_cufft_error_check(int value) {  /* Should be cufftResult enum but this would fail on CPU-only systems */
 
   switch(value) {
   case CUFFT_SUCCESS:
@@ -122,7 +125,9 @@ EXPORT void cufft_error_check(int value) {  /* Should be cufftResult enum but th
 }
 
 /*
- * Return GPU usage info.
+ * @FUNC{cuda_ngpus, "Return number of GPUs in use"}
+ * @DESC{"Return number of GPUs currently in use"}
+ * @RVAL{int, "Returns number of GPUs"}
  *
  */
 
@@ -132,7 +137,9 @@ EXPORT int cuda_ngpus() {
 }
 
 /*
- * Return GPUs to use.
+ * @FUNC{cuda_gpus, "Return list of GPUs in use"}
+ * @DESC{"Return array of currently used GPUs"}
+ * @RVAL{int *, "Pointer to array specifying the GPUs (length given by cuda_ngpus())"}
  *
  */
 
@@ -142,12 +149,11 @@ EXPORT int *cuda_gpus() {
 }
 
 /*
- * Allocate GPUs.
- *
- * ngpus = Number of GPUs to allocate (int). If ngpus = 0, attempt to allocate all available GPUs. In this case, gpus variable is not accessed.
- * gpus  = GPU numbers to use (int *).
- *
- * No return value.
+ * @FUNC{cuda_alloc_gpus, "Allocate GPUs to use"}
+ * @DESC{"Allocate GPUs to use in the calculation"}
+ * @ARG1{int ngpus, "Number of GPUs to use. If zero, attempt to use all GPUs on the system and gpus variable is not accessed"}
+ * @ARG2{int *gpus, "Array specifying the GPU numbers to use (see nvidia-smi output)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -193,7 +199,13 @@ EXPORT void cuda_alloc_gpus(int ngpus, int *gpus) {
 }
 
 /*
- * Returns the total amount (= all allocated GPUs combined) of free GPU memory (in bytes).
+ * @FUNC{cuda_memory, "Return total free GPU memory"}
+ * @DESC{"Returns the total amount (for all allocated GPUs combined) of free GPU memory available (in bytes).
+          Usually users do not need to check for this as libgrid transfers grids in/out of GPU to maintain
+          maximum memory occupation"}
+ * @RVAL{size_t, "Returns the available memory in bytes"}
+ *
+ * TODO: total amount of memory is also calculated but not returned.
  *
  */
 
@@ -220,11 +232,12 @@ EXPORT size_t cuda_memory() {
 }
 
 /*
- * Transform between from shuffled (reciprocal) to unshuffled (real) storage format.
- *
- * block = Memory data for unshuffle (gpu_mem_block *; input/output).
- * 
- * No return value.
+ * @FUNC{cuda_gpu_unshuffle, "Transform from shuffled and unshuffled format"}
+ * @DESC{"Transform array from shuffled (reciprocal) to unshuffled (real) storage format.
+          libgrid does such transformation transparently, so users should not have to
+          call this routine"}
+ * @ARG1{gpu_mem_block *block, "Data to unshuffle"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -272,11 +285,11 @@ EXPORT void cuda_gpu_unshuffle(gpu_mem_block *block) {
 }
 
 /*
- * Transfer data from host memory to GPUs.
- *
- * block = Memory block to syncronize from host to GPU (gpu_mem_block *; input/output).
- *
- * Return value: 0 = OK, -1 = error.
+ * @FUNC{cuda_mem2gpu, "Transfer data from host to GPU"}
+ * @DESC{"Transfer data from host memory to GPU memory. libgrid will transfer data as
+          needed, so that users would rarely have to call this routine"}
+ * @ARG1{gpu_mem_block, "Memory block to syncronize from host to GPU"}
+ * @RVAL{int, "Returns error status (0 = OK, -1 = Error)"}
  *
  */
 
@@ -335,11 +348,11 @@ EXPORT inline int cuda_mem2gpu(gpu_mem_block *block) {
 }
 
 /*
- * Transfer data from GPU to host memory.
- *
- * block = Memory block to syncronize from GPU to host (gpu_mem_block *; input/output).
- *
- * Return value: 0 = OK, -1 = error.
+ * @FUNC{cuda_gpu2mem, "Transfer data from GPU to host memory"}
+ * @DESC{"Transfer data from GPU memory to host memory. Normally this is done transparently
+          by libgrid, so that users do not need to call this directly"}
+ * @ARG1{gpu_mem_block *block, "Memory block to syncronize from GPU to host"}
+ * @RVAL{int, "Returns error status (0 = OK, -1 = Error)"}
  *
  */
 
@@ -383,12 +396,12 @@ EXPORT inline int cuda_gpu2mem(gpu_mem_block *block) {
 }
 
 /*
- * Transfer data from one area in GPU to another
- *
- * dst     = (destination) GPU buffer (gpu_mem_block *; output).
- * src     = (source) GPU buffer (gpu_mem_block *; input).
- *
- * Return value: 0 = OK, -1 = error.
+ * @FUNC{cuda_gpu2gpu, "Copy data inside GPU"}
+ * @DESC{"Transfer data from one area in GPU to another. This is usually done transparently by libgrid
+          and users do not need to call this function"}
+ * @ARG1{gpu_mem_block *dst, "Destination GPU address"}
+ * @ARG2{gpu_mem_block *src, "Source GPU address"}
+ * @RVAL{int, "Returns error status (0 = OK, -1 = Error)"}
  *
  */
 
@@ -424,11 +437,10 @@ EXPORT inline int cuda_gpu2gpu(gpu_mem_block *dst, gpu_mem_block *src) {
 }
 
 /*
- * Find GPU memory block based on host_mem address (or to check if host_mem block on GPU).
- *
- * host_mem = Host memory address to identify the GPU memory block (void *; input).
- *
- * Return: Pointer to gpu_mem_block or NULL (not found).
+ * @FUNC{cuda_find_block, "Find GPU memory block address"}
+ * @DESC{"Find GPU memory block based on host_mem address (or to check if host_mem block is present on GPU)"}
+ * @ARG1{void *host_mem, "Host memory address to identify the GPU memory block"}
+ * @RVAL{gpu_mem_block *, "Returns pointer to gpu_mem_block or NULL if not found"}
  *
  */
 
@@ -454,12 +466,11 @@ EXPORT gpu_mem_block *cuda_find_block(void *host_mem) {
 }  
 
 /*
- * Move memory block from GPU back to host memory.
- *
- * host_mem = Host memory address to identify the block (void *; input).
- * copy     = Synchronize the contents of the block to host memory before removing it from GPU? (1 = yes, 0 = no)
- *
- * Return value: 0 = OK, -1 = error.
+ * @FUNC{cuda_remove_block, "Remove memory block from GPU"}
+ * @DESC{"Move memory block from GPU back to host memory"}
+ * @ARG1{void *host_mem, "Host memory address to identify the block"}
+ * @ARG2{char copy, "Synchronize the block to host memory before removing it? (1 = yes, 0 = no)"}
+ * @RVAL{int, "Returns error status (0 = OK, -1 = Error)"}
  *
  */
 
@@ -588,17 +599,15 @@ static int alloc_mem(gpu_mem_block *block, size_t length) {
 }
 
 /*
- * Add block (from host memory to GPU). If there is not enough space in GPU memory,
- * this may swap out another block(s) based on their last use stamp.
- *
- * host_mem     = Host memory pointer containing the data (void *; input).
- * length       = Length of host memory data (size_t; input). If cufft_handle == -1, 
- *                allocate this amount on all GPUs, otherwise use CUFFT partitioning of data over the GPUs (length not used; this is contained in the cufft handle).
- * cufft_handle = CUFFT handle (if not known, -1; allocates length amount of memory on all GPUs). If != -1, CUFFT multi GPU routines are used for managing memory (cufftHandle).
- * id           = String describing the block contents. Useful for debugging. (char *; input).
- * copy         = Copy host_mem to gpu_mem? (1 = yes, 0 = no).
- *
- * Return value: Pointer to new gpu_block_mem or NULL = error.
+ * @FUNC{cuda_add_block, "Add memory block to GPU"}
+ * @DESC{"Add block (from host memory to GPU). If there is not enough space in GPU memory,
+          this may swap out another block(s) based on their last use stamp"}
+ * @ARG1{void *host_mem, "Host memory pointer containing the data"}
+ * @ARG2{size_t length, "Length of host memory data. If cufft_handle == -1, allocate this amount on all GPUs, otherwise use CUFFT partitioning of data over the GPUs (length not used; this is contained in the cufft handle)"}
+ * @ARG3{cufftHandle cufft_handle, "CUFFT handle (if not known, -1; allocates length amount of memory on all GPUs). If != -1, CUFFT multi GPU routines are used for managing memory (cufftHandle)"}
+ * @ARG4{char *id, "String describing the block contents. Useful for debugging"}
+ * @ARG5{char copy, "Copy host_mem to gpu_mem? (1 = yes, 0 = no)"}
+ * @RVAL{gpu_block_mem *, "Returns Pointer to new gpu_block_mem or NULL on error"}
  *
  */
 
@@ -677,12 +686,10 @@ EXPORT gpu_mem_block *cuda_add_block(void *host_mem, size_t length, cufftHandle 
 }
 
 /*
- * Lock block to GPU memory.
- * A locked memory block cannot be swapped out of GPU.
- *
- * host_mem = Host memory to be locked to GPU memory (void *; input).
- *
- * Return value: 0 = OK, -1 = error (not on GPU).
+ * @FUNC{cuda_lock_block, "Lock memory block to GPU memory"}
+ * @DESC{"Lock block to GPU memory. A locked memory block cannot be swapped out of GPU"}
+ * @ARG1{void *host_mem, "Host memory to be locked to GPU memory"}
+ * @RVAL{int, "Returns 0 = OK, -1 = error (not present on GPU)"}
  *
  */
 
@@ -708,12 +715,10 @@ EXPORT int cuda_lock_block(void *host_mem) {
 }
 
 /*
- * Unlock block from GPU memory.
- * An unlocked memory block can be swapped out of GPU.
- *
- * host_mem = Host memory to be locked to GPU memory (void *; input).
- *
- * Return value: 0 = OK, -1 = error (not on GPU).
+ * @FUNC{cuda_unlock_block, "Unlock block from GPU memory"}
+ * @DESC{"Unlock block from GPU memory. An unlocked memory block can be swapped out of GPU"}
+ * @ARG1{void *host_mem, "Host memory to be locked to GPU memory"}
+ * @RVAL{int, "Returns 0 = OK, -1 = error (not present on GPU)"}
  *
  */
 
@@ -742,28 +747,25 @@ EXPORT int cuda_unlock_block(void *host_mem) {
 }
 
 /*
- * Add two blocks to GPU simulatenously (or keep both at CPU). Other blocks may be swapped out
- * or the two blocks may not fit in at the same time.
- *
- * host_mem1     = Host memory pointer 1 (void *; input).
- * length1       = Length of host memory pointer 1 (size_t; input).
- * cufft_handle1 = CUFFT handle for 1 (cufftHandle).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * copy1         = Copy contents of block 1 to GPU? 1 = copy, 0 = don't copy.
- * host_mem2     = Host memory pointer 2 (void *; input).
- * length2       = Length of host memory pointer 2 (size_t; input).
- * cufft_handle2 = CUFFT handle for 2 (cufftHandle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- * copy2         = Copy contents of block 2 to GPU? 1 = copy, 0 = don't copy.
- *
- * If both memory blocks can be allocated in GPU, their contents will
- * be transferred there and 0 is returned.
- *
- * If neither of the blocks can be allocated in GPU, both blocks will
- * be pushed back to host memory and -1 is returned.
- *
- * Note that this may end up in unresolvable situation if:
- * one of the blocks is locked to GPU and the other one does not fit there!
+ * @FUNC{cuda_add_two_blocks, "Add two block to GPU"}
+ * @DESC{"Add two blocks to GPU simulatenously (or keep them both at CPU). Other blocks may be swapped out
+          or the two blocks may not fit in at the same time.\\
+          If both memory blocks can be allocated in GPU, their contents will
+          be transferred there and 0 is returned.\\
+          If neither of the blocks can be allocated in GPU, both blocks will
+          be pushed back to host memory and -1 is returned.\\
+          Note that this may end up in unresolvable situation if: one of the blocks is 
+          locked to GPU and the other one does not fit there!"}
+ * @ARG1{void *host_mem1, "Host memory pointer 1"}
+ * @ARG2{size_t length1, "Length of host memory pointer 1"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT handle for 1"}
+ * @ARG4{char *id1, "String describing block 1 contents. Useful for debugging"}
+ * @ARG5{char copy1, "Copy contents of block 1 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG6{void *host_mem2, "Host memory pointer 2"}
+ * @ARG7{size_t length2, "Length of host memory pointer 2"}
+ * @ARG8{cufftHandle cufft_handle2, "CUFFT handle for 2"}
+ * @ARG9{char *id2, "String describing block 2 contents. Useful for debugging"}
+ * @ARG10{char copy2, "Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
  *
  */
 
@@ -1784,14 +1786,14 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
   if(ngpus > 1) {
     if((status = cufftXtSetGPUs(*plan, ngpus, gpus)) != CUFFT_SUCCESS) {
       fprintf(stderr, "libgrid(cuda): Error allocating GPUs in rcufft_workspace.\n");
-      cufft_error_check(status);
+      cuda_cufft_error_check(status);
     }    
   }
 
   /* Make cufft plan & get workspace sizes */
   if((status = cufftMakePlan3d(*plan, (int) nx, (int) ny, (int) nz, type, &wrksize[0])) != CUFFT_SUCCESS) {
     fprintf(stderr, "libgrid(cuda): Error in making real 3d cufft plan.\n");
-    cufft_error_check(status);
+    cuda_cufft_error_check(status);
     return;
   }
 
@@ -1855,7 +1857,7 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
       if((status = cufftSetWorkArea(i, gpumem[0])) != CUFFT_SUCCESS) {
         if(status != CUFFT_INVALID_PLAN) { // some plans may not be active...
           fprintf(stderr, "libgrid(cuda): CUFFT set workarea failed.\n");      
-          cufft_error_check(status);
+          cuda_cufft_error_check(status);
         }
       }
   } else {
@@ -1863,7 +1865,7 @@ void grid_cufft_make_plan(cufftHandle *plan, cufftType type, INT nx, INT ny, INT
       if((status = cufftXtSetWorkArea(i, &(gpumem[0]))) != CUFFT_SUCCESS) {
         if(status != CUFFT_INVALID_PLAN) { // some plans may not be active...
           fprintf(stderr, "libgrid(cuda): CUFFT set workarea failed.\n");      
-          cufft_error_check(status);
+          cuda_cufft_error_check(status);
         }
       }
   }
