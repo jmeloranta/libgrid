@@ -1,7 +1,8 @@
 /*
  * Interface to FFTW.
  *
- * No user callable routines.
+ * These are not included in the manual since it should not be necessary
+ * to call these routines directly.
  *
  */
 

@@ -7,7 +7,7 @@ libgrid-manual.pdf: gendoc libgrid-manual.tex
 	$(shell ./gendoc ../src/threads.c > thread-functions.tex)
 	$(shell ./gendoc ../src/linalg.c > linalg-functions.tex)
 	$(shell ./gendoc ../src/interpolate.c > interpolate-functions.tex)
-	$(shell ./gendoc ../src/timer.c > timer-functions.tex)
+	$(shell ./gendoc ../src/ctimer.c > timer-functions.tex)
 	$(shell ./gendoc ../src/cuda.c > cuda-functions.tex)
 	$(shell ./gendoc ../src/ext/*.c > cuda-ext-functions.tex)
 	pdflatex libgrid-manual

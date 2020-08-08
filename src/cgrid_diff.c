@@ -27,15 +27,14 @@ static char cgrid_bc_conv(cgrid *grid) {
 #endif
 
 /* 
- * Differentiate a grid with respect to x, y, z (central difference).
- * Uses grid_analyze_method to determine FFT vs. FD.
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradx    = differentiated grid x output (cgrid *; output).
- * grady    = differentiated grid y output (cgrid *; output).
- * gradz    = differentiated grid z output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_gradient, "Gradient of grid"}
+ * @DESC{"Differentiate a grid with respect to x, y, z (gradient). Based on grid_analyze_method setting,
+ *       either FFT or finite difference (central difference) will be used"}
+ * @ARG1{cgrid *grid, "Grid to be differentiated"}
+ * @ARG2{cgrid *gradx, "Gradient x-component"}
+ * @ARG3{cgrid *grady, "Gradient y-component"}
+ * @ARG4{cgrid *gradz, "Gradient z-component"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -58,13 +57,11 @@ EXPORT void cgrid_gradient(cgrid *grid, cgrid *gradx, cgrid *grady, cgrid *gradz
 }
 
 /* 
- * Differentiate a grid with respect to x (central difference).
- * Uses grid_analyze_method to determine FFT vs. FD.
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradient = differentiated grid output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_gradient_x, "Differentiate grid with respect to x"}
+ * @DESC{"Differentiate a grid with respect to x. Uses grid_analyze_method to determine FFT vs. finite difference method"}
+ * @ARG1{cgrid *grid, "Grid to be differentiated"}
+ * @ARG2{cgrid *gradient, "Differentiated grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -79,13 +76,11 @@ EXPORT void cgrid_gradient_x(cgrid *grid, cgrid *gradient) {
 }
 
 /* 
- * Differentiate a grid with respect to y (central difference).
- * Uses grid_analyze_method to determine FFT vs. FD.
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradient = differentiated grid output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_gradient_y, "Differentiate grid with respect to y"}
+ * @DESC{"Differentiate a grid with respect to y. Uses grid_analyze_method to determine FFT vs. finite difference method"}
+ * @ARG1{cgrid *grid, "Grid to be differentiated"}
+ * @ARG2{cgrid *gradient, "Differentiated grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -100,13 +95,11 @@ EXPORT void cgrid_gradient_y(cgrid *grid, cgrid *gradient) {
 }
 
 /* 
- * Differentiate a grid with respect to z (central difference).
- * Uses grid_analyze_method to determine FFT vs. FD.
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradient = differentiated grid output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_gradient_z, "Differentiate grid with respect to z"}
+ * @DESC{"Differentiate a grid with respect to z. Uses grid_analyze_method to determine FFT vs. finite difference method"}
+ * @ARG1{cgrid *grid, "Grid to be differentiated"}
+ * @ARG2{cgrid *gradient, "Differentiated grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -121,13 +114,11 @@ EXPORT void cgrid_gradient_z(cgrid *grid, cgrid *gradient) {
 }
 
 /*
- * Calculate laplacian of the grid.
- * Use FD or FFT according to grid_analyze_method.
- *
- * grid    = source grid (cgrid *; input).
- * laplace = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_laplace, "Laplacian of grid"}
+ * @DESC{"Calculate laplacian of the grid. Uses finite difference or FFT according based on grid_analyze_method setting"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -142,13 +133,11 @@ EXPORT void cgrid_laplace(cgrid *grid, cgrid *laplace) {
 }
 
 /*
- * Calculate laplacian of the grid (X).
- * Use FD or FFT according to grid_analuze_method.
- *
- * grid    = source grid (cgrid *; input).
- * laplace = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_laplace_x, "Second derivative of grid with respect to x"}
+ * @DESC{"Calculate second derivative of the grid with respect to x. Uses FD or FFT according to grid_analuze_method"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -163,13 +152,11 @@ EXPORT void cgrid_laplace_x(cgrid *grid, cgrid *laplace) {
 }
 
 /*
- * Calculate laplacian of the grid (Y).
- * Use FD or FFT according to grid_analuze_method.
- *
- * grid    = source grid (cgrid *; input).
- * laplace = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_laplace_y, "Second derivative of grid with respect to y"}
+ * @DESC{"Calculate second derivative of the grid with respect to y. Uses FD or FFT according to grid_analuze_method"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -184,13 +171,11 @@ EXPORT void cgrid_laplace_y(cgrid *grid, cgrid *laplace) {
 }
 
 /*
- * Calculate laplacian of the grid (Z).
- * Use FD or FFT according to grid_analuze_method.
- *
- * grid    = source grid (cgrid *; input).
- * laplace = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_laplace_z, "Second derivative of grid with respect to z"}
+ * @DESC{"Calculate second derivative of the grid with respect to z. Uses FD or FFT according to grid_analuze_method"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -205,12 +190,11 @@ EXPORT void cgrid_laplace_z(cgrid *grid, cgrid *laplace) {
 }
 
 /* 
- * Differentiate a grid with respect to x (central difference).
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradient = differentiated grid output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_fd_gradient_x, "First derivative of grid with respect to x (finite difference)"}
+ * @DESC{"Calculate first derivative of the grid with respect to x using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *gradient, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -240,12 +224,11 @@ EXPORT void cgrid_fd_gradient_x(cgrid *grid, cgrid *gradient) {
 }
 
 /* 
- * Differentiate a grid with respect to y.
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradient = differentiated grid output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_fd_gradient_y, "First derivative of grid with respect to y (finite difference)"}
+ * @DESC{"Calculate first derivative of the grid with respect to y using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *gradient, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -275,12 +258,11 @@ EXPORT void cgrid_fd_gradient_y(cgrid *grid, cgrid *gradient) {
 }
 
 /* 
- * Differentiate a grid with respect to z.
- *
- * grid     = grid to be differentiated (cgrid *; input).
- * gradient = differentiated grid output (cgrid *; output).
- * 
- * No return value.
+ * @FUNC{cgrid_fd_gradient_z, "First derivative of grid with respect to z (finite difference)"}
+ * @DESC{"Calculate first derivative of the grid with respect to z using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *gradient, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -310,12 +292,11 @@ EXPORT void cgrid_fd_gradient_z(cgrid *grid, cgrid *gradient) {
 }
 
 /*
- * Calculate laplacian of the grid.
- *
- * grid    = source grid (cgrid *; input).
- * laplace = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_fd_laplace, "Laplacian of grid (finite difference)"}
+ * @DESC{"Calculate laplacian of the grid using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -350,12 +331,11 @@ EXPORT void cgrid_fd_laplace(cgrid *grid, cgrid *laplace) {
 }
 
 /*
- * Calculate laplacian of the grid (x component). This is the second derivative with respect to x.
- *
- * grid     = source grid (cgrid *; input).
- * laplacex = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_fd_laplace_x, "Second derivative of grid with respect to x (finite difference)"}
+ * @DESC{"Calculate second derivative of the grid with respect to x using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplacex, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -388,12 +368,11 @@ EXPORT void cgrid_fd_laplace_x(cgrid *grid, cgrid *laplacex) {
 }
 
 /*
- * Calculate laplacian of the grid (y component). This is the second derivative with respect to y.
- *
- * grid     = source grid (cgrid *; input).
- * laplacey = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_fd_laplace_y, "Second derivative of grid with respect to y (finite difference)"}
+ * @DESC{"Calculate second derivative of the grid with respect to y using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplacey, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -426,12 +405,11 @@ EXPORT void cgrid_fd_laplace_y(cgrid *grid, cgrid *laplacey) {
 }
 
 /*
- * Calculate vector laplacian of the grid (z component). This is the second derivative with respect to z.
- *
- * grid     = source grid (cgrid *; input).
- * laplacez = output grid for the operation (cgrid *; output).
- *
- * No return value.
+ * @FUNC{cgrid_fd_laplace_z, "Second derivative of grid with respect to z (finite difference)"}
+ * @DESC{"Calculate second derivative of the grid with respect to z using finite difference (central difference)"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplacez, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -464,14 +442,12 @@ EXPORT void cgrid_fd_laplace_z(cgrid *grid, cgrid *laplacez) {
 }
 
 /*
- * Differentiate grid in the Fourier space along x.
- *
- * grid       = grid to be differentiated (in Fourier space) (cgrid *; input).
- * gradient_x = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input and output grids may be the same.
+ * @FUNC{cgrid_fft_gradient_x, "First derivative of grid with respect to x (FFT)"}
+ * @DESC{"Calculate first derivative of the grid with respect to x using FFT. Note that the input and output
+          grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *gradient_x, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -515,14 +491,12 @@ EXPORT void cgrid_fft_gradient_x(cgrid *grid, cgrid *gradient_x) {
 }
 
 /*
- * Differentiate grid in the Fourier space along y.
- *
- * grid       = grid to be differentiated (in Fourier space) (cgrid *; input).
- * gradient_y = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input and output grids may be the same.
+ * @FUNC{cgrid_fft_gradient_y, "First derivative of grid with respect to y (FFT)"}
+ * @DESC{"Calculate first derivative of the grid with respect to y using FFT. Note that the input and output
+          grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *gradient_y, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -566,14 +540,12 @@ EXPORT void cgrid_fft_gradient_y(cgrid *grid, cgrid *gradient_y) {
 }
 
 /*
- * Differentiate grid in the Fourier space along z.
- *
- * grid       = grid to be differentiated (in Fourier space) (cgrid *; input).
- * gradient_z = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input and output grids may be the same.
+ * @FUNC{cgrid_fft_gradient_z, "First derivative of grid with respect to z (FFT)"}
+ * @DESC{"Calculate first derivative of the grid with respect to z using FFT. Note that the input and output
+          grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *gradient_z, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -618,14 +590,11 @@ EXPORT void cgrid_fft_gradient_z(cgrid *grid, cgrid *gradient_z) {
 }
 
 /* 
- * Calculate laplacian of a grid (in Fourier space).
- *
- * grid    = grid to be differentiated (cgrid *; input).
- * laplace = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input/output grids may be the same.
+ * @FUNC{cgrid_fft_laplace, "Laplacian of grid (FFT)"}
+ * @DESC{"Calculate laplacian of the grid using FFT. Note that the input and output grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -687,14 +656,11 @@ EXPORT void cgrid_fft_laplace(cgrid *grid, cgrid *laplace)  {
 }
 
 /* 
- * Calculate second derivative of a grid with respect to x in Fourier space.
- *
- * grid    = grid to be differentiated (cgrid *; input).
- * laplace = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input/output grids may be the same.
+ * @FUNC{cgrid_fft_laplace_x, "Second derivative of grid with respect to x (FFT)"}
+ * @DESC{"Calculate second derivative of the grid with respect to x using FFT. Note that the input and output grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -740,14 +706,11 @@ EXPORT void cgrid_fft_laplace_x(cgrid *grid, cgrid *laplace)  {
 }
 
 /* 
- * Calculate second derivative of a grid with respect to y (in Fourier space).
- *
- * grid    = grid to be differentiated (cgrid *; input).
- * laplace = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input/output grids may be the same.
+ * @FUNC{cgrid_fft_laplace_y, "Second derivative of grid with respect to y (FFT)"}
+ * @DESC{"Calculate second derivative of the grid with respect to y using FFT. Note that the input and output grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -794,14 +757,11 @@ EXPORT void cgrid_fft_laplace_y(cgrid *grid, cgrid *laplace)  {
 }
 
 /* 
- * Calculate second derivative of a grid with respect to z (in Fourier space).
- *
- * grid    = grid to be differentiated (cgrid *; input).
- * laplace = output grid (cgrid *; output).
- *
- * No return value.
- *
- * Note: input/output grids may be the same.
+ * @FUNC{cgrid_fft_laplace_z, "Second derivative of grid with respect to z (FFT)"}
+ * @DESC{"Calculate second derivative of the grid with respect to z using FFT. Note that the input and output grids may be the same"}
+ * @ARG1{cgrid *grid, "Source grid"}
+ * @ARG2{cgrid *laplace, "Output grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -846,13 +806,11 @@ EXPORT void cgrid_fft_laplace_z(cgrid *grid, cgrid *laplace)  {
   }
 }
 
-
 /*
- * Calculate expectation value of laplace operator in the Fourier space (int grid^* grid'').
- *
- * grid    = source grid for the operation (in Fourier space) (cgrid *; input).
- *
- * Returns the expectation value (REAL).
+ * @FUNC{cgrid_fft_laplace_expectation_value, "Expectation value of laplacian (FFT)"}
+ * @DESC{"Calculate expectation value of laplacian in the reciprocal space ($\int grid^* \Delta grid$)"}
+ * @ARG1{cgrid *grid, "Source grid for the operation (must be in reciprocal space)"}
+ * @RVAL{REAL, "Returns the expectation value"}
  *
  */
 
@@ -921,15 +879,18 @@ EXPORT REAL cgrid_fft_laplace_expectation_value(cgrid *grid)  {
 }
 
 /*
- * Solve Poisson equation: Laplace f = u subject to periodic boundary condition. Grid in Fourier space.
- * Uses finite difference for Laplacian (7 point) and FFT. Num. Recip. Sect. 19.4.
- *
- * grid = On entry function u specified over grid (input) 
- *        and function f (output) on exit (cgrid *; input/output).
- *
- * No return value.
- *
- * NOTE: Does not impose moving background.
+ * @FUNC{cgrid_fft_poisson, "Solve Poisson equation (FFT)"}
+ * @DESC{"Solve Poisson equation: $\Delta f = u$ subject to periodic boundary condition. Grid must be given in reciprocal space.
+          This uses finite difference for Laplacian (7 point) -- see FFT. Num. Recip. Sect. 19.4. Note that this does not include
+          the moving background in the calculation.
+          To use this routine:\\
+          // grid contains function u\\
+          cgrid_fft(grid);\\
+          cgrid_fft_poisson(grid);\\
+          cgrid_inverse_fft_norm(grid);\\
+          // grid contains solution f"}
+ * @ARG1{cgrid *grid, "On entry Fourier transform of function u (input) and Fourier transform of function f on exit (output)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -965,12 +926,13 @@ EXPORT void cgrid_fft_poisson(cgrid *grid) {
 }
 
 /*
- * Calculate divergence of a vector field.
- *
- * div     = result (cgrid *; output).
- * fx      = x component of the field (cgrid *; input).
- * fy      = y component of the field (cgrid *; input).
- * fz      = z component of the field (cgrid *; input).
+ * @FUNC{cgrid_fd_div, "Divergence of vector field (finite difference)"}
+ * @DESC{"Calculate divergence of a vector field"}
+ * @ARG1{cgird *div, "Result"}
+ * @ARG2{cgrid *fx, "x component of the field"}
+ * @ARG3{cgrid *fy, "y component of the field"}
+ * @ARG4{cgrid *fz, "z component of the field"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1004,18 +966,17 @@ EXPORT void cgrid_fd_div(cgrid *div, cgrid *fx, cgrid *fy, cgrid *fz) {
 }
 
 /*
- * Calculate rot of a vector field.
- *
- * rotx = x component of rot (cgrid *; output). If NULL, not computed (fx not accessed and may also be NULL).
- * roty = y component of rot (cgrid *; output). If NULL, not computed (fy not accessed and may also be NULL).
- * rotz = z component of rot (cgrid *; output). If NULL, not computed (fz not accessed and may also be NULL).
- * fx   = x component of the field (cgrid *; input).
- * fy   = y component of the field (cgrid *; input).
- * fz   = z component of the field (cgrid *; input).
+ * @FUNC{cgrid_fd_rot, "Rot of vector field (finite difference)"}
+ * @DESC{"Calculate rot operator of a vector field"}
+ * @ARG1{cgrid *rotx, "x component of rot. If NULL, not computed (fx not accessed and may also be NULL)"}
+ * @ARG2{cgrid *roty, "y component of rot. If NULL, not computed (fy not accessed and may also be NULL)"}
+ * @ARG3{cgrid *rotz, "z component of rot. If NULL, not computed (fz not accessed and may also be NULL)"}
+ * @ARG4{cgrid *fx, "x component of the field"}
+ * @ARG5{cgrid *fy, "y component of the field"}
+ * @ARG6{cgrid *fz, "z component of the field"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: CUDA implementation missing.
- *
- * No return value.
  *
  */
 
@@ -1077,12 +1038,13 @@ EXPORT void cgrid_fd_rot(cgrid *rotx, cgrid *roty, cgrid *rotz, cgrid *fx, cgrid
 }
 
 /*
- * Calculate |rot| (|curl|; |\Nablda\Times|) of a vector field (i.e., magnitude).
- *
- * rot  = magnitudet of rot (rgrid *; output).
- * fx   = x component of the field (cgrid *; input).
- * fy   = y component of the field (cgrid *; input).
- * fz   = z component of the field (cgrid *; input).
+ * @FUNC{cgrid_fd_abs_rot, "Norm of rot of vector field (finite difference)"}
+ * @DESC{"Calculate $|rot|$ ($|curl|$; $|\nabla\times|$) of a vector field (i.e., the magnitude)"}
+ * @ARG1{cgrid *rot, "Magnitudet of rot"}
+ * @ARG2{cgrid *fx, "x component of the field"}
+ * @ARG3{cgrid *fy, "y component of the field"}
+ * @ARG4{cgrid *fz, "z component of the field"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: CUDA implementation missing.
  *
