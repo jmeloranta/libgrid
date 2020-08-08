@@ -843,8 +843,8 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
  * @DESC{"Calculate $T_BEC$ for a given wavefunction according to:
           $T_BEC = T_{\lambda} * ((n - ngnd) / n)^(exponent)$"}
  * @ARG1{wf *wf, "Wavefunction for which the temperature is calculated"}
- * @ARG2{REAL tl, "Lambda temperature ($T_{\lambda$})"}
- * @ARG3{REAL exponent, "Exponent (2/3 for BEC, approx. 1/6 for superfluid $^4$He with $T_{\lambda}$ \approx 2.19"}
+ * @ARG2{REAL tl, "Lambda temperature ($T_{\lambda}$)"}
+ * @ARG3{REAL exponent, "Exponent (2/3 for BEC, approx. 1/6 for superfluid $^4$He with $T_{\lambda} \approx 2.19$"}
  * @RVAL{REAL, "Returns temperature in Kelvin"}
  *
  */
