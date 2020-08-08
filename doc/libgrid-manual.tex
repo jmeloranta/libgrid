@@ -271,49 +271,49 @@ Functions in libgrid are divided into following three classes: 1) rgrid\_* (func
 
 \section{Real grid routines}
 
-\include{real-functions}
+\input{real-functions}
 
 \section{Complex grid routines}
 
-\include{complex-functions}
+\input{complex-functions}
 
 \section{Mixed grid routines}
 
-\include{mixed-functions}
+\input{mixed-functions}
 
 \section{Wavefunction routines}
 
-\include{wf-functions}
+\input{wf-functions}
 
 \section{Random number routines}
 
-\include{random-functions}
+\input{random-functions}
 
 \section{Thread routines}
 
-\include{thread-functions}
+\input{thread-functions}
 
 \section{Linear algebra routines}
 
-\include{linalg-functions}
+\input{linalg-functions}
 
 \section{Interpolation routines}
 
-\include{interpolate-functions}
+\input{interpolate-functions}
 
 \section{Timer routines}
 
-\include{timer-functions}
+\input{timer-functions}
 
 \section{CUDA specific routines}
 
-\include{cuda-functions}
+\input{cuda-functions}
 
 \section{External CUDA routines}
 
 Users may wish to provide their own functions that operate on grids, which causes a problem for CUDA execution. CUDA wants the functions to be compiled separately using nvcc compiler, which would require libgrid users to consider CUDA coding \& compilation. To work around this inconvenience, libgrid allows users to define their on functions (libgrid/src/ext-cuda directory). These are compiled at the time of libgrid compilation, which also makes them accessible in CUDA. Currently, there are several functions defined using this external mechanism, which are used by libdft library. See libgrid/src/ext-cuda directory for examples.
 
-\include{cuda-ext-functions}
+\input{cuda-ext-functions}
 
 \chapter{Interfacing with other software}
 

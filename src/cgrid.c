@@ -498,8 +498,8 @@ EXPORT void cgrid_write_grid(char *base, cgrid *grid) {
 
 /*
  * @FUNC{cgrid_write_grid_reciprocal, "Write complex reciprocal space grid to disk"}
- * @DESC{Write complex (momentum space) grid to disk including cuts along x, y, and z axes.
-         Suffixes .x, .y, .z, and .grd are added to the given file name}
+ * @DESC{"Write complex (momentum space) grid to disk including cuts along x, y, and z axes.
+         Suffixes .x, .y, .z, and .grd are added to the given file name"}
  * @ARG1{char *basename, "Base filename"}
  * @ARG2{cgrid *grid, "Grid to be written to disk"}
  * @RVAL{void, "No return value"}
@@ -952,7 +952,7 @@ EXPORT void cgrid_sum(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 
 /* 
  * @FUNC{cgrid_difference, "Subtract two grids"}
- * @DESC{Subtract two grids: gridc = grida - gridb. 
+ * @DESC{"Subtract two grids: gridc = grida - gridb. 
          Note that both source and destination may be the same grid."}
  * @ARG1{cgrid *gridc, "Destination grid"}
  * @ARG2{cgrid *grida, "1st source grid"}
@@ -1070,7 +1070,7 @@ EXPORT void cgrid_power(cgrid *gridb, cgrid *grida, REAL exponent) {
 
 /*
  * @FUNC{cgrid_division, "Divide two grids"}
- * @DESC{Divide two grids: gridc = grida / gridb. Note that the source and destination grids may be the same."}
+ * @DESC{"Divide two grids: gridc = grida / gridb. Note that the source and destination grids may be the same."}
  * @ARG1{cgrid *gridc, "Destination grid"}
  * @ARG2{cgrid *grida, "1st source grid"}
  * @ARG3{cgrid *gridb, "2nd source grid"}
@@ -2384,9 +2384,9 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
 }
 
 /*
- * @FUNC{cgrid_host_lock, "Lock grid to host memory (CUDA)}
+ * @FUNC{cgrid_host_lock, "Lock grid to host memory (CUDA)"}
  * @DESC{"Lock grid into host memory. This does nothing on pure CPU-based systems.
- *        On GPU-based systems it forces a given grid to stay in host memory"}
+          On GPU-based systems it forces a given grid to stay in host memory"}
  * @ARG1{cgrid *grid, "Grid to be host-locked"}
  * @RVAL{void, "No return value"}
  *
