@@ -26,12 +26,10 @@ extern int feenableexcept(int);
 #endif
 
 /*
- * FFTW specific flags for planning. Default is MEASURE.
- *
- * f = Which planning mode to use (ESTIMATE & MEASURE are fast whereas PATIENT & EXHAUSTIVE are really slow).
- *     However, best overall performance is obtained with the latter two...
- *
- * No return value.
+ * @FUNC{grid_set_fftw_flags, "Set FFTW planning flags"}
+ * @DESC{"FFTW specific flags for planning. Default is MEASURE"}
+ * @ARG1{char f, "Which planning mode to use: 0 = FFTW_ESTIMATE, 1 = FFTW_MEASURE, 2 = FFTW_PATIENT, 3 = FFTW_EXHAUSTIVE"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -57,9 +55,9 @@ EXPORT void grid_set_fftw_flags(char f) {
 }
 
 /*
- * Get FFTW flags for planning.
- *
- * Returns the current planning mode (see above).
+ * @FUNC{grid_get_fftw_flags, "Get FFTW planning flags"}
+ * @DESC{"Get current FFTW flags used for planning"}
+ * @RVAL{char, "Returns the current planning mode"}
  *
  */
 
@@ -81,11 +79,10 @@ EXPORT char grid_get_fftw_flags() {
 }
 
 /*
- * Initialize threads. This must be called before any threaded routines.
- *
- * threads = Number of threads to be used in the calculations (INT).
- *
- * No return value.
+ * @FUNC{grid_threads_init, "Initialize libgrid OpenMP threads"}
+ * @DESC{"Initialize OpenMP threads. This function must be called before using any threaded routines in libgrid"}
+ * @ARG1{INT threads, "Number of OpenMP threads to be used in the calculations"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -148,7 +145,9 @@ EXPORT void grid_threads_init(INT threads) {
 }
 
 /*
- * Return the max number of threads available.
+ * @FUNC{grid_threads, "Get number of OpenMP threads"}
+ * @DESC{"Return the number of OpenMP threads available"}
+ * @RVAL{INT, "Returns the number of threads"}
  *
  */
 
