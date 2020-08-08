@@ -714,21 +714,6 @@ EXPORT inline REAL complex grid_wf_overlap(wf *gwfa, wf *gwfb) {
 }
 
 /*
- * Output wavefunction.
- *
- * gwf = wavefunction to be printed (wf *).
- * out = output file pointer (FILE *).
- *
- * No return value.
- *
- */
-
-EXPORT inline void grid_wf_print(wf *gwf, FILE *out) { 
-
-  cgrid_print(gwf->grid, out); 
-}
-
-/*
  * Merge two wavefunctions according to: wf = (1 - alpha(r)) wfr + alpha(r) wfi.
  * alpha is computed by grid_wf_absorb().
  *

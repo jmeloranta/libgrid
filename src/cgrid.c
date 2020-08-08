@@ -1185,12 +1185,11 @@ EXPORT void cgrid_add(cgrid *grid, REAL complex c) {
 }
 
 /*
- * Multiply grid by a constant.
- *
- * grid = grid to be multiplied (cgrid *; output).
- * c    = multiplier (REAL complex; input).
- *
- * No return value.
+ * @FUNC{cgrid_multiply, "Multiply grid by constant"}
+ * @DESC{"Multiply grid by a constant"}
+ * @ARG1{cgrid *grid, "Grid to be multiplied"}
+ * @ARG2{REAL complex c, "Multiplier"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1212,13 +1211,12 @@ EXPORT void cgrid_multiply(cgrid *grid, REAL complex c) {
 }
 
 /* 
- * Add and multiply: grid = (grid + ca) * cm.
- *
- * grid = grid to be operated (cgrid *; input/output).
- * ca   = constant to be added (REAL complex; input).
- * cm   = multiplier (REAL complex; input).
- *
- * No return value.
+ * @FUNC{cgrid_add_and_multiply, "Add and multiply grid"}
+ * @DESC{"Add and multiply: grid = (grid + ca) * cm"}
+ * @ARG1{cgrid *grid, "Grid to be operated on"}
+ * @ARG2{REAL complex ca, "Constant to be added"}
+ * @ARG3{REAL complex cm, "Multiplier"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1239,13 +1237,12 @@ EXPORT void cgrid_add_and_multiply(cgrid *grid, REAL complex ca, REAL complex cm
 }
 
 /*
- * Multiply and add: grid = cm * grid + ca.
- *
- * grid = grid to be operated (cgrid *; input/output).
- * cm   = multiplier (REAL complex; input).
- * ca   = constant to be added (REAL complex; input).
- *
- * No return value.
+ * @FUNC{cgrid_multiply_and_add, "Multiply and add grid"}
+ * @DESC{"Multiply and add: grid = cm * grid + ca"}
+ * @ARG1{cgrid *grid, "Grid to be operated on"}
+ * @ARG2{REAL complex cm, "Multiplier"}
+ * @ARG3{REAL complex ca, "Constant to be added"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1266,15 +1263,13 @@ EXPORT void cgrid_multiply_and_add(cgrid *grid, REAL complex cm, REAL complex ca
 }
 
 /* 
- * Add scaled grid (multiply/add): gridc = gridc + d * grida
- *
- * gridc = destination grid for the operation (cgrid *; input/output).
- * d     = multiplier for the operation (REAL complex; input).
- * grida = source grid for the operation (cgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{cgrid_add_scaled, "Add scaled grid"}
+ * @DESC{"Add scaled grid: gridc = gridc + d * grida. 
+          Note that source and destination grids may be the same grid"}
+ * @ARG1{cgrid *gridc, "Destination grid for the operation"}
+ * @ARG2{REAL complex d, "Multiplier for the operation"}
+ * @ARG3{cgrid *grida, "Source grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1297,16 +1292,14 @@ EXPORT void cgrid_add_scaled(cgrid *gridc, REAL complex d, cgrid *grida) {
 }
 
 /*
- * Perform the following operation: gridc = gridc + d * grida * gridb.
- *
- * gridc = destination grid (cgrid *; input/output).
- * d     = constant multiplier (REAL complex; input).
- * grida = 1st source grid (cgrid *; input).
- * gridb = 2nd source grid (cgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{cgrid_add_scaled_product, "Three grid product"}
+ * @DESC{"Perform the following operation: gridc = gridc + d * grida * gridb.
+          Note that the source and destination grids may be the same grid"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{REAL complex d, "Constant multiplier"}
+ * @ARG3{cgrid *grida, "1st source grid"}
+ * @ARG4{cgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1330,16 +1323,17 @@ EXPORT void cgrid_add_scaled_product(cgrid *gridc, REAL complex d, cgrid *grida,
 }
 
 /*
- * Operate on a grid by a given operator: gridc = O(grida).
- *
- * gridc    = destination grid (cgrid *; output).
- * grida    = source grid (cgrid *; input).
- * operator = operator (REAL complex (*)(REAL complex, void *); input). Args are value and params.
- *            (i.e. a function mapping a given C-number to another)
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{cgrid_operate_one, "Operate on grid"}
+ * @DESC{"Operate on a grid by a given operator: gridc = O(grida).
+         Note that the source and destination grids may be the same grid.
+         The arguments to the use specified operator function are:
+         (REAL complex) value at grid point and (void *) params.
+         The latter argument is for external user supplied data"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "Source grid"}
+ * @ARG3{(REAL complex) (*operator), "Operator function"}
+ * @ARG4{void *params, "User supplied additional parameters (may be NULL)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1365,17 +1359,18 @@ EXPORT void cgrid_operate_one(cgrid *gridc, cgrid *grida, REAL complex (*operato
 }
 
 /*
- * Operate on a grid by a given operator and multiply: gridc = gridb * O(grida).
- *
- * gridc    = destination grid (cgrid *; output).
- * gridb    = multiply with this grid (cgrid *; input).
- * grida    = source grid (cgrid *; input).
- * operator = operator (REAL complex (*)(REAL complex, void *); input). Args are value and params.
- *            (i.e., a function mapping a given C-number to another)
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{cgrid_operate_one_product, "Operate on grid and multiply"}
+ * @DESC{"Operate on a grid by a given operator and multiply: gridc = gridb * O(grida).
+         Note that the source and destination grids may be the same.
+         The operator function takes the following arguments:
+         (REAL complex) value at the grid point, (void *) params. The latter is for
+         user specified additional data"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *gridb, "Multiplication by this grid"}
+ * @ARG3{cgrid *grida, "Source grid"}
+ * @ARG4{(REAL complex (*operator), "Operator function"}
+ * @ARG5{void *params, "User supplied data (may be NULL)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1403,20 +1398,17 @@ EXPORT void cgrid_operate_one_product(cgrid *gridc, cgrid *gridb, cgrid *grida, 
 }
 
 /* 
- * Operate on two grids and place the result in third: gridc = O(grida, gridb).
- * where O is the operator.
+ * @FUNC{cgrid_operate_two, "Operate on two grids"}
+ * @DESC{"Operate on two grids and place the result in third: gridc = O(grida, gridb)
+          where O is the operator. Note that the source and destination grids may be the same.
+          The operator function has two parameters, the current grid values of grida and gridb"}
+ * @ARG1{cgrid *gridc, "Destination grid"}
+ * @ARG2{cgrid *grida, "1s source grid"}
+ * @ARG3{cgrid *gridb, "2nd source grid"}
+ * @ARG4{(REAL complex (*operator), "Operator"}
+ * @RVAL{void, "No return value"}
  *
- * gridc    = destination grid (cgrid *; output).
- * grida    = 1s source grid (cgrid *; input).
- * gridb    = 2nd source grid (cgrid *; input).
- * operator = operator mapping grida and gridb (REAL complex (*)(REAL
- *            complex, REAL complex); input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
- *
- * TODO: Allow parameter passing.
+ * TODO: Allow user specified parameter passing.
  *
  */
 
@@ -1444,12 +1436,12 @@ EXPORT void cgrid_operate_two(cgrid *gridc, cgrid *grida, cgrid *gridb, REAL com
 }
 
 /*
- * Operate on a grid by a given operator.
- *
- * grid     = grid to be operated (cgrid *; output).
- * operator = operator (void (*)(REAL complex *); input).
- * 
- * No return value.
+ * @FUNC{cgrid_transform_one, "Transform grid"}
+ * @DESC{"Transform a grid by a given operator. This can modify the grid values directly through
+         the pointer (REAL complex *) that is given as argument to the operator"}
+ * @ARG1{cgrid *grid, "Grid to be operated"}
+ * @ARG2{void (*operator), "Operator function"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: Allow parameter passing.
  *
@@ -1473,13 +1465,13 @@ EXPORT void cgrid_transform_one(cgrid *grid, void (*operator)(REAL complex *a)) 
 }
 
 /*
- * Operate on two separate grids by a given operator.
- *
- * grida    = grid to be operated (cgrid *; input/output).
- * gridb    = grid to be operated (cgrid *; input/output).
- * operator = operator (void (*)(REAL complex *); input).
- * 
- * No return value.
+ * @FUNC{cgrid_transform_two, "Transform two grids"}
+ * @DESC{"Transform two separate grids by a given operator. This can modify the grid values directly through
+         the two pointers (REAL complex *) that are given as arguments to the operator"}
+ * @ARG1{cgrid *grida, "Grid 1 to be operated"}
+ * @ARG2{cgrid *gridb, "Grid 2 to be operated"}
+ * @ARG3{void (*operator), "Operator acting on the two grids"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: Allow parameter passing.
  *
@@ -1507,11 +1499,10 @@ EXPORT void cgrid_transform_two(cgrid *grida, cgrid *gridb, void (*operator)(REA
 }
 
 /*
- * Integrate over a grid.
- *
- * grid = grid to be integrated (cgrid *; input).
- *
- * Returns the integral value (REAL complex).
+ * @FUNC{cgrid_integral, "Integrate over grid"}
+ * @DESC{"Integrate over a grid"}
+ * @ARG1{cgrid *grid, "Grid to be integrated"}
+ * @RVAL{REAL complex, "Numerical value for the integral"}
  *
  */
 
@@ -1538,17 +1529,16 @@ EXPORT REAL complex cgrid_integral(cgrid *grid) {
 }
 
 /*
- * Integrate over a grid with limits.
- *
- * grid = grid to be integrated (cgrid *; input).
- * xl   = lower limit for x (REAL; input).
- * xu   = upper limit for x (REAL; input).
- * yl   = lower limit for y (REAL; input).
- * yu   = upper limit for y (REAL; input).
- * zl   = lower limit for z (REAL; input).
- * zu   = upper limit for z (REAL; input).
- *
- * Returns the integral value (REAL complex).
+ * @FUNC{cgrid_integral_region, "Integrate over region"}
+ * @DESC{"Integrate over a grid with limits"}
+ * @ARG1{cgrid *grid, "Grid to be integrated"}
+ * @ARG2{REAL xl, "Lower limit for x"}
+ * @ARG3{REAL xu, "Upper limit for x"}
+ * @ARG4{REAL yl, "Lower limit for y"}
+ * @ARG5{REAL yu, "Upper limit for y"}
+ * @ARG6{REAL zl, "Lower limit for z"}
+ * @ARG7{REAL zu, "Upper limit for z"}
+ * @RVAL{REAL complex, "Numerical value for the integral"}
  *
  */
 
@@ -1583,11 +1573,10 @@ EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl
 }
  
 /* 
- * Integrate over the grid squared (int |grid|^2).
- *
- * grid = grid to be integrated (cgrid *; input).
- *
- * Returns the integral (REAL complex).
+ * @FUNC{cgrid_integral_of_square, "Integrate over square of grid"}
+ * @DESC{"Integrate over the grid squared ($\int |grid|^2$)"}
+ * @ARG1{cgrid *grid, "Grid to be integrated"}
+ * @RVAL{REAL complex, "Value for the integral"}
  *
  */
 
@@ -1613,12 +1602,11 @@ EXPORT REAL cgrid_integral_of_square(cgrid *grid) {
 }
 
 /*
- * Calculate overlap between two grids (int grida^*gridb).
- *
- * grida = 1st grid (complex conjugated) (cgrid *; input).
- * gridb = 2nd grid (no complex conjugation) (cgrid *; input).
- *
- * Returns the value of the overlap integral (REAL complex).
+ * @FUNC{cgrid_integral_of_conjugate_product, "Overlap between two grids"}
+ * @DESC{"Calculate overlap between two grids ($\int grida^*gridb$)"}
+ * @ARG1{cgrid *grida, "1st grid (complex conjugated)"}
+ * @ARG2{cgrid *gridb, "2nd grid (no complex conjugation)"}
+ * @RVAL{REAL complex, "Returns the overlap integral"}
  *
  */
 
@@ -1643,13 +1631,11 @@ EXPORT REAL complex cgrid_integral_of_conjugate_product(cgrid *grida, cgrid *gri
 }
 
 /*
- * Calculate the expectation value of a grid over a grid.
- * (int opgrid |dgrid|^2).
- *
- * dgrid  = grid giving the probability (cgrid *; input).
- * opgrid = grid to be averaged (cgrid *; input).
- *
- * Returns the average value (REAL complex).
+ * @FUNC{cgrid_grid_expectation_value, "Expectation value of operator over grid"}
+ * @DESC{"Calculate expectation value of opgrid over dgrid (i.e., $\int opgrid |dgrid|^2$)"}
+ * @ARG1{cgrid *dgrid, "Grid yielding the probability"}
+ * @ARG2{cgrid *opgrid, "Grid to be averaged"}
+ * @RVAL{REAL complex, "Returns the expectation value integral"}
  *
  */
 
@@ -1676,14 +1662,14 @@ EXPORT REAL complex cgrid_grid_expectation_value(cgrid *dgrid, cgrid *opgrid) {
 }
  
 /*
- * Calculate the expectation value of a function over a grid.
- * (int grida^* func grida = int func |grida|^2).
- *
- * func  = function to be averaged (REAL complex (*)(void *, REAL complex, REAL, REAL, REAL); input).
- *         The arguments are: optional arg, grida(x,y,z), x, y, z.
- * grida = grid giving the probability (|grida|^2) (cgrid *; input).
- *
- * Returns the average value (REAL complex).
+ * @FUNC{cgrid_grid_expectation_value_func, "Calculate expectation value of function over grid"}
+ * @DESC{"Calculate expectation value of a function over a grid 
+         (i.e., $\int grida^* func grida = \int func |grida|^2$).
+         Arguments to the function are: arg (optional; may be NULL), (REAL complex) grid value at (x, y, z),
+         and coordinates x, y, z."}
+ * @ARG1{REAL complex (*func), "Function to be averaged over the grid"}
+ * @ARG2{cgrid *grida, "Grid yielding the probability (i.e., $|grida|^2$)"}
+ * @RVAL{REAL complex, "Returns the expectation value integral"}
  *
  */
  
@@ -1718,13 +1704,13 @@ EXPORT REAL complex cgrid_grid_expectation_value_func(void *arg, REAL complex (*
 }
 
 /* 
- * Integrate over the grid multiplied by weighting function (int grid w(x)).
- *
- * grid   = grid to be integrated over (cgrid *; input).
- * weight = function defining the weight (REAL complex (*)(REAL, REAL, REAL); input). The arguments are (x,y,z) coordinates.
- * farg   = argument to the weight function (void *; input).
- *
- * Returns the value of the integral (REAL complex).
+ * @FUNC{cgrid_weighted_integral, "Integrate over grid with weight function"}
+ * @DESC{"Integrate over the grid multiplied by weighting function (i.e., $\int grid w(x)$).
+         The weight function takes three arguments (REAL): x, y, z coordinates"}
+ * @ARG1{cgrid *grid, "Grid to be integrated over"}
+ * @ARG2{REAL complex (*weight), "Function defining the weight"}
+ * @ARG3{void *farg, "Argument to the weight function"}
+ * @RVAL{REAL complex, "Returns the value of the integral"}
  *
  */
 
@@ -1758,14 +1744,13 @@ EXPORT REAL complex cgrid_weighted_integral(cgrid *grid, REAL complex (*weight)(
 }
 
 /* 
- * Integrate over square of the grid multiplied by weighting function (int grid^2 w(x)).
- *
- * grid   = grid to be integrated over (cgrid *; input).
- * weight = function defining the weight (REAL complex (*)(REAL, REAL, REAL); input).
- *          The arguments are (x,y,z) coordinates.
- * farg   = argument to the weight function (void *; input).
- *
- * Returns the value of the integral (REAL complex).
+ * @FUNC{cgrid_weighted_integral_of_square, "Weighted integral of grid squared"}
+ * @DESC{"Integrate over square of the grid multiplied by weighting function ($\int grid^2 w(x)$).
+         The weighing function takes three arguments: x, y, z coordinates of the current grid point"}
+ * @ARG1{cgrid *grid, "Grid to be integrated over"}
+ * @ARG2{REAL complex (*weight), "Function defining the weight"}
+ * @ARG3{void *farg, "Argument to the weight function (may be NULL)"}
+ * @RVAL{REAL complex, "Returns the value of the integral"}
  *
  */
 
@@ -1800,45 +1785,10 @@ EXPORT REAL cgrid_weighted_integral_of_square(cgrid *grid, REAL (*weight)(void *
 }
 
 /*
- * Print the grid with both real and imaginary parts into file (ASCII format).
- *
- * grid = grid to be printed out (cgrid *; input).
- * out  = output file pointer (FILE *; input).
- *
- * No return value.
- *
- */
-
-EXPORT void cgrid_print(cgrid *grid, FILE *out) {
-
-  INT i, j, k;
-
-#ifdef USE_CUDA
-  if(cuda_status()) cuda_remove_block(grid->value, 1);
-#endif
-
-  for(i = 0; i < grid->nx; i++) {
-    for(j = 0; j < grid->ny; j++) {
-      for(k = 0; k < grid->nz; k++) {
-        fprintf(out, FMT_R " " FMT_R,
-		CREAL(cgrid_value_at_index(grid, i, j, k)),
-		CIMAG(cgrid_value_at_index(grid, i, j, k)));
-	  }
-      fprintf(out, "\n");
-    }
-    fprintf(out, "\n");
-  }
-}
-
-/*
- * Perform Fast Fourier Transformation of a grid.
- *
- * grid = grid to be Fourier transformed (input/output) (cgrid *; input/output).
- *
- * No return value.
- *
- * Notes: - The input grid is overwritten with the output.
- *        - No normalization is performed.
+ * @FUNC{cgrid_fft, "FFT of grid"}
+ * @DESC{"Perform Fast Fourier Transformation of a grid"}
+ * @ARG1{cgrid *grid, "Grid to be Fourier transformed (without normalization)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1852,14 +1802,10 @@ EXPORT void cgrid_fft(cgrid *grid) {
 }
 
 /*
- * Perform inverse Fast Fourier Transformation of a grid.
- *
- * grid = grid to be inverse Fourier transformed (input/output) (cgrid *; input/output).
- *
- * No return value.
- *
- * Notes: - The input grid is overwritten with the output.
- *        - No normalization.
+ * @FUNC{cgrid_inverse_fft, "Inverse FFT of grid"}
+ * @DESC{"Perform inverse Fast Fourier Transformation of a grid (unnormalized)"}
+ * @ARG1{cgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1873,12 +1819,11 @@ EXPORT void cgrid_inverse_fft(cgrid *grid) {
 }
 
 /*
- * Perform scaled inverse Fast Fourier Transformation of a grid.
- *
- * grid = grid to be inverse Fourier transformed (cgrid *; input/output).
- * c    = scaling factor (i.e. the output is multiplied by this constant) (REAL complex; input).
- *
- * No return value.
+ * @FUNC{cgrid_scaled_inverse_fft, "Scaled inverse FFT of grid"}
+ * @DESC{"Perform scaled inverse Fast Fourier Transformation of a grid"}
+ * @ARG1{cgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @ARG2{REAL complex c, "Scaling factor"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1889,11 +1834,10 @@ EXPORT void cgrid_scaled_inverse_fft(cgrid *grid, REAL complex c) {
 }
 
 /*
- * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm.
- *
- * grid = grid to be inverse Fourier transformed (input/output) (cgrid *; input/output).
- *
- * No return value.
+ * @FUNC{cgrid_inverse_fft_norm, "Normalized inverse FFT of grid"}
+ * @DESC{"Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm"}
+ * @ARG1{cgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  * Note: The input grid is overwritten with the output.
  *
@@ -1905,13 +1849,11 @@ EXPORT void cgrid_inverse_fft_norm(cgrid *grid) {
 }
 
 /*
- * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm (including the spatial step).
- *
- * grid = grid to be inverse Fourier transformed (input/output) (cgrid *; input/output).
- *
- * No return value.
- *
- * Note: The input grid is overwritten with the output.
+ * @FUNC{cgrid_inverse_fft_norm2, "Spatially normalized inverse FFT of grid"}
+ * @DESC{"Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm
+          (including the spatial step)"}
+ * @ARG1{cgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1922,27 +1864,21 @@ EXPORT void cgrid_inverse_fft_norm2(cgrid *grid) {
 
 
 /*
- * Convolute FFT transformed grids. 
- *
- * To convolute grids grida and gridb and place the result in gridc:
- * cgrid_fft(grida);
- * cgrid_fft(gridb);
- * cgrid_convolue(gridc, grida, gridb);
- * cgrid_inverse_fft_norm2(gridc);    // Note: must be norm2
- * gridc now contains the convolution of grida and gridb.
- *
- * gridc = output grid (cgrid *; output).
- * grida = 1st grid to be convoluted (cgrid *; input).
- * gridb = 2nd grid to be convoluted (cgrid *; input).
- *
- * No return value.
- *
- * Note: the input/output grids may be the same.
- *
- * Convert from FFT to Fourier integral:
- *
- * Forward: Multiply FFT result by step^3.
- * Inverse: Multiply FFT result by (1 / (step * N))^3.
+ * @FUNC{cgrid_fft_convolute, "Convolute two grids in reciprocal space"}
+ * @DESC{"Convolute two FFT transformed grids. To convolute grids grida and gridb 
+          and place the result in gridc:\\
+          cgrid_fft(grida);\\
+          cgrid_fft(gridb);\\
+          cgrid_convolue(gridc, grida, gridb);\\
+          cgrid_inverse_fft_norm2(gridc);\\
+          gridc now contains the convolution of grida and gridb.
+          The input and output grids may be the same. To conver from FFT to Fourier integral:\\
+          Forward: Multiply result by step$^3$\\
+          Inverse: Multiply result by 1 / (step * N)$^3$"}
+ * @ARG1{cgrid *gridc, "Output grid"}
+ * @ARG2{cgrid *grida, "1st grid to be convoluted"}
+ * @ARG3{cgrid *gridb, "2nd grid to be convoluted"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1981,16 +1917,16 @@ EXPORT void cgrid_fft_convolute(cgrid *gridc, cgrid *grida, cgrid *gridb) {
 }
 
 /*
- * Access grid point at given index.
+ * @FUNC{cgrid_value_at_index, "Access grid point at given index"}
+ * @DESC{"Access grid point at given index. Note that this is very slow on CUDA
+          as it accesses the elements individually"}
+ * @ARG1{cgrid *grid, "Grid to be accessed"}
+ * @ARG2{INT i, "Index along x"}
+ * @ARG3{INT j, "Index along y"}
+ * @ARG4{INT k, "Index along z"}
+ * @RVAL{REAL complex, "Returns grid value at index (i, j, k)"}
  *
- * grid = grid to be accessed (cgrid *; input).
- * i    = index along x (INT; input).
- * j    = index along y (INT; input).
- * k    = index along z (INT; input).
- *
- * Returns grid value at index (i, j, k).
- *
- * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ * TODO: There is too much CUDA stuff in here, needs to move to cuda.c eventually.
  *
  */
 
@@ -2000,7 +1936,6 @@ EXPORT inline REAL complex cgrid_value_at_index(cgrid *grid, INT i, INT j, INT k
     return grid->value_outside(grid, i, j, k);
 
 #ifdef USE_CUDA
-  /* There is too much CUDA stuff in here, needs to move to cuda.c eventually */
   REAL complex value;
   gpu_mem_block *ptr;
   INT nx = grid->nx, ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1, nnx2, nnx1, nny2, nny1, gpu, idx;
@@ -2038,17 +1973,16 @@ EXPORT inline REAL complex cgrid_value_at_index(cgrid *grid, INT i, INT j, INT k
 }
 
 /*
- * Set value to a grid point at given index.
+ * @FUNC{cgrid_value_to_index, "Set value to grid at given index"}
+ * @DESC{"Set value to a grid point at given index.
+          Note that this is very slow on CUDA as each element is transferred individually"}
+ * @ARG1{cgrid *grid, "Grid to be accessed"}
+ * @ARG2{INT i, "Index along x"}
+ * @ARG3{INT j, "Index along y"}
+ * @ARG4{INT k, "Index along z"}
+ * @RVAL{void, "No return value"}
  *
- * grid  = grid to be accessed (cgrid *; output).
- * i     = index along x (INT; input).
- * j     = index along y (INT; input).
- * k     = index along z (INT; input).
- * value = value to be set at (i, j, k) (REAL complex; input).
- *
- * No return value.
- *
- * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ * TODO: There is too much CUDA stuff in here, needs to move to cuda.c eventually
  *
  */
 
@@ -2057,7 +1991,6 @@ EXPORT inline void cgrid_value_to_index(cgrid *grid, INT i, INT j, INT k, REAL c
   if (i < 0 || j < 0 || k < 0 || i >= grid->nx || j >= grid->ny || k >= grid->nz) return;
 
 #ifdef USE_CUDA
-  /* There is too much CUDA stuff in here, needs to move to cuda.c eventually */
   gpu_mem_block *ptr;
   INT nx = grid->nx, ny = grid->ny, ngpu2 = cuda_ngpus(), ngpu1, nnx2, nnx1, nny2, nny1, gpu, idx;
   if((ptr = cuda_find_block(grid->value))) {
@@ -2094,14 +2027,13 @@ EXPORT inline void cgrid_value_to_index(cgrid *grid, INT i, INT j, INT k, REAL c
 }
 
 /*
- * Access grid point at given (x,y,z) point using linear interpolation.
- *
- * grid = grid to be accessed (cgrid *; input).
- * x    = x value (REAL; input).
- * y    = y value (REAL; input).
- * z    = z value (REAL; input).
- *
- * Returns grid value at (x,y,z).
+ * @FUNC{cgrid_value, "Access grid point at given coorinates"}
+ * @DESC{"Access grid point at given (x,y,z) point using linear interpolation"}
+ * @ARG1{cgrid *grid, "Grid to be accessed"}
+ * @ARG2{REAL x, "x coordinate"}
+ * @ARG3{REAL y, "y coordinate"}
+ * @ARG4{REAL z, "z coordinate"}
+ * @RVAL{REAL complex, "Returns grid value at (x,y,z)"}
  *
  */
 
@@ -2137,6 +2069,7 @@ EXPORT inline REAL complex cgrid_value(cgrid *grid, REAL x, REAL y, REAL z) {
    * f(x,y) = (1-x) (1-y) (1-z) f(0,0,0) + x (1-y) (1-z) f(1,0,0) + (1-x) y (1-z) f(0,1,0) + (1-x) (1-y) z f(0,0,1) 
    *          + x     y   (1-z) f(1,1,0) + x (1-y)   z   f(1,0,1) + (1-x) y   z   f(0,1,1) +   x     y   z f(1,1,1)
    */ 
+
   f000 = cgrid_value_at_index(grid, i, j, k);
   f100 = cgrid_value_at_index(grid, i + 1, j, k);
   f010 = cgrid_value_at_index(grid, i, j + 1, k);
@@ -2155,10 +2088,11 @@ EXPORT inline REAL complex cgrid_value(cgrid *grid, REAL x, REAL y, REAL z) {
 }
 
 /*
- * Extrapolate between two grids of different sizes.
- *
- * dest = Destination grid (cgrid *; output).
- * src  = Source grid (cgrid *; input).
+ * @FUNC{cgrid_extrapolate, "Extrapolate between two grids"}
+ * @DESC{"Extrapolate between two grids of different sizes"}
+ * @ARG1{cgrid *dest, "Destination grid"}
+ * @ARG2{cgrid *src, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2192,6 +2126,8 @@ EXPORT void cgrid_extrapolate(cgrid *dest, cgrid *src) {
 /*
  * Subroutine for rotating grid around z axis. See below.
  *
+ * TODO: This should probably move to cprivate.c ...
+ *
  */
 
 static REAL complex cgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
@@ -2207,13 +2143,12 @@ static REAL complex cgrid_value_rotate_z(void *arg, REAL x, REAL y, REAL z) {
 }
 
 /*
- * Rotate a grid by a given angle around the z-axis.
- *
- * in  = Input grid (cgrid *; input).
- * out = Rotated grid (cgrid *; output).
- * th  = Rotation angle theta in radians (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_rotate_z, "Rotate grid around z-axis"}
+ * @DESC{"Rotate a grid by a given angle around the z-axis"}
+ * @ARG1{cgrid *in, "Input grid"}
+ * @ARG2{cgrid *out, "Rotated grid"}
+ * @ARG3{REAL th, "Rotation angle theta in radians"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2238,11 +2173,10 @@ EXPORT void cgrid_rotate_z(cgrid *out, cgrid *in, REAL th) {
 }
 
 /*
- * Clear real part of complex grid.
- *
- * grid = grid for the operation (cgrid *; input/output).
- *
- * No return value.
+ * @FUNC{cgrid_zero_re, "Clear real part of grid"}
+ * @DESC{"Clear real part of complex grid"}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2260,9 +2194,10 @@ EXPORT void cgrid_zero_re(cgrid *grid) {
 }
 
 /*
- * Clear imaginary part of complex grid.
- *
- * grid = grid for the operation (cgrid *; input/output).
+ * @FUNC{cgrid_zero_im, "Zero imaginary part of grid"}
+ * @DESC{"Clear imaginary part of complex grid"}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2280,12 +2215,11 @@ EXPORT void cgrid_zero_im(cgrid *grid) {
 }
 
 /*
- * Extract complex phase factors from a given grid.
- *
- * dst = Dest grid (rgrid *; output).
- * src = Source grid (cgrid *; input).
- *
- * No return value.
+ * @FUNC{cgrid_phase, "Calculate phase factor of grid"}
+ * @DESC{"Extract complex phase factors from a given grid"}
+ * @ARG1{cgrid *dst, "Destination grid"}
+ * @ARG2{cgrid *src, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2312,17 +2246,16 @@ EXPORT void cgrid_phase(rgrid *dst, cgrid *src) {
 }
 
 /*
- * Zero a given index range of a complex grid when x in [lx, hx[ x [ly, hy[ x [lz, hz[ .
- *
- * grid     = Grid to be operated on (cgrid *; input/output).
- * lx       = Lower limit for x index (INT; input).
- * hx       = Upper limit for x index (INT; input).
- * ly       = Lower limit for y index (INT; input).
- * hy       = Upper limit for y index (INT; input).
- * lz       = Lower limit for z index (INT; input).
- * hz       = Upper limit for z index (INT; input).
- *
- * No return value.
+ * @FUNC{cgrid_zero_index, "Zero part of grid"}
+ * @DESC{"Zero a given index range of a complex grid [lx, hx[ x [ly, hy[ x [lz, hz["}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @ARG2{INT lx, "Lower limit for x index"}
+ * @ARG3{INT hx, "Upper limit for x index"}
+ * @ARG4{INT ly, "Lower limit for y index"}
+ * @ARG5{INT hy, "Upper limit for y index"}
+ * @ARG6{INT lz, "Lower limit for z index"}
+ * @ARG7{INT hz, "Upper limit for z index"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2350,15 +2283,13 @@ EXPORT void cgrid_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz
 }
 
 /*
- * Raise grid to integer power (fast). |grid|^n
- *
- * dst      = Destination grid (cgrid *; output).
- * src      = Source grid (cgrid *; input).
- * exponent = Exponent to be used (INT; input). This value can be negative.
- *
- * No return value.
- *
- * TODO: CUDA could use ipow equivalent. Uses pow() now.
+ * @FUNC{cgrid_ipower, "Rise grid to integer power"}
+ * @DESC{"Raise grid to integer power (fast): $|grid|^n$. Note that source and destination can be the
+          same grid"}
+ * @ARG1{cgrid *dst, "Destination grid"}
+ * @ARG2{cgrid *src, "Source grid"}
+ * @ARG3{INT exponent, "Exponent, which may benegative"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2386,13 +2317,14 @@ EXPORT void cgrid_ipower(cgrid *dst, cgrid *src, INT exponent) {
 }
 
 /*
- * Apply user defined filter in Fourier space.
- *
- * grid   = Grid in Fourier space to be filtered (cgrid *; input/output).
- * func   = Filter function (REAL complex (*func)(void *farg, REAL kx, REAL ky, REAL kz); input).
- * farg   = Arguments to be passed to the function (void *; input).
- *
- * No return value.
+ * @FUNC{cgrid_fft_filter, "Apply FFT filter to grid"}
+ * @DESC{"Apply user defined filter in Fourier space.
+          The filter function takes the following arguments: user data (void *farg), 
+          kx (REAL), ky (REAL), and kz (REAL)"}
+ * @ARG1{cgrid *grid, "Grid in reciprocal space to be filtered"}
+ * @ARG2{REAL complex (*func), "Filter function"}
+ * @ARG3{void *farg, "User data passed to the filter function (may be NULL)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2452,12 +2384,11 @@ EXPORT void cgrid_fft_filter(cgrid *grid, REAL complex (*func)(void *, REAL, REA
 }
 
 /*
- * Lock grid into host memory. This does nothing on pure CPU-based systems.
- * On GPU-based systems it forces a given grid to stay in host memory.
- *
- * grid = grid to be host-locked (cgrid *; input).
- * 
- * No return value.
+ * @FUNC{cgrid_host_lock, "Lock grid to host memory (CUDA)}
+ * @DESC{"Lock grid into host memory. This does nothing on pure CPU-based systems.
+ *        On GPU-based systems it forces a given grid to stay in host memory"}
+ * @ARG1{cgrid *grid, "Grid to be host-locked"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2469,12 +2400,11 @@ EXPORT void cgrid_host_lock(cgrid *grid) {
 }
 
 /*
- * Unlock grid. This does nothing on pure CPU-based systems.
- * On GPU-based systems it allows again the grid to move to GPU.
- *
- * grid = grid to be host-locked (rgrid *; input).
- * 
- * No return value.
+ * @FUNC{cgrid_host_unlock, "Unlock grid from host memory (CUDA)"}
+ * @DESC{"Unlock grid from host memory. This does nothing on pure CPU-based systems.
+          On GPU-based systems it allows again the grid to move to GPU."}
+ * @ARG1{cgrid *grid, "Grid to be host-unlocked"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2486,27 +2416,23 @@ EXPORT void cgrid_host_unlock(cgrid *grid) {
 }
 
 /*
- * Set space flag for grid. On CPU systems this does nothing.
- * On GPU systems it affects the data storage order (INPLACE vs. INPLACE_SHUFFLED).
- *
- * In C2C transform on CPU there is no difference in the storage format. However,
- * on GPU forward and inverse transforms store things differently across GPUs.
- *
- * This routine may have to be called if a grid is taken to Fourier space and
- * then it is operated afterwards for real space. For example:
- *
- * cgrid_fft(grid1);
- * cgrid_fft(grid2);
- * cgrid_fft_convolute(grid3, grid2, grid1);
- * cgrid_inverse_fft(grid3);
- * ....
- * <both grid1 and grid2 are left in INPLACE_SHUFFLED format>
- * To use them in real space at this point, this routine must be used.
- *
- * grid = Grid for the operation (rgrid *; input).
- * flag = 0: Real data or 1: fourier space data (char; input).
- *
- * No return value.
+ * @FUNC{cgrid_fft_space, "Set space flag on grid (CUDA)"}
+ * @DESC{"Set space flag for grid. On CPU systems this does nothing.
+          On GPU systems it affects the data storage order (INPLACE vs. INPLACE_SHUFFLED).
+          In C2C transform on CPU there is no difference in the storage format. However,
+          on GPU forward and inverse transforms store things differently across GPUs.
+          This routine may have to be called if a grid is taken to Fourier space and
+          then it is operated afterwards for real space. For example:\\
+          cgrid_fft(grid1);\\
+          cgrid_fft(grid2);\\
+          cgrid_fft_convolute(grid3, grid2, grid1);\\
+          cgrid_inverse_fft(grid3);\\
+          ....\\
+          $<$both grid1 and grid2 are left in INPLACE_SHUFFLED format$>$\\
+          To use them in real space at this point, this routine must be used"}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @ARG2{char flag, "0: Real data or 1: reciprocal space data"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2522,11 +2448,10 @@ EXPORT void cgrid_fft_space(cgrid *grid, char space) {
 }
 
 /*
- * Multiply complex grid by coordinate x.
- * 
- * grid  = Grid to be operated on (cgrid *; input/output).
- *
- * No return value.
+ * @FUNC{cgrid_multiply_by_x, "Multiply grid by coordinate x"}
+ * @DESC{"Multiply complex grid by coordinate x"}
+ * @ARG1{cgrid *grid, "Grid to be operated on"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2551,11 +2476,10 @@ EXPORT void cgrid_multiply_by_x(cgrid *grid) {
 }
 
 /*
- * Multiply complex grid by coordinate y.
- * 
- * grid  = Grid to be operated on (cgrid *; input/output).
- *
- * No return value.
+ * @FUNC{cgrid_multiply_by_y, "Multiply grid by coordinate y"}
+ * @DESC{"Multiply complex grid by coordinate y"}
+ * @ARG1{cgrid *grid, "Grid to be operated on"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2580,11 +2504,10 @@ EXPORT void cgrid_multiply_by_y(cgrid *grid) {
 }
 
 /*
- * Multiply complex grid by coordinate z.
- * 
- * grid  = Grid to be operated on (cgrid *; input/output).
- *
- * No return value.
+ * @FUNC{cgrid_multiply_by_z, "Multiply grid by coordinate z"}
+ * @DESC{"Multiply complex grid by coordinate z"}
+ * @ARG1{cgrid *grid, "Grid to be operated on"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2609,18 +2532,18 @@ EXPORT void cgrid_multiply_by_z(cgrid *grid) {
 }
 
 /*
- * Compute spherical shell average of |grid|^2 with respect to the grid origin
- * (result 1-D grid). Mormalization: \sum grid(i) = N.
- *
- * input1  = Input grid 1 for averaging (cgrid *; input).
- * input2  = Input grid 2 for averaging (cgrid *; input). Can be NULL if N/A.
- * input3  = Input grid 3 for averaging (cgrid *; input). Can be NULL if N/A.
- * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
- * binstep = Binning step length (REAL; input).
- * nbins   = Number of bins requested (INT; input).
- * volel   = 1: direct sum or 0: radial average (char; input).
- *
- * No return value.
+ * @FUNC{cgrid_spherical_average, "Spherical average of grid squared"}
+ * @DESC{"Compute spherical shell average of $|grid|^2$ with respect to the grid origin
+         (result 1-D grid). Three grids can be averaged together but they can be given as NULL
+         if not needed"}
+ * @ARG1{cgrid *input1, "Input grid 1 for averaging"}
+ * @ARG2{cgrid *input2, "Input grid 2 for averaging. Can be NULL if N/A"}
+ * @ARG3{cgrid *input3, "Input grid 3 for averaging. Can be NULL if N/A"}
+ * @ARG4{REAL *bins, "1-D array for the averaged values. This is an array with dimension equal to nbins"}
+ * @ARG5{REAL binstep, "Binning step length"}
+ * @ARG6{INT nbins, "Number of bins requested"}
+ * @ARG7{char volel, "1: direct sum or 0: radial average"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2683,18 +2606,18 @@ EXPORT void cgrid_spherical_average(cgrid *input1, cgrid *input2, cgrid *input3,
 }
 
 /*
- * Compute spherical average in the reciprocal space of power spectrum with respect to the grid origin
- * (result 1-D grid). Normalization is \sum grid = N.
- * 
- * input1  = Input grid 1 for averaging (cgrid *; input), but this complex data (i.e., *after* FFT).
- * input2  = Input grid 2 for averaging (cgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
- * input3  = Input grid 3 for averaging (cgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
- * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
- * binstep = Binning step length for k (REAL; input). 
- * nbins   = Number of bins requested (INT; input).
- * volel   = 1: radial sum or 0: radial average (char; input).
- *
- * No return value.
+ * @FUNC{cgrid_spherical_average_reciprocal, "Spherical average of grid in reciprocal space"}
+ * @DESC{"Compute spherical average in the reciprocal space of power spectrum with respect to the grid origin
+         (result 1-D grid). This can compute the average for three grids but any of them can be
+         given as NULL if not needed."}
+ * @ARG1{cgrid *input1, "Input grid 1 for averaging, but this complex data (i.e., *after* FFT)"}
+ * @ARG2{cgrid *input2, "Input grid 2 for averaging, but this complex data (i.e., *after* FFT)"}
+ * @ARG3{cgrid *input3, "Input grid 3 for averaging, but this complex data (i.e., *after* FFT)"}
+ * @ARG4{REAL *bins, "1-D array for the averaged values. This is an array with dimension equal to nbins"}
+ * @ARG5{REAL binstep, "Binning step length for k"}
+ * @ARG6{INT nbins, "Number of bins requested"}
+ * @ARG7{char volel, "1: radial sum or 0: radial average"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2769,12 +2692,11 @@ EXPORT void cgrid_spherical_average_reciprocal(cgrid *input1, cgrid *input2, cgr
 }
 
 /*
- * Apply anti-alias to grid by a given rule. Note that the grid must be in Fourier space.
- * 
- * grid   = Grid for the operation (cgrid *; input/output).
- * rule   = 1: 2/3 rule, 2: 1/2 (or 2/4) rule (char; input).
- *
- * No return value.
+ * @FUNC{cgrid_dealias, "FFT dealiasing"}
+ * @DESC{"Apply dealias to grid by a given rule. Note that the grid must be in Fourier space"}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @ARG2{char rule, "1: 2/3 rule, 2: 1/2 (or 2/4) rule"}
+ * @RVAL{void, "No return value"}
  * 
  */
 
@@ -2796,12 +2718,12 @@ EXPORT void cgrid_dealias(cgrid *grid, char rule) {
 }
 
 /*
- * Apply anti-alias to grid by a given k_max value (i.e., zero when |k| > k_max). Note that the grid must be in Fourier space.
- * 
- * grid   = Grid for the operation (cgrid *; input/output).
- * kmax   = Maximum value for k (REAL; input).
- *
- * No return value.
+ * @FUNC{cgrid_dealias2, "Apply dealias with limit"}
+ * @DESC{"Apply dealias to grid by a given $k_max$ value (i.e., zero when $|k| > k_max$).
+          Note that the grid must be in Fourier space"}
+ * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @ARG2{REAL kmax, "Maximum value for k"}
+ * @RVAL{void, "No return value"}
  * 
  */
 
@@ -2851,15 +2773,14 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
 }
 
 /*
- * Map function onto grid in the Fourier space.
- *
- * grid = destination grid for the operation (cgrid *; output).
- * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data
- *        and kx,ky,kz are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- *
- * No return value.
+ * @FUNC{cgrid_mapk, "Map function to grid in reciprocal space"}
+ * @DESC{"Map function onto grid in the reciprocal space. 
+          The arguments to the user specified function are:
+          user data (void *) and kx,ky,kz (REAL) coordinates"}
+ * @ARG1{cgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL complex (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data"}
+ * @RVAL{void, "No return value"}
  *
  */
 

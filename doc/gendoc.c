@@ -33,11 +33,6 @@ char *quoted(char *txt) {
         buf[j+1] = '_';
         j += 2;
         break;
-      case '$':
-        buf[j] = '\\';
-        buf[j+1] = '$';
-        j += 2;
-        break;
       case '&':
         buf[j] = '\\';
         buf[j+1] = '&';
@@ -70,7 +65,10 @@ void scan_docs(char *file) {
     fgets(buf, sizeof(buf), fp);
     if(sscanf(buf, "%*[a-z A-Z*/]@FUNC{%128[^,], \"%1024[^\"]\"}", func_name, func_doc) != 2) continue;
     // Use fscanf to get multiline description
-    if(fscanf(fp, "%*[a-z A-Z*/]@DESC{\"%1024[^\"]\"}\n", func_desc) != 1) continue;
+    if(fscanf(fp, "%*[a-z A-Z*/]@DESC{\"%1024[^\"]\"}\n", func_desc) != 1) {
+      fprintf(stderr, "Error reading description for %s.\n", func_name);
+      continue;
+    }
     fgets(buf, sizeof(buf), fp);
     if(sscanf(buf, "%*[a-z A-Z*/]@ARG1{%128[^,], \"%1024[^\"]\"}", arg1, arg1_doc) != 2) {arg1[0] = 0; arg1_doc[0] = 0;}
     else fgets(buf, sizeof(buf), fp);
