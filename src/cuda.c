@@ -1298,19 +1298,15 @@ EXPORT void cuda_statistics(char verbose) {
 }
 
 /*
- * CUDA fft memory policy.
- *
- * host_mem     = Host memory block (void *; input).
- * length       = Host memory block length (size_t; input).
- * cufft_handle = CUFFT handle (-1 if not available; cufftHandle).
- * id           = String describing the block contents. Useful for debugging. (char *; input).
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * The FFT policy is as follows:
- *
- * 1. Execute FFT on the GPU always (even when other blocks have to be swapped out).
+ * @FUNC{cuda_fft_policy, "CUDA FFT policy function"}
+ * @DESC{"CUDA fft memory policy: Decide whether to perform FFT on the host or the GPU.
+          The FFT policy is as follows:\\
+          1. Execute FFT on the GPU always (even when other blocks have to be swapped out)"}
+ * @ARG1{void *host_mem, "Host memory block for FFT"}
+ * @ARG2{size_t length, "Host memory block length"}
+ * @ARG3{cufftHandle cufft_handle, "CUFFT handle (-1 if not available)"}
+ * @ARG4{char *id, "Comment string describing the block contents"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory"}
  *
  */
 
@@ -1341,20 +1337,15 @@ EXPORT int cuda_fft_policy(void *host_mem, size_t length, cufftHandle cufft_hand
 }
 
 /*
- * CUDA small operation memory policy.
- *
- * host_mem     = Host memory block (void *; input).
- * length       = Host memory block length (size_t; input).
- * cufft_handle = CUFFT handle (-1 if not available; cufftHandle).
- * id           = String describing the block contents. Useful for debugging. (char *; input).
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * The FFT policy is as follows:
- *
- * 1. If block on GPU, execute on GPU.
- * 2. If block on CPU, execute on CPU.
+ * @FUNC{cuda_misc_policy, "CUDA small operation policy"}
+ * @DESC{"CUDA small operation memory policy. The misc policy is as follows:\\
+          1. If block on GPU, execute on GPU.\\
+          2. If block on CPU, execute on CPU."}
+ * @ARG1{void *host_mem, "Host memory block address"}
+ * @ARG2{size_t length, "Host memory block length"}
+ * @ARG3{cufftHandle cufft_handle, "CUFFT handle (-1 if not available)"}
+ * @ARG4{char *id, "String describing the block contents"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory"}
  *
  */
 
@@ -1380,22 +1371,17 @@ EXPORT int cuda_misc_policy(void *host_mem, size_t length, cufftHandle cufft_han
 }
 
 /*
- * CUDA one memory block policy.
- *
- * host_mem     = Host memory block (void *; input).
- * cufft_handle = CUFFT handle (cufft_handle).
- * length       = Host memory block length (size_t; input).
- * id           = String describing the block contents. Useful for debugging. (char *; input).
- * copy         = Copy contents of the block to GPU? 1 = copy, 0 = don't copy.
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * The one block policy is as follows:
- *
- * 1. Execute the operation on the GPU if there is enough memory left.
- * 2. If the block is alreay on GPU run the operation there.
- * 3. If the block is not on GPU and there is not enough memory left, run on the host (CPU).
+ * @FUNC{cuda_one_block_policy, "CUDA one memory block policy"}
+ * @DESC{"CUDA one memory block policy. The current policy is as follows:\\
+          1. Execute the operation on the GPU if there is enough memory left.\\
+          2. If the block is alreay on GPU run the operation there.\\
+          3. If the block is not on GPU and there is not enough memory left, run on the host (CPU)"}
+ * @ARG1{void *host_mem, "Host memory block"}
+ * @ARG2{cufftHandle cufft_handle, "CUFFT handle"}
+ * @ARG3{size_t length, "Host memory block length"}
+ * @ARG4{char *id, "String describing the block contents"}
+ * @ARG5{char copy, "Copy contents of the block to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory"}
  *
  */
 
@@ -1424,29 +1410,23 @@ EXPORT int cuda_one_block_policy(void *host_mem, size_t length, cufftHandle cuff
 }
 
 /*
- * CUDA two memory block policy.
- *
- * host_mem1     = Host memory block 1 (void *; input).
- * length1       = Host memory block length 1 (size_t; input).
- * cufft_handle1 = CUFFT handle 1 (cufft_handle).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * copy1         = Copy contents of block 1 to GPU? 1 = copy, 0 = don't copy.
- * host_mem2     = Host memory block 2 (void *; input).
- * length2       = Host memory block length 2 (size_t; input).
- * cufft_handle2 = CUFFT handle 2 (cufft_handle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- * copy2         = Copy contents of block 2 to GPU? 1 = copy, 0 = don't copy.
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * Note: When -1 is returned, all memory blocks will be in host memory.
- *
- * The two block policy is as follows:
- *
- * 1. Execute the operation on the GPU if there is enough memory available for both blocks.
- * 2. If one of the blocks is already on GPU run the operation there.
- * 3. If neither block is on GPU and there is not enough memory left, run on the host (CPU).
+ * @FUNC{cuda_two_block_policy, "CUDA two block memory policy"}
+ * @DESC{"CUDA two memory block policy. The two block policy is as follows:\\
+         1. Execute the operation on the GPU if there is enough memory available for both blocks.\\
+         2. If one of the blocks is already on GPU run the operation there.\\
+         3. If neither block is on GPU and there is not enough memory left, run on the host (CPU)\\
+         Note: When this function returns -1, all memory blocks will be in host memory"}
+ * @ARG1{void *host_mem1, "Host memory block 1"}
+ * @ARG2{size_t length1, "Host memory block length 1"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT handle 1"}
+ * @ARG4{char *id1,"String describing block 1 contents"}
+ * @ARG5{char copy1, "Copy contents of block 1 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG6{void *host_mem2, "Host memory block 2"}
+ * @ARG7{size_t length2, "Host memory block length 2"}
+ * @ARG8{cufftHandle cufft_handle2, "CUFFT handle 2"}
+ * @ARG9{char *id2, "String describing block 2 contents"}
+ * @ARG10{char copy2, {Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory}
  *
  */
 
@@ -1480,34 +1460,28 @@ EXPORT int cuda_two_block_policy(void *host_mem1, size_t length1, cufftHandle cu
 }
 
 /*
- * CUDA three memory block policy.
- *
- * host_mem1     = Host memory block 1 (void *; input).
- * length1       = Host memory block length 1 (size_t; input).
- * cufft_handle1 = CUFFT handle 1 (cufft_handle).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * copy1         = Copy contents of block 1 to GPU? 1 = copy, 0 = don't copy.
- * host_mem2     = Host memory block 2 (void *; input).
- * length2       = Host memory block length 2 (size_t; input).
- * cufft_handle2 = CUFFT handle 2 (cufft_handle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- * copy2         = Copy contents of block 2 to GPU? 1 = copy, 0 = don't copy.
- * host_mem3     = Host memory block 3 (void *; input).
- * length3       = Host memory block length 3 (size_t; input).
- * cufft_handle3 = CUFFT handle 3 (cufft_handle).
- * id3           = String describing block 3 contents. Useful for debugging. (char *; input).
- * copy3         = Copy contents of block 3 to GPU? 1 = copy, 0 = don't copy.
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * Note: When -1 is returned, all memory blocks will reside in host memory.
- *
- * The three block policy is as follows:
- *
- * 1. Execute the operation on the GPU if there is enough memory left for all three blocks.
- * 2. If at least two of the blocks are already on GPU run the operation there.
- * 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).
+ * @FUNC{cuda_three_block_policy, "CUDA three block policy"}
+ * @DESC{"CUDA three memory block policy. The three block policy is as follows:\\
+          1. Execute the operation on the GPU if there is enough memory left for all three blocks.\\
+          2. If at least two of the blocks are already on GPU run the operation there.\\
+          3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).\\
+          Note: When -1 is returned, all memory blocks will reside in host memory"}
+ * @ARG1{void *host_mem1, "Host memory block 1"}
+ * @ARG2{size_t length1, "Host memory block length 1"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT handle 1"}
+ * @ARG4{char *id1, "String describing block 1 contents"}
+ * @ARG5{char copy1, "Copy contents of block 1 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG6{void *host_mem2, "Host memory block 2"}
+ * @ARG7{size_t length2, "Host memory block length 2"}
+ * @ARG8{cufftHandle cufft_handle2, "CUFFT handle 2"}
+ * @ARG9{char *id2, "String describing block 2 contents"}
+ * @ARG10{char copy2, "Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG11{void *host_mem3, "Host memory block 3"}
+ * @ARG12{size_t length3, "Host memory block length 3"}
+ * @ARG13{cufftHandle cufft_handle3, "CUFFT handle 3"}
+ * @ARG14{char *id3, "String describing block 3 contents"}
+ * @ARG15{char copy3, "Copy contents of block 3 to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory"}
  *
  */
 
@@ -1547,39 +1521,33 @@ EXPORT int cuda_three_block_policy(void *host_mem1, size_t length1, cufftHandle 
 }
 
 /*
- * CUDA four memory block policy.
- *
- * host_mem1     = Host memory block 1 (void *; input).
- * length1       = Host memory block length 1 (size_t; input).
- * cufft_handle1 = CUFFT handle 1 (cufft_handle).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * copy1         = Copy contents of block 1 to GPU? 1 = copy, 0 = don't copy.
- * host_mem2     = Host memory block 2 (void *; input).
- * length2       = Host memory block length 2 (size_t; input).
- * cufft_handle2 = CUFFT handle 2 (cufft_handle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- * copy2         = Copy contents of block 2 to GPU? 1 = copy, 0 = don't copy.
- * host_mem3     = Host memory block 3 (void *; input).
- * length3       = Host memory block length 3 (size_t; input).
- * cufft_handle3 = CUFFT handle 3 (cufft_handle).
- * id3           = String describing block 3 contents. Useful for debugging. (char *; input).
- * copy3         = Copy contents of block 3 to GPU? 1 = copy, 0 = don't copy.
- * host_mem4     = Host memory block 4 (void *; input).
- * length4       = Host memory block length 4 (size_t; input).
- * cufft_handle4 = CUFFT handle 4 (cufft_handle).
- * id4           = String describing block 4 contents. Useful for debugging. (char *; input).
- * copy4         = Copy contents of block 4 to GPU? 1 = copy, 0 = don't copy.
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * Note: When -1 is returned, all block will be in host memory.
- *
- * The four block policy is as follows:
- *
- * 1. Execute the operation on the GPU if there is enough memory left for all four blocks.
- * 2. If at least two of the blocks are already on GPU run the operation there.
- * 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).
+ * @FUNC{cuda_four_block_policy, "CUDA four block policy"}
+ * @DESC{"CUDA four memory block policy. The four block policy is as follows:\\
+         1. Execute the operation on the GPU if there is enough memory left for all four blocks.\\
+         2. If at least two of the blocks are already on GPU run the operation there.\\
+         3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).\\
+         Note: When this function returns -1, all block will be in host memory"}
+ * @ARG1{void *host_mem1, "Host memory block 1"}
+ * @ARG2{size_t length1, "Host memory block length 1"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT handle 1"}
+ * @ARG4{char *id1, "String describing block 1 contents"}
+ * @ARG5{char copy1, "Copy contents of block 1 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG6{void *host_mem2, "Host memory block 2"}
+ * @ARG7{size_t length2, "Host memory block length 2"}
+ * @ARG8{cufftHandle cufft_handle2, "CUFFT handle 2"}
+ * @ARG9{char *id2, "String describing block 2 contents"}
+ * @ARG10{char copy2, "Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG11{void *host_mem3, "Host memory block 3"}
+ * @ARG12{size_t length3, "Host memory block length 3"}
+ * @ARG13{cufftHandle cufft_handle3, "CUFFT handle 3"}
+ * @ARG14{char *id3, "String describing block 3 contents"}
+ * @ARG15{char copy3, "Copy contents of block 3 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG16{void *host_mem4, "Host memory block 4"}
+ * @ARG17{size_t length4, "Host memory block length 4"}
+ * @ARG18{cufftHandle cufft_handle4, "CUFFT handle 4"}
+ * @ARG19{char *id4, "String describing block 4 contents"}
+ * @ARG20{char copy4, "Copy contents of block 4 to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory"}
  *
  */
 
@@ -1624,27 +1592,22 @@ EXPORT int cuda_four_block_policy(void *host_mem1, size_t length1, cufftHandle c
 }
 
 /*
- * CUDA memory copy policy. Copy host_mem2 to host_mem1.
- *
- * host_mem1     = Destination host memory block (void *; input).
- * length1       = Destination host memory block length (size_t; input).
- * cufft_handle1 = CUFFT handle 1 (cufft_handle).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * host_mem2     = Source host memory block (void *; input).
- * length2       = Source host memory block length (size_t; input).
- * cufft_handle2 = CUFFT handle 2 (cufft_handle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- *
- * Returns 0 if GPU operation can proceed
- * or -1 if the operation is to be carried out in host memory.
- *
- * Note: When -1 is returned, all blocks will be in host memory.
- *
- * The three block policy is as follows:
- *
- * 1. Execute the operation on the GPU if there is enough memory left for both blocks. The subsequent ops will be likely on GPU.
- * 2. If the source block is already on GPU run the operation there.
- * 3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).
+ * @FUNC{cuda_copy_policy, "CUDA memory copy policy"}
+ * @DESC{"CUDA memory copy policy (i.e., copy host_mem2 to host_mem1). The three block policy is as follows:
+          1. Execute the operation on the GPU if there is enough memory left for both blocks. 
+             The subsequent ops will be likely on GPU.\\
+          2. If the source block is already on GPU run the operation there.\\
+          3. If none of the blocks are on GPU and there is not enough memory left, run on the host (CPU).\\
+          Note that when -1 is returned, all blocks will be in host memory"}
+ * @ARG1{void *host_mem1, "Destination host memory block"}
+ * @ARG2{size_t length1, "Destination host memory block length"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT handle 1"}
+ * @ARG4{char *id1, "String describing block 1 contents"}
+ * @ARG5{void *host_mem2, "Source host memory block"}
+ * @ARG6{size_t length2, "Source host memory block length"}
+ * @ARG7{cufftHandle cufft_handle2, "CUFFT handle 2"}
+ * @ARG8{char *id2, "String describing block 2 contents"}
+ * @RVAL{int, "Returns 0 if GPU operation can proceed or -1 if the operation is to be carried out in host memory"}
  *
  */
 
@@ -1689,9 +1652,9 @@ EXPORT int cuda_copy_policy(void *host_mem1, size_t length1, cufftHandle cufft_h
 }
 
 /*
- * Print GPU information.
- *
- * No return value.
+ * @FUNC{cuda_gpu_info, "Print CUDA/GPU information"}
+ * @DESC{"Print CUDA/GPU information"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1730,7 +1693,7 @@ EXPORT void cuda_gpu_info() {
 }
 
 /*
- * Allocate cufft plan.
+ * Allocate cufft plan (should not be called directly).
  *
  * plan = Pointer to cufft plan (cufftHandle *; input/output).
  * type = cufft plan type (cufftType; input).
