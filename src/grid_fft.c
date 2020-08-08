@@ -6,7 +6,7 @@
 #include "grid.h"
 
 /*
- * Return default wisdom file name.
+ * FFTW default wisdom file.
  *
  */
 
@@ -25,12 +25,10 @@ static char *grid_fft_wisfile() {
 }
 
 /*
- * FFTW Wisdom interface - import wisdom.
- *
- * file = file name for reading wisdom data (input; char *).
- *        If NULL pointer, default file name will be used.
- *
- * No return value.
+ * @FUNC{grid_fft_read_wisdom, "Read FFTW wisdom file"}
+ * @DESC{"Import FFTW wisdom data from file"}
+ * @ARG1{char *file, "File name for reading wisdom data. If NULL, default file name will be used"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -50,12 +48,10 @@ EXPORT void grid_fft_read_wisdom(char *file) {
 }
 
 /*
- * FFTW Wisdom interface - export wisdom.
- *
- * file = file name for saving wisdom data (input, char *).
- *        If NULL pointer, default file name will be used.
- *
- * No return value.
+ * @FUNC{grid_fft_write_wisdom, "Write FFTW wisdom file"}
+ * @DESC{"Write FFTW Wisdom file to disk"}
+ * @ARG1{char *file, "File name for saving wisdom data. If NULL, default file name will be used"}
+ * @RVAL{void, "No return value"}
  *
  */
 

@@ -10,11 +10,11 @@
 char grid_analyze_method = (char) -1; // 0 = FD and 1 = FFT, -1 = not set
 
 /*
- * Function to switch between FD and FFT based routines.
- *
- * method = 0: Finite difference (FD) or 1 = FFT (char; input).
- *
- * No return value.
+ * @FUNC{grid_wf_analyze_method, "Set finite difference or FFT derivatives"}
+ * @DESC{"Function to switch between FD and FFT based routines. Note that only FFT-based
+          routines can be used on multi-GPU systems"}
+ * @ARG1{char method, "0: Finite difference (FD) or 1 = FFT"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -24,16 +24,15 @@ EXPORT void grid_wf_analyze_method(char method) {
 }
 
 /*
- * Generic frontend for calculating velocity. This may use FD or FFT
- * depending on the grid_analyze_method setting.
- *
- * gwf    = wavefunction for the operation (wf *).
- * vx     = x output grid containing the velocity (rgrid *).
- * vy     = y output grid containing the velocity (rgrid *).
- * vz     = z output grid containing the velocity (rgrid *).
- * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
- *
- * No return value.
+ * @FUNC{grid_wf_velocity, "Calculate velocity field of wavefunction"}
+ * @DESC{"This function calculates the velocity field for a given wavefunction (Madelung representation). 
+          This may use either FD or FFT depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *vx, "output grid containing x component of velocity"}
+ * @ARG3{rgrid *vy, "output grid containing y component of velocity"}
+ * @ARG4{rgrid *vz, "output grid containing z component of velocity"}
+ * @ARG5{REAL eps, "Epsilon for (safely) dividing by $|psi|^2$"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -46,14 +45,12 @@ EXPORT void grid_wf_velocity(wf *gwf, rgrid *vx, rgrid *vy, rgrid *vz, REAL eps)
 }
 
 /*
- * Generic frontend for calculating velocity. This may use FD or FFT
- * depending on the grid_analyze_method setting.
- *
- * gwf    = wavefunction for the operation (wf *).
- * vx     = x output grid containing the velocity (rgrid *).
- * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
- *
- * No return value.
+ * @FUNC{grid_wf_velocity_x, "Calculate velocity field x of wavefunction"}
+ * @DESC{"This function calculates the velocity field x component for a given wavefunction (Madelung representation).
+          This may use either FD or FFT depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *vx, "output grid containing x component of velocity"}
+ * @ARG5{REAL eps, "Epsilon for (safely) dividing by $|psi|^2$"}
  *
  */
 
@@ -64,14 +61,12 @@ EXPORT void grid_wf_velocity_x(wf *gwf, rgrid *vx, REAL eps) {
 }
 
 /*
- * Generic frontend for calculating velocity. This may use FD or FFT
- * depending on the grid_analyze_method setting.
- *
- * gwf    = wavefunction for the operation (wf *).
- * vy     = y output grid containing the velocity (rgrid *).
- * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
- *
- * No return value.
+ * @FUNC{grid_wf_velocity_y, "Calculate velocity field y of wavefunction"}
+ * @DESC{"This function calculates the velocity field y component for a given wavefunction (Madelung representation).
+          This may use either FD or FFT depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *vy, "output grid containing y component of velocity"}
+ * @ARG5{REAL eps, "Epsilon for (safely) dividing by $|psi|^2$"}
  *
  */
 
@@ -82,14 +77,12 @@ EXPORT void grid_wf_velocity_y(wf *gwf, rgrid *vy, REAL eps) {
 }
 
 /*
- * Generic frontend for calculating velocity. This may use FD or FFT
- * depending on the grid_analyze_method setting.
- *
- * gwf    = wavefunction for the operation (wf *).
- * vz     = z output grid containing the velocity (rgrid *).
- * eps    = Epsilon for (safe) dividing by |psi|^2 (REAL).
- *
- * No return value.
+ * @FUNC{grid_wf_velocity_z, "Calculate velocity field z of wavefunction"}
+ * @DESC{"This function calculates the velocity field z component for a given wavefunction (Madelung representation).
+          This may use either FD or FFT depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *vz, "output grid containing z component of velocity"}
+ * @ARG5{REAL eps, "Epsilon for (safely) dividing by $|psi|^2$"}
  *
  */
 
@@ -100,15 +93,20 @@ EXPORT void grid_wf_velocity_z(wf *gwf, rgrid *vz, REAL eps) {
 }
 
 /*
- * Generic frontend for calculating probability flux. This may use FD or FFT
- * depending on the grid_analyze_method setting.
+ * @FUNC{grid_wf_probability_flux, "Calculate probability flux for wavefunction"}
+ * @DESC{"Calculate probability flux for given wavefunction. This may use FD or FFT
+          depending on the grid_analyze_method setting. This is related to liquid momentum:
+          rho_mass * velocity = mass * flux\\
+          Notes:\\
+          - This is not the liquid velocity. Divide by density (rho) to get v (velocity);
+            v_i = flux_i / rho (i = x, y, z).\\
+          - This is in units of \# of particles. Multiply by gwf->mass to get this in terms of mass"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_x, "Output grid containing x component of the flux"}
+ * @ARG3{rgrid *flux_y, "Output grid containing y component of the flux"}
+ * @ARG4{rgrid *flux_z, "Output grid containing z component of the flux"}
+ * @RVAL{void, "No return value"}
  *
- * gwf       = wavefunction for the operation (wf *).
- * flux_x    = x output grid containing the flux (rgrid *).
- * flux_y    = y output grid containing the flux (rgrid *).
- * flux_z    = z output grid containing the flux (rgrid *).
- *
- * No return value.
  */
 
 EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgrid *flux_z) {
@@ -118,13 +116,13 @@ EXPORT void grid_wf_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, rgri
 }
 
 /*
- * Generic frontend for calculating probability flux. This may use FD or FFT
- * depending on the grid_analyze_method setting.
+ * @FUNC{grid_wf_probability_flux_x, "Calculate probability flux x for wavefunction"}
+ * @DESC{"Calculate probability flux x component for given wavefunction. This may use FD or FFT
+          depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_x, "Output grid containing x component of the flux"}
+ * @RVAL{void, "No return value"}
  *
- * gwf       = wavefunction for the operation (wf *).
- * flux_x    = x output grid containing the flux (rgrid *).
- *
- * No return value.
  */
 
 EXPORT void grid_wf_probability_flux_x(wf *gwf, rgrid *flux_x) {
@@ -134,13 +132,13 @@ EXPORT void grid_wf_probability_flux_x(wf *gwf, rgrid *flux_x) {
 }
 
 /*
- * Generic frontend for calculating probability flux. This may use FD or FFT
- * depending on the grid_analyze_method setting.
+ * @FUNC{grid_wf_probability_flux_y, "Calculate probability flux y for wavefunction"}
+ * @DESC{"Calculate probability flux y component for given wavefunction. This may use FD or FFT
+          depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_y, "Output grid containing y component of the flux"}
+ * @RVAL{void, "No return value"}
  *
- * gwf       = wavefunction for the operation (wf *).
- * flux_y    = y output grid containing the flux (rgrid *).
- *
- * No return value.
  */
 
 EXPORT void grid_wf_probability_flux_y(wf *gwf, rgrid *flux_y) {
@@ -150,13 +148,13 @@ EXPORT void grid_wf_probability_flux_y(wf *gwf, rgrid *flux_y) {
 }
 
 /*
- * Generic frontend for calculating probability flux. This may use FD or FFT
- * depending on the grid_analyze_method setting.
+ * @FUNC{grid_wf_probability_flux_z, "Calculate probability flux z for wavefunction"}
+ * @DESC{"Calculate probability flux z component for given wavefunction. This may use FD or FFT
+          depending on the grid_analyze_method setting"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_z, "Output grid containing z component of the flux"}
+ * @RVAL{void, "No return value"}
  *
- * gwf       = wavefunction for the operation (wf *).
- * flux_z    = z output grid containing the flux (rgrid *).
- *
- * No return value.
  */
 
 EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
@@ -166,19 +164,18 @@ EXPORT void grid_wf_probability_flux_z(wf *gwf, rgrid *flux_z) {
 }
 
 /*
- * Calculate the probability flux (m^-2 s^-1). This is related to liquid momentum:
- * rho_mass * velocity = mass * flux.
- *
- * gwf        = wavefunction for the operation (wf *).
- * flux_x     = x output grid containing the flux (rgrid *).
- * flux_y     = y output grid containing the flux (rgrid *).
- * flux_z     = z output grid containing the flux (rgrid *).
- *
- * No return value.
- *
- * NOTES: - This is not the liquid velocity! Divide by density (rho) to get v (velocity):
- *          v_i = flux_i / rho (i = x, y, z).
- *        - This is in units of # of particles. Multiply by gwf->mass to get this in terms of mass.
+ * @FUNC{grid_wf_fd_probability_flux, "Calculate probability flux for wavefunction (finite difference)"}
+ * @DESC{"Calculate probability flux for given wavefunction. This uses explicitly finite difference (FD).
+          This is related to liquid momentum: rho_mass * velocity = mass * flux.\\
+          Notes:\\
+          - This is not the liquid velocity. Divide by density (rho) to get v (velocity);
+            v_i = flux_i / rho (i = x, y, z).\\
+          - This is in units of \# of particles. Multiply by gwf-$>$mass to get this in terms of mass"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_x, "Output grid containing x component of the flux"}
+ * @ARG3{rgrid *flux_y, "Output grid containing y component of the flux"}
+ * @ARG4{rgrid *flux_z, "Output grid containing z component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -194,13 +191,11 @@ EXPORT void grid_wf_fd_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, r
 }
 
 /*
- * Calculate the probability flux x component (m^-2 s^-1). This is related to liquid momentum:
- * rho_mass * velocity = mass * flux. Uses finite difference.
- * 
- * gwf       = wavefunction for the operation (wf *).
- * flux_x    = x output grid containing the flux (rgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_fd_probability_flux_x, "Calculate probability flux x for wavefunction (finite difference)"}
+ * @DESC{"Calculate probability flux x component for given wavefunction. This uses explicitly FD"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_x, "Output grid containing x component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -224,13 +219,11 @@ EXPORT void grid_wf_fd_probability_flux_x(wf *gwf, rgrid *flux_x) {
 }
 
 /*
- * Calculate the probability flux y component (m^-2 s^-1). This is related to liquid momentum:
- * rho_mass * velocity = mass * flux.
- * 
- * gwf       = wavefunction for the operation (wf *).
- * flux_y    = y output grid containing the flux (rgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_fd_probability_flux_y, "Calculate probability flux y for wavefunction (finite difference)"}
+ * @DESC{"Calculate probability flux y component for given wavefunction. This uses explicitly FD"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_y, "Output grid containing y component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -254,13 +247,11 @@ EXPORT void grid_wf_fd_probability_flux_y(wf *gwf, rgrid *flux_y) {
 }
 
 /*
- * Calculate the probability flux z component (m^-2 s^-1). This is related to liquid momentum:
- * rho_mass * velocity = mass * flux.
- * 
- * gwf       = wavefunction for the operation (wf *).
- * flux_z    = z output grid containing the flux (rgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_fd_probability_flux_z, "Calculate probability flux z for wavefunction (finite difference)"}
+ * @DESC{"Calculate probability flux z component for given wavefunction. This uses explicitly FD"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_z, "Output grid containing z component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -284,14 +275,14 @@ EXPORT void grid_wf_fd_probability_flux_z(wf *gwf, rgrid *flux_z) {
 }
 
 /*
- * Calculate probability flux using FFT: J = rho * flux.
- *
- * gwf    = Wavefunction (gwf *; input).
- * flux_x = Flux x component (rgrid *; output).
- * flux_y = Flux y component (rgrid *; output).
- * flux_z = Flux z component (rgrid *; output).
- *
- * No return value.
+ * @FUNC{grid_wf_fft_probability_flux, "Calculate probability flux for wavefunction (FFT)"}
+ * @DESC{"Calculate probability flux for given wavefunction. This uses explicitly FFT.
+   This evaluates: $(\hbar/m) * Im[\psi^* \nabla psi]$"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_x, "Output grid containing x component of the flux"}
+ * @ARG3{rgrid *flux_y, "Output grid containing y component of the flux"}
+ * @ARG4{rgrid *flux_z, "Output grid containing z component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -303,12 +294,11 @@ EXPORT void grid_wf_fft_probability_flux(wf *gwf, rgrid *flux_x, rgrid *flux_y, 
 }
 
 /*
- * Calculate probability flux using FFT: (hbar/m) * Im[psi^* grad psi].
- *
- * gwf    = Wavefunction (gwf *; input).
- * flux_x = Flux x component (rgrid *; output).
- *
- * No return value.
+ * @FUNC{grid_wf_fft_probability_flux_x, "Calculate probability flux x for wavefunction (FFT)"}
+ * @DESC{"Calculate probability flux x component for given wavefunction. This uses explicitly FFT"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_x, "Output grid containing x component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -328,12 +318,11 @@ EXPORT void grid_wf_fft_probability_flux_x(wf *gwf, rgrid *flux_x) {
 }
 
 /*
- * Calculate probability flux using FFT: (hbar/m) * Im[psi^* grad psi].
- *
- * gwf    = Wavefunction (gwf *; input).
- * flux_y = Flux y component (rgrid *; output).
- *
- * No return value.
+ * @FUNC{grid_wf_fft_probability_flux_y, "Calculate probability flux y for wavefunction (FFT)"}
+ * @DESC{"Calculate probability flux y component for given wavefunction. This uses explicitly FFT"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_y, "Output grid containing y component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -353,12 +342,11 @@ EXPORT void grid_wf_fft_probability_flux_y(wf *gwf, rgrid *flux_y) {
 }
 
 /*
- * Calculate probability flux using FFT: (hbar/m) * Im[psi^* grad psi].
- *
- * gwf    = Wavefunction (gwf *; input).
- * flux_z = Flux z component (rgrid *; output).
- *
- * No return value.
+ * @FUNC{grid_wf_fft_probability_flux_z, "Calculate probability flux z for wavefunction (FFT)"}
+ * @DESC{"Calculate probability flux z component for given wavefunction. This uses explicitly FFT"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{rgrid *flux_z, "Output grid containing z component of the flux"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -378,12 +366,11 @@ EXPORT void grid_wf_fft_probability_flux_z(wf *gwf, rgrid *flux_z) {
 }
 
 /*
- * Calculate linear momentum expectation value: <p> = mass * <probability flux>
- *
- * wf        = Wavefunction (wf *; input).
- * workspace = Workspace (rgrid *; input).
- *
- * Return <p_x>.
+ * @FUNC{grid_wf_px, "Linear momentum x of wavefunction"}
+ * @DESC{"Calculate linear momentum expectation value x component: $<p> = mass * <probability flux>$"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *workspace, "Workspace"}
+ * @RVAL{REAL, "Returns $<p_x>$"}
  *
  */
 
@@ -394,12 +381,11 @@ EXPORT REAL grid_wf_px(wf *gwf, rgrid *workspace) {
 }
 
 /*
- * Calculate linear momentum expectation value: <p> = mass * <probability flux>
- *
- * wf        = Wafecuntion (wf *; input).
- * workspace = Workspace (rgrid *; input).
- *
- * Return <p_y>.
+ * @FUNC{grid_wf_py, "Linear momentum y of wavefunction"}
+ * @DESC{"Calculate linear momentum expectation value y component: $<p> = mass * <probability flux>$"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *workspace, "Workspace"}
+ * @RVAL{REAL, "Returns $<p_y>$"}
  *
  */
 
@@ -410,12 +396,11 @@ EXPORT REAL grid_wf_py(wf *gwf, rgrid *workspace) {
 }
 
 /*
- * Calculate linear momentum expectation value: <p> = mass * <probability flux>
- *
- * wf        = Wafecuntion (wf *; input).
- * workspace = Workspace (rgrid *; input).
- *
- * Return <p_z>.
+ * @FUNC{grid_wf_pz, "Linear momentum z of wavefunction"}
+ * @DESC{"Calculate linear momentum expectation value z component: $<p> = mass * <probability flux>$"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *workspace, "Workspace"}
+ * @RVAL{REAL, "Returns $<p_z>$"}
  *
  */
 
@@ -426,11 +411,12 @@ EXPORT REAL grid_wf_pz(wf *gwf, rgrid *workspace) {
 }
 
 /*
- * Calculate angular momentum L_x.
- *
- * wf         = Wavefunction (wf *; input).
- * dst        = Destination for the operation (rgrid *; input).
- * workspace  = Workspace required for the operation (cgrid *; input).
+ * @FUNC{grid_wf_lx_op, "Angular momentum x operator"}
+ * @DESC{"Operator for angular momentum x component"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *dst, "Destination grid"}
+ * @ARG3{rgrid *workspace, "Workspace"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -444,11 +430,12 @@ EXPORT void grid_wf_lx_op(wf *wf, cgrid *dst, cgrid *workspace) {
 }
 
 /*
- * Calculate angular momentum L_y.
- *
- * wf         = Wavefunction (gwf *).
- * dst        = Destination for the operation (cgrid *; input).
- * workspace  = Workspace required for the operation (cgrid *; input).
+ * @FUNC{grid_wf_ly_op, "Angular momentum y operator"}
+ * @DESC{"Operator for angular momentum y component"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *dst, "Destination grid"}
+ * @ARG3{rgrid *workspace, "Workspace"}
+ * @RVAL{void, "No return value"}
  *
  */
  
@@ -462,11 +449,12 @@ EXPORT void grid_wf_ly_op(wf *wf, cgrid *dst, cgrid *workspace) {
 }
 
 /*
- * Calculate angular momentum operator L_z.
- *
- * wf         = Wavefunction (gwf *).
- * dst        = Destination for the operation (cgrid *; input).
- * workspace  = Workspace required for the operation (cgrid *; input).
+ * @FUNC{grid_wf_lz_op, "Angular momentum z operator"}
+ * @DESC{"Operator for angular momentum z component"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *dst, "Destination grid"}
+ * @ARG3{rgrid *workspace, "Workspace"}
+ * @RVAL{void, "No return value"}
  *
  */
  
@@ -480,13 +468,12 @@ EXPORT void grid_wf_lz_op(wf *wf, cgrid *dst, cgrid *workspace) {
 }
 
 /*
- * Calculate angular momentum expectation value <L_x>.
- *
- * wf         = Wavefunction (wf *; input).
- * workspace1 = Workspace required for the operation (cgrid *; input).
- * workspace2 = Workspace required for the operation (cgrid *; input).
- *
- * Return <L_x> (L_x = y p_z - z p_y).
+ * @FUNC{grid_wf_lx, "Angular momentum x expectation value"}
+ * @DESC{"Calculate expectation value for angular momentum x component ($L_x = y p_z - z p_y$)"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{cgrid *workspace1, "Workspace 1"}
+ * @ARG3{cgrid *workspace2, "Workspace 2"}
+ * @RVAL{REAL, "Expectation value $<L_x>$"}
  *
  */
 
@@ -497,13 +484,12 @@ EXPORT REAL grid_wf_lx(wf *wf, cgrid *workspace1, cgrid *workspace2) {
 }
 
 /*
- * Calculate angular momentum expectation value <L_y>.
- *
- * wf         = Wavefunction (gwf *).
- * workspace1 = Workspace required for the operation (cgrid *; input).
- * workspace2 = Workspace required for the operation (cgrid *; input).
- *
- * Return <L_y> (L_y = z * p_x - x * p_z).
+ * @FUNC{grid_wf_ly, "Angular momentum y expectation value"}
+ * @DESC{"Calculate expectation value for angular momentum y component ($L_y = z * p_x - x * p_z$)"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{cgrid *workspace1, "Workspace 1"}
+ * @ARG3{cgrid *workspace2, "Workspace 2"}
+ * @RVAL{REAL, "Expectation value $<L_y>$"}
  *
  */
  
@@ -514,13 +500,12 @@ EXPORT REAL grid_wf_ly(wf *wf, cgrid *workspace1, cgrid *workspace2) {
 }
 
 /*
- * Calculate angular momentum expectation value <L_z>.
- *
- * wf         = Wavefunction (gwf *).
- * workspace1 = Workspace required for the operation (cgrid *; input).
- * workspace2 = Workspace required for the operation (cgrid *; input).
- *
- * Return <L_z> (L_z = x p_y - y p_x).
+ * @FUNC{grid_wf_lz, "Angular momentum z expectation value"}
+ * @DESC{"Calculate expectation value for angular momentum z component ($L_z = x p_y - y p_x$)"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{cgrid *workspace1, "Workspace 1"}
+ * @ARG3{cgrid *workspace2, "Workspace 2"}
+ * @RVAL{REAL, "Expectation value $<L_z>$"}
  *
  */
  
@@ -531,20 +516,17 @@ EXPORT REAL grid_wf_lz(wf *wf, cgrid *workspace1, cgrid *workspace2) {
 }
 
 /*
- * Calculate angular momentum expectation values <L_x>, <L_y>, <L_z>.
- *
- * wf         = Wavefunction (gwf *).
- * lx         = Value of l_x (REAL *).
- * ly         = Value of l_y (REAL *).
- * lz         = Value of l_z (REAL *).
- * workspace1 = Workspace required for the operation (cgrid *; input).
- * workspace2 = Workspace required for the operation (cgrid *; input).
- *
- * NOTE: The old df_driver_L() routine returned angular momentum * mass.
- *       This routine does not include the mass.
+ * @FUNC{grid_wf_l, "Angular momentum expectation value"}
+ * @DESC{"Calculate expectation value for angular momentum vector. Note that this does not include;5D
+          multiplication by mass"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{REAL *lx, "Value for $L_x$"}
+ * @ARG3{REAL *ly, "Value for $L_y$"}
+ * @ARG4{REAL *lz, "Value for $L_z$"}
+ * @ARG5{cgrid *workspace1, "Workspace 1"}
+ * @ARG6{cgrid *workspace2, "Workspace 2"}
+ * @RVAL{void, "No return value"}
  * 
- * No return value.
- *
  */
  
 EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, cgrid *workspace1, cgrid *workspace2) {
@@ -555,16 +537,15 @@ EXPORT void grid_wf_l(wf *wf, REAL *lx, REAL *ly, REAL *lz, cgrid *workspace1, c
 }
 
 /*
- * Calculate the energy from the rotation constraint, -<omega*L>.
- *
- * gwf        = wavefunction for the system (wf *; input).
- * omega_x    = angular frequency in a.u., x-axis (REAL, input)
- * omega_y    = angular frequency in a.u., y-axis (REAL, input)
- * omega_z    = angular frequency in a.u., z-axis (REAL, input)
- * workspace1 = Workspace required for the operation (cgrid *).
- * workspace2 = Workspace required for the operation (cgrid *).
- *
- * Returns the rotational energy.
+ * @FUNC{grid_wf_rotational_energy, "Energy from rotational constraint"}
+ * @DESC{"Calculate the energy from the rotation constraint, $-<omega*L>$"}
+ * @ARG1{wf *gwf, "Wavefunction"}
+ * @ARG2{REAL omega_x, "Angular frequency in a.u., x-axis"}
+ * @ARG3{REAL omega_y, "Angular frequency in a.u., y-axis"}
+ * @ARG4{REAL omega_z, "Angular frequency in a.u., z-axis"}
+ * @ARG5{cgrid *workspace1, "Workspace 1"}
+ * @ARG6{cgrid *workspace2, "Workspace 2"}
+ * @RVAL{REAL, "Returns the rotational energy"}
  *
  */
 
@@ -577,23 +558,20 @@ EXPORT REAL grid_wf_rotational_energy(wf *gwf, REAL omega_x, REAL omega_y, REAL 
 }
 
 /*
- * Calculate kinetic energy density as a function of wave vector k (atomic unis).
- *
- * E(k) = 4pi (m/2) k^2 \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
- *
- * Total K.E. is then int E(k) dk.
- *
- * gwf        = Wave function to be analyzed (wf *; input).
- * bins       = Averages in k-space (REAL *; output). The array length is nbins.
- * binstep    = Step length in k-space in atomic units (REAL; input).
- * nbins      = Number of bins to use (INT; input).
- * workspace1 = Workspace 1 (rgrid *; input).
- * workspace2 = Workspace 2 (rgrid *; input).
- * workspace3 = Workspace 3 (rgrid *; input).
- * workspace4 = Workspace 4 (rgrid *; input).
- * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
- *
- * No return value.
+ * @FUNC{grid_wf_KE, "Kinetic energy density in reciprocal space"}
+ * @DESC{"Calculate kinetic energy density as a function of wave vector $|k|$ (atomic units):\\
+          $E(k) = 4\pi (m/2) k^2 \int |(\sqrt(rho)v)(k,theta,phi)|^2 \sin(theta) dtheta dphi$\\
+          The total K.E. is then $\int E(k) dk$"}
+ * @ARG1{wf *gwf, "Wave function to be analyzed"}
+ * @ARG2{REAL *bins, "Array for the averages in k-space. The array length is nbins"}
+ * @ARG3{REAL binstep, "Step length in k-space in atomic units"}
+ * @ARG4{INT nbins, "Number of bins to use"}
+ * @ARG5{rgrid *workspace1, "Workspace 1"}
+ * @ARG6{rgrid *workspace2, "Workspace 2"}
+ * @ARG7{rgrid *workspace3, "Workspace 3"}
+ * @ARG8{rgrid *workspace4, "Workspace 4"}
+ * @ARG9{REAL eps, "Epislon for (safe) division by $|psi|^2$"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -622,25 +600,22 @@ EXPORT void grid_wf_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid *work
 }
 
 /*
- * Calculate incompressible kinetic energy density as a function of wave vector k (atomic unis).
- *
- * E(k) = (m/2) k^2 \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
- *
- * where (m/2) |sqrt(rho)v|^2 corresponds to the incompressible part of kinetic energy.
- * Total incompressible K.E. is then int E(k) dk.
- *
- * gwf        = Wave function to be analyzed (wf *; input).
- * bins       = Averages in k-space (REAL *; output). The array length is nbins.
- * binstep    = Step length in k-space in atomic units (REAL; input).
- * nbins      = Number of bins to use (INT; input).
- * workspace1 = Workspace 1 (rgrid *; input/output).
- * workspace2 = Workspace 2 (rgrid *; input/output).
- * workspace3 = Workspace 3 (rgrid *; input/output).
- * workspace4 = Workspace 4 (rgrid *; input/output).
- * workspace5 = Workspace 5 (rgrid *; input/output).
- * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
- *
- * No return value.
+ * @FUNC{grid_wf_incomp_KE, "Incompressible kinetic energy density in reciprocal space"}
+ * @DESC{"Calculate incompressible kinetic energy density as a function of wave vector $|k|$ (atomic units):\\
+          $E(k) = (m/2) k^2 \int |(\sqrt(rho)v)(k,theta,phi)|^2 \sin(theta) dtheta dphi$\\
+          where $(m/2) |\sqrt(rho)v|^2$ corresponds to the incompressible part of kinetic energy.
+          Total incompressible K.E. is then $\int E(k) dk$"}
+ * @ARG1{wf *gwf, "Wavefunction to be analyzed"}
+ * @ARG2{REAL *bins, "Averages in k-space. The array length is nbins"}
+ * @ARG3{REAL binstep, "Step length in k-space in atomic units"}
+ * @ARG4{INT nbins, "Number of bins to use"}
+ * @ARG5{rgrid *workspace1, "Workspace 1"}
+ * @ARG6{rgrid *workspace2, "Workspace 2"}
+ * @ARG7{rgrid *workspace3, "Workspace 4"}
+ * @ARG8{rgrid *workspace4, "Workspace 5"}
+ * @ARG9{rgrid *workspace5, "Workspace 6"}
+ * @ARG10{REAL eps, "Epislon for (safe) division by $|psi|^2$"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -671,24 +646,21 @@ EXPORT void grid_wf_incomp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgri
 }
 
 /*
- * Calculate compressible kinetic energy density as a function of wave vector k (atomic unis).
- *
- * E(k) = 4pi (m/2) \int |(sqrt(rho)v)(k,theta,phi)|^2 sin(theta) dtheta dphi
- *
- * where (m/2) |sqrt(rho)v|^2 is the compressible part of kinetic energy.
- * Total compressible K.E. is then int E(k) dk.
- *
- * gwf        = Wave function to be analyzed (wf *; input).
- * bins       = Averages in k-space (REAL *; output). The array length is nbins.
- * binstep    = Step length in k-space in atomic units (REAL; input).
- * nbins      = Number of bins to use (INT; input).
- * workspace1 = Workspace 1 (rgrid *; input/output).
- * workspace2 = Workspace 2 (rgrid *; input/output).
- * workspace3 = Workspace 3 (rgrid *; input/output).
- * workspace4 = Workspace 4 (rgrid *; input/output).
- * eps        = Epislon for (safe) division by |psi|^2 (REAL; input). 
- *
- * No return value.
+ * @FUNC{grid_wf_comp_KE, "Compressible kinetic energy density in reciprocal space"}
+ * @DESC{"Calculate compressible kinetic energy density as a function of wave vector $|k|$ (atomic units):\\
+          $E(k) = 4pi (m/2) \int |(\sqrt(rho)v)(k,theta,phi)|^2 \sin(theta) dtheta dphi$\\
+          where $(m/2) |\sqrt(rho)v|^2$ is the compressible part of kinetic energy.
+          Total compressible K.E. is then $\int E(k) dk$"}
+ * @ARG1{wf *gwf, "Wavefunction to be analyzed"}
+ * @ARG2{REAL *bins, "Averages in k-space. The array length is nbins"}
+ * @ARG3{REAL binstep, "Step length in k-space in atomic units"}
+ * @ARG4{INT nbins, "Number of bins to use"}
+ * @ARG5{rgrid *workspace1, "Workspace 1"}
+ * @ARG6{rgrid *workspace2, "Workspace 2"}
+ * @ARG7{rgrid *workspace3, "Workspace 3"}
+ * @ARG8{rgrid *workspace4, "Workspace 4"}
+ * @ARG9{REAL eps, "Epislon for (safe) division by $|psi|^2$"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -719,16 +691,14 @@ EXPORT void grid_wf_comp_KE(wf *gwf, REAL *bins, REAL binstep, INT nbins, rgrid 
 }
 
 /*
- * Calculate average spherical occupation numbers in the Fourier space, n(|k|). Sum over n(|k|)
- * gives the total number of particles.
- *
- * gwf        = Wave function to be analyzed (wf *; input).
- * bins       = Averages in k-space (REAL *; output). The array length is nbins.
- * binstep    = Step length in k-space in atomic units (REAL; input).
- * nbins      = Number of bins to use (INT; input).
- * cworkspace = Workspace (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_average_occupation, "Average occupation number in reciprocal space"}
+ * @DESC{"Calculate average spherical occupation numbers in the Fourier space, $n(|k|)$"}
+ * @ARG1{wf *gwf, "Wavefunction to be analyzed"}
+ * @ARG2{REAL *bins, "Averages in k-space. The array length is nbins"}
+ * @ARG3{REAL binstep, "Step length in k-space in atomic units"}
+ * @ARG4{INT nbins, "Number of bins to use"}
+ * @ARG5{cgrid *cworkspace, "Workspace"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -746,16 +716,14 @@ EXPORT void grid_wf_average_occupation(wf *gwf, REAL *bins, REAL binstep, INT nb
 }
 
 /*
- * Calculate total spherical occupation numbers in the Fourier space, n(|k|). Sum over n(|k|)
- * gives the total number of particles.
- *
- * gwf        = Wave function to be analyzed (wf *; input).
- * bins       = Averages in k-space (REAL *; output). The array length is nbins.
- * binstep    = Step length in k-space in atomic units (REAL; input).
- * nbins      = Number of bins to use (INT; input).
- * cworkspace = Workspace (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_total_occupation, "Total occupation number in reciprocal space"}
+ * @DESC{"Calculate total spherical occupation numbers in the Fourier space, $n(|k|)$"}
+ * @ARG1{wf *gwf, "Wavefunction to be analyzed"}
+ * @ARG2{REAL *bins, "Averages in k-space. The array length is nbins"}
+ * @ARG3{REAL binstep, "Step length in k-space in atomic units"}
+ * @ARG4{INT nbins, "Number of bins to use"}
+ * @ARG5{cgrid *cworkspace, "Workspace"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -773,15 +741,14 @@ EXPORT void grid_wf_total_occupation(wf *gwf, REAL *bins, REAL binstep, INT nbin
 }
 
 /*
- * Calculate classical kinetic energy: int 1/2 * mass * rho * |v|^2 d^3
- * This is the kinetic energy due to classical flow / motion.
- *
- * wf         = Wavefunction (wf *; input).
- * workspace1 = Workspace (rgrid *; input).
- * workspace2 = Workspace (rgrid *; input).
- * eps        = Epsilon for (safe) dividing by |psi|^2 (REAL).
- *
- * Returns the kinetic energy (REAL).
+ * @FUNC{grid_wf_kinetic_energy_classical, "Classical kinetic energy"}
+ * @DESC{"Calculate classical kinetic energy: $\int \frac{1}{2}  m \rho * |v|^2 d^3r$.
+          This is the kinetic energy due to classical flow / motion"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{rgrid *workspace1, "Workspace 1"}
+ * @ARG3{rgrid *workspace2, "Workspace 2"}
+ * @ARG4{REAL eps, "Epsilon for (safe) dividing by $|psi|^2$"}
+ * @RVAL{REAL, "Returns the kinetic energy"}
  *
  */
 
@@ -802,16 +769,15 @@ EXPORT REAL grid_wf_kinetic_energy_classical(wf *gwf, rgrid *workspace1, rgrid *
 }
 
 /*
- * Calculate quantum pressure energy: \frac{\hbar^2}{2m} \int |\nabla \sqrt{\rho})|^2
- *
- * gwf        = Wavefunction (wf *; input).
- * workspace1 = Workspace (rgrid *; input).
- * workspace2 = Workspace (rgrid *; input).
- * workspace3 = Workspace (rgrid *; input).
- * 
- * Returns the quantum kinetic energy (REAL).
- *
- * Notes: Ideally, classical + quantum = total kinetic energy (subject to numerical accuracy).
+ * @FUNC{grid_wf_kinetic_energy_qp, "Quantum kinetic energy (quantum pressure)"}
+ * @DESC{"Calculate quantum (pressure) energy: $\frac{\hbar^2}{2m} \int |\nabla \sqrt{\rho})|^2$\\
+   Note that ideally, classical + quantum = total kinetic energy. 
+   However, there are often numerical accuracy issues such that this does not hold well"}
+ * @ARG1{wf *gwf, "Wavefunction"}
+ * @ARG2{rgrid *workspace1, "Workspace 1"}
+ * @ARG3{rgrid *workspace2, "Workspace 2"}
+ * @ARG4{rgrid *workspace3, "Workspace 3"}
+ * @RVAL{REAL, "Returns the quantum kinetic energy"}
  *
  */
 
@@ -852,16 +818,15 @@ EXPORT REAL grid_wf_kinetic_energy_qp(wf *gwf, rgrid *workspace1, rgrid *workspa
 }
 
 /*
- * Calculate liquid circulation.
- *
- * wf         = Wave function (wf *; input).
- * nn         = Exponent (REAL; input). Usually nn = 1.0. See below.
- * workspace1 = Workspace (rgrid *; input).
- * workspace2 = Workspace (rgrid *; input).
- * workspace3 = Workspace (rgrid *; input).
- * workspace4 = Workspace (rgrid *; input).
- *
- * returns int |circulation|^nn
+ * @FUNC{grid_wf_circulation, "Calculate liquid circulation"}
+ * @DESC{"Calculate total liquid circulation ($\int |rot (\rho v)|^nn$)"}
+ * @ARG1{wf *wf, "Wavefunction"}
+ * @ARG2{REAL nn, "Exponent $nn$. Usually $nn = 1.0$"}
+ * @ARG3{rgrid *workspace1, "Workspace 1"}
+ * @ARG4{rgrid *workspace2, "Workspace 2"}
+ * @ARG5{rgrid *workspace3, "Workspace 3"}
+ * @ARG6{rgrid *workspace4, "Workspace 4"}
+ * @RVAL{REAL, "Returns total circulation"}
  *
  */
 
@@ -874,15 +839,13 @@ EXPORT REAL grid_wf_circulation(wf *gwf, REAL nn, rgrid *workspace1, rgrid *work
 }
 
 /*
- * Calculate T_BEC for a given wave function according to T_BEC = T_l * ((n - ngnd) / n) ^ (exponent)
- *
- * wf         = Wave function for which the temperature is calculated (wf *; input).
- * tl         = Lambda temperature (REAL; input).
- * exponent   = Exponent (2/3 for BEC, 1/6 for superfluid 4He with tl = 2.19).
- *
- * Returns temperature in Kelvin.
- *
- * Note: This is only approximate for interacting superfluids (helium).
+ * @FUNC{grid_wf_temperature, "Calculate BEC temperature"}
+ * @DESC{"Calculate $T_BEC$ for a given wavefunction according to:
+          $T_BEC = T_{\lambda} * ((n - ngnd) / n)^(exponent)$"}
+ * @ARG1{wf *wf, "Wavefunction for which the temperature is calculated"}
+ * @ARG2{REAL tl, "Lambda temperature ($T_{\lambda$})"}
+ * @ARG3{REAL exponent, "Exponent (2/3 for BEC, approx. 1/6 for superfluid $^4$He with $T_{\lambda}$ \approx 2.19"}
+ * @RVAL{REAL, "Returns temperature in Kelvin"}
  *
  */
 
@@ -903,11 +866,10 @@ EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl, REAL exponent) {
 }
   
 /*
- * Calculate the superfluid fraction: n_s = n_gnd / n.
- *
- * wf         = Wave function for which the temperature is calculated (wf *; input).
- *
- * Returns the fraction between 0 and 1.
+ * @FUNC{grid_wf_superfluid, "Calculate superfluid fraction"}
+ * @DESC{"Calculate the superfluid fraction: $n_s = n_gnd / n$"}
+ * @ARG1{wf *wf, "Wavefunction for which the temperature is calculated"}
+ * @RVAL{REAL, "Returns the fraction between 0 and 1"}
  *
  */
 
@@ -932,27 +894,10 @@ EXPORT REAL grid_wf_superfluid(wf *gwf) {
 }
 
 /*
- * Calculate the superfluid fraction: n_s = n_gnd / n given the ground state wave function (condensate).
- *
- * wf         = Wave function for which the temperature is calculated (wf *; input).
- * gnd        = Wave function for the ground state (condensate) (wf *; input).
- *
- * Returns the fraction between 0 and 1.
- *
- */
-
-EXPORT REAL grid_wf_superfluid2(wf *gwf, wf *gnd) {
-
-  // \frac{1}{N_gwf} \frac{1}{N_gnd} |\int gwf^* x gnd d^3r|^2
-  return csqnorm(cgrid_integral_of_conjugate_product(gnd->grid, gwf->grid)) / (grid_wf_norm(gwf) * grid_wf_norm(gnd));
-}
-
-/*
- * Calculate the normal fraction: n_n = 1 - n_gnd / n.
- *
- * wf         = Wave function for which the temperature is calculated (wf *; input).
- *
- * Returns the fraction between 0 and 1.
+ * @FUNC{grid_wf_normalfluid, "Calculate normal fraction"}
+ * @DESC{"Calculate the normal fraction: $n_n = 1 - n_gnd / n$"}
+ * @ARG1{wf *wf, "Wavefunction for which the temperature is calculated"}
+ * @RVAL{REAL, "Returns the fraction between 0 and 1"}
  * 
  */
 

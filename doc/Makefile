@@ -5,6 +5,7 @@ libgrid-manual.pdf: gendoc libgrid-manual.tex
 	$(shell ./gendoc ../src/grid_wf*.c > wf-functions.tex)	
 	$(shell ./gendoc ../src/rand.c > random-functions.tex)
 	$(shell ./gendoc ../src/threads.c > thread-functions.tex)
+	$(shell ./gendoc ../src/grid_fft.c > fftw-functions.tex)
 	$(shell ./gendoc ../src/linalg.c > linalg-functions.tex)
 	$(shell ./gendoc ../src/interpolate.c > interpolate-functions.tex)
 	$(shell ./gendoc ../src/ctimer.c > timer-functions.tex)
