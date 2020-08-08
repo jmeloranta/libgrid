@@ -18,7 +18,7 @@
 /* Global variables */
 char grid_gpu_mem_holder;  /* Just to get a host mem address */
 void *grid_gpu_mem = NULL; // Temp space for GPU (host memory pointer; host_)
-cudaXtDesc *grid_gpu_mem_addr = NULL; // cuda_block_address() of grid_gpu_mem
+cudaXtDesc *grid_gpu_mem_addr = NULL; // cuda_find_block() of grid_gpu_mem
 
 /*
  * Initialize the CUDA portion of cgrid routines. Common block for each GPU for reduction.
@@ -41,7 +41,7 @@ EXPORT void cgrid_cuda_init(size_t len) {
       fprintf(stderr, "libgrid(CUDA): Failed to allocate temporary space on GPU.\n");
       abort();
     }
-    grid_gpu_mem_addr = (cuda_block_address(grid_gpu_mem))->gpu_info->descriptor;
+    grid_gpu_mem_addr = (cuda_find_block(grid_gpu_mem))->gpu_info->descriptor;
     cuda_lock_block(grid_gpu_mem);
   }
 }
@@ -67,7 +67,7 @@ EXPORT char cgrid_cuda_fft_convolute(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_fft_convoluteW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_fft_convoluteW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -91,7 +91,7 @@ EXPORT char cgrid_cuda_abs_power(cgrid *dst, cgrid *src, REAL exponent) {
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_abs_powerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_abs_powerW(cuda_find_block(dst->value), cuda_find_block(src->value), exponent, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -115,7 +115,7 @@ EXPORT char cgrid_cuda_power(cgrid *dst, cgrid *src, REAL exponent) {
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_powerW(cuda_block_address(dst->value), cuda_block_address(src->value), exponent, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_powerW(cuda_find_block(dst->value), cuda_find_block(src->value), exponent, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -141,7 +141,7 @@ EXPORT char cgrid_cuda_multiply(cgrid *grid, REAL complex c) {
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);
-  cgrid_cuda_multiplyW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiplyW(cuda_find_block(grid->value), cc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -167,7 +167,7 @@ EXPORT char cgrid_cuda_sum(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_sumW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_sumW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -193,7 +193,7 @@ EXPORT char cgrid_cuda_difference(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_differenceW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_differenceW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -219,7 +219,7 @@ EXPORT char cgrid_cuda_product(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_productW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -245,7 +245,7 @@ EXPORT char cgrid_cuda_conjugate_product(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_conjugate_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_conjugate_productW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -271,7 +271,7 @@ EXPORT char cgrid_cuda_division(cgrid *dst, cgrid *src1, cgrid *src2) {
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_divisionW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_divisionW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -298,7 +298,7 @@ EXPORT char cgrid_cuda_division_eps(cgrid *dst, cgrid *src1, cgrid *src2, REAL e
   if(cuda_three_block_policy(src1->value, src1->grid_len, src1->cufft_handle, src1->id, 1, src2->value, src2->grid_len, src2->cufft_handle, src2->id, 1, 
                              dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
 
-  cgrid_cuda_division_epsW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), eps, dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_division_epsW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), eps, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -324,7 +324,7 @@ EXPORT char cgrid_cuda_add(cgrid *grid, REAL complex c) {
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);
-  cgrid_cuda_addW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_addW(cuda_find_block(grid->value), cc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -353,7 +353,7 @@ EXPORT char cgrid_cuda_multiply_and_add(cgrid *grid, REAL complex cm, REAL compl
   ccm.y = CIMAG(cm);
   cca.x = CREAL(ca);
   cca.y = CIMAG(ca);
-  cgrid_cuda_multiply_and_addW(cuda_block_address(grid->value), ccm, cca, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiply_and_addW(cuda_find_block(grid->value), ccm, cca, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -382,7 +382,7 @@ EXPORT char cgrid_cuda_add_and_multiply(cgrid *grid, REAL complex ca, REAL compl
   ccm.y = CIMAG(cm);
   cca.x = CREAL(ca);
   cca.y = CIMAG(ca);
-  cgrid_cuda_add_and_multiplyW(cuda_block_address(grid->value), cca, ccm, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_add_and_multiplyW(cuda_find_block(grid->value), cca, ccm, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -410,7 +410,7 @@ EXPORT char cgrid_cuda_add_scaled(cgrid *dst, REAL complex d, cgrid *src) {
 
   dd.x = CREAL(d);
   dd.y = CIMAG(d);
-  cgrid_cuda_add_scaledW(cuda_block_address(dst->value), dd, cuda_block_address(src->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_add_scaledW(cuda_find_block(dst->value), dd, cuda_find_block(src->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -441,7 +441,7 @@ EXPORT char cgrid_cuda_add_scaled_product(cgrid *dst, REAL complex d, cgrid *src
 
   dd.x = CREAL(d);
   dd.y = CIMAG(d);
-  cgrid_cuda_add_scaled_productW(cuda_block_address(dst->value), dd, cuda_block_address(src1->value), cuda_block_address(src2->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_add_scaled_productW(cuda_find_block(dst->value), dd, cuda_find_block(src1->value), cuda_find_block(src2->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -489,7 +489,7 @@ EXPORT char cgrid_cuda_constant(cgrid *grid, REAL complex c) {
 
   cc.x = CREAL(c);
   cc.y = CIMAG(c);
-  cgrid_cuda_constantW(cuda_block_address(grid->value), cc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_constantW(cuda_find_block(grid->value), cc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -514,7 +514,7 @@ EXPORT char cgrid_cuda_integral(cgrid *grid, REAL complex *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integralW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, &tmp);
+  cgrid_cuda_integralW(cuda_find_block(grid->value), grid->nx, grid->ny, grid->nz, &tmp);
   *value = tmp.x + I * tmp.y;
 
   if(grid->nx != 1) *value *= step;
@@ -550,7 +550,7 @@ EXPORT char cgrid_cuda_integral_region(cgrid *grid, INT il, INT iu, INT jl, INT 
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_regionW(cuda_block_address(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, &tmp);
+  cgrid_cuda_integral_regionW(cuda_find_block(grid->value), il, iu, jl, ju, kl, ku, grid->nx, grid->ny, grid->nz, &tmp);
   *value = tmp.x + I * tmp.y;
 
   if(grid->nx != 1) *value *= step;
@@ -580,7 +580,7 @@ EXPORT char cgrid_cuda_integral_of_square(cgrid *grid, REAL *value) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_squareW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz, &tmp);
+  cgrid_cuda_integral_of_squareW(cuda_find_block(grid->value), grid->nx, grid->ny, grid->nz, &tmp);
   *value = tmp.x;
 
   if(grid->nx != 1) *value *= step;
@@ -612,7 +612,7 @@ EXPORT char cgrid_cuda_integral_of_conjugate_product(cgrid *grida, cgrid *gridb,
 
   if(cuda_two_block_policy(grida->value, grida->grid_len, grida->cufft_handle, grida->id, 1, gridb->value, gridb->grid_len, gridb->cufft_handle, gridb->id, 1) < 0) return -1;
 
-  cgrid_cuda_integral_of_conjugate_productW(cuda_block_address(grida->value), cuda_block_address(gridb->value), gridb->nx, gridb->ny, gridb->nz, &tmp);
+  cgrid_cuda_integral_of_conjugate_productW(cuda_find_block(grida->value), cuda_find_block(gridb->value), gridb->nx, gridb->ny, gridb->nz, &tmp);
   *value = tmp.x + I * tmp.y;
 
   if(gridb->nx != 1) *value *= step;
@@ -644,7 +644,7 @@ EXPORT char cgrid_cuda_grid_expectation_value(cgrid *dgrid, cgrid *opgrid, REAL 
 
   if(cuda_two_block_policy(dgrid->value, dgrid->grid_len, dgrid->cufft_handle, dgrid->id, 1, opgrid->value, opgrid->grid_len, opgrid->cufft_handle, opgrid->id, 1) < 0) return -1;
 
-  cgrid_cuda_grid_expectation_valueW(cuda_block_address(dgrid->value), cuda_block_address(opgrid->value), dgrid->nx, dgrid->ny, dgrid->nz, &tmp);
+  cgrid_cuda_grid_expectation_valueW(cuda_find_block(dgrid->value), cuda_find_block(opgrid->value), dgrid->nx, dgrid->ny, dgrid->nz, &tmp);
   *value = tmp.x + I * tmp.y;
 
   if(dgrid->nx != 1) *value *= step;
@@ -672,7 +672,7 @@ EXPORT char cgrid_cuda_conjugate(cgrid *dst, cgrid *src) {
 
   if(cuda_two_block_policy(dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0, src->value, src->grid_len, src->cufft_handle, src->id, 1) < 0) return -1;
 
-  cgrid_cuda_conjugateW(cuda_block_address(dst->value), cuda_block_address(src->value), dst->nx, dst->ny, dst->nz);
+  cgrid_cuda_conjugateW(cuda_find_block(dst->value), cuda_find_block(src->value), dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -693,7 +693,7 @@ EXPORT char cgrid_cuda_zero_re(cgrid *grid) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_zero_reW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_zero_reW(cuda_find_block(grid->value), grid->nx, grid->ny, grid->nz);
   return 0;
 }
 
@@ -713,7 +713,7 @@ EXPORT char cgrid_cuda_zero_im(cgrid *grid) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_zero_imW(cuda_block_address(grid->value), grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_zero_imW(cuda_find_block(grid->value), grid->nx, grid->ny, grid->nz);
   return 0;
 }
 
@@ -739,7 +739,7 @@ EXPORT char cgrid_cuda_zero_index(cgrid *grid, INT lx, INT hx, INT ly, INT hy, I
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_zero_indexW(cuda_block_address(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_zero_indexW(cuda_find_block(grid->value), lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
   return 0;
 }
 
@@ -759,7 +759,7 @@ EXPORT char cgrid_cuda_multiply_by_x(cgrid *grid) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_multiply_by_xW(cuda_block_address(grid->value), grid->x0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiply_by_xW(cuda_find_block(grid->value), grid->x0, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -780,7 +780,7 @@ EXPORT char cgrid_cuda_multiply_by_y(cgrid *grid) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_multiply_by_yW(cuda_block_address(grid->value), grid->y0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiply_by_yW(cuda_find_block(grid->value), grid->y0, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -801,7 +801,7 @@ EXPORT char cgrid_cuda_multiply_by_z(cgrid *grid) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_multiply_by_zW(cuda_block_address(grid->value), grid->z0, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_multiply_by_zW(cuda_find_block(grid->value), grid->z0, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -823,7 +823,7 @@ EXPORT char cgrid_cuda_dealias2(cgrid *grid, REAL kmax) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_dealias2W(cuda_block_address(grid->value), kmax, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_dealias2W(cuda_find_block(grid->value), kmax, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }

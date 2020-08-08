@@ -49,7 +49,7 @@ EXPORT char grid_func7a_cuda_operate_one(cgrid *dst, REAL rmin, REAL radd, REAL 
   x0 = dst->x0;
   y0 = dst->y0;
   z0 = dst->z0;
-  grid_func7a_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+  grid_func7a_cuda_operate_oneW(cuda_find_block(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
 
   return 0;
 }
@@ -115,7 +115,7 @@ EXPORT char grid_func7b_cuda_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL 
   x0 = dst->x0;
   y0 = dst->y0;
   z0 = dst->z0;
-  grid_func7b_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+  grid_func7b_cuda_operate_oneW(cuda_find_block(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
 
   return 0;
 }
@@ -160,7 +160,7 @@ EXPORT char grid_func7c_cuda_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL 
   x0 = dst->x0;
   y0 = dst->y0;
   z0 = dst->z0;
-  grid_func7c_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+  grid_func7c_cuda_operate_oneW(cuda_find_block(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
 
   return 0;
 }
@@ -205,7 +205,7 @@ EXPORT char grid_func7d_cuda_operate_one(rgrid *dst, REAL rmin, REAL radd, REAL 
   x0 = dst->x0;
   y0 = dst->y0;
   z0 = dst->z0;
-  grid_func7d_cuda_operate_oneW(cuda_block_address(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
+  grid_func7d_cuda_operate_oneW(cuda_find_block(dst->value), rmin, radd, a0, a1, a2, a3, a4, a5, dst->nx, dst->ny, dst->nz, x0, y0, z0, dst->step);
 
   return 0;
 }

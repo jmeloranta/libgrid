@@ -43,7 +43,7 @@ EXPORT char grid_cuda_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid 
 
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, pot->value, pot->grid_len, pot->cufft_handle, pot->id, 1) < 0) return -1;
 
-  grid_cuda_wf_propagate_potentialW(cuda_block_address(grid->value), cuda_block_address(pot->value), ts, cons, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
+  grid_cuda_wf_propagate_potentialW(cuda_find_block(grid->value), cuda_find_block(pot->value), ts, cons, lx, hx, ly, hy, lz, hz, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -66,7 +66,7 @@ EXPORT char grid_cuda_wf_density(wf *gwf, rgrid *density) {
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, density->value, density->grid_len, density->cufft_handle_r2c, density->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_densityW(cuda_block_address(grid->value), cuda_block_address(density->value), grid->nx, grid->ny, grid->nz);
+  grid_cuda_wf_densityW(cuda_find_block(grid->value), cuda_find_block(density->value), grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -91,7 +91,7 @@ EXPORT char grid_cuda_wf_merge(wf *dst, cgrid *cwfr, cgrid *cwfi) {
   if(cuda_three_block_policy(cwfr->value, cwfr->grid_len, cwfr->cufft_handle, cwfr->id, 1, cwfi->value, cwfi->grid_len, cwfi->cufft_handle, cwfi->id, 1, cdst->value, cdst->grid_len, cdst->cufft_handle, cdst->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_mergeW(cuda_block_address(cdst->value), cuda_block_address(cwfr->value), cuda_block_address(cwfi->value), lx, hx, ly, hy, lz, hz, cdst->nx, cdst->ny, cdst->nz);
+  grid_cuda_wf_mergeW(cuda_find_block(cdst->value), cuda_find_block(cwfr->value), cuda_find_block(cwfi->value), lx, hx, ly, hy, lz, hz, cdst->nx, cdst->ny, cdst->nz);
 
   return 0;
 }

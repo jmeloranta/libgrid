@@ -27,7 +27,7 @@ static inline REAL grid_func5(REAL rhop, REAL beta, REAL rhom, REAL C) {
 EXPORT char grid_func5_cuda_operate_one(rgrid *dst, rgrid *src, REAL beta, REAL rhom, REAL C) {
 
   if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle_r2c, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) return -1;
-  grid_func5_cuda_operate_oneW(cuda_block_address(dst->value), cuda_block_address(src->value), beta, rhom, C, dst->nx, dst->ny, dst->nz);
+  grid_func5_cuda_operate_oneW(cuda_find_block(dst->value), cuda_find_block(src->value), beta, rhom, C, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }
@@ -36,7 +36,7 @@ EXPORT char grid_func5_cuda_operate_one_product(rgrid *dst, rgrid *src1, rgrid *
 
   if(cuda_three_block_policy(src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, src2->value, src2->grid_len, src2->cufft_handle_r2c, src2->id, 1, dst->value, dst->grid_len, dst->cufft_handle_r2c, dst->id, 0) < 0) 
     return -1;
-  grid_func5_cuda_operate_one_productW(cuda_block_address(dst->value), cuda_block_address(src1->value), cuda_block_address(src2->value), beta, rhom, C, dst->nx, dst->ny, dst->nz);
+  grid_func5_cuda_operate_one_productW(cuda_find_block(dst->value), cuda_find_block(src1->value), cuda_find_block(src2->value), beta, rhom, C, dst->nx, dst->ny, dst->nz);
 
   return 0;
 }

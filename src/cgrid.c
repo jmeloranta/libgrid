@@ -2441,7 +2441,7 @@ EXPORT void cgrid_fft_space(cgrid *grid, char space) {
 #ifdef USE_CUDA
   gpu_mem_block *ptr;
 
-  if(!(ptr = cuda_block_address(grid->value))) return; // Not on GPU
+  if(!(ptr = cuda_find_block(grid->value))) return; // Not on GPU
   if(space) ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE_SHUFFLED;
   else ptr->gpu_info->subFormat = CUFFT_XT_FORMAT_INPLACE;
 #endif

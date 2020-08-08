@@ -766,6 +766,7 @@ EXPORT int cuda_unlock_block(void *host_mem) {
  * @ARG8{cufftHandle cufft_handle2, "CUFFT handle for 2"}
  * @ARG9{char *id2, "String describing block 2 contents. Useful for debugging"}
  * @ARG10{char copy2, "Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{char, "Returns 0 = OK, -1 = failed"}
  *
  */
 
@@ -818,33 +819,31 @@ EXPORT char cuda_add_two_blocks(void *host_mem1, size_t length1, cufftHandle cuf
 }
 
 /*
- * Add three blocks to GPU simulatenously. Other blocks may be swapped out
- * or the three blocks may not fit in at the same time.
- *
- * host_mem1     = Host memory pointer 1 (void *; input).
- * length1       = Length of host memory pointer 1 (size_t; input).
- * cufft_handle1 = CUFFT Handle for 1 (cufftHandle).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * copy1         = Copy contents of block 1 to GPU? 1 = copy, 0 = don't copy.
- * host_mem2     = Host memory pointer 2 (void *; input).
- * length2       = Length of host memory pointer 2 (size_t; input).
- * cufft_handle2 = CUFFT Handle for 2 (cufftHandle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- * copy2         = Copy contents of block 2 to GPU? 1 = copy, 0 = don't copy.
- * host_mem3     = Host memory pointer 3 (void *; input).
- * length3       = Length of host memory pointer 3 (size_t; input).
- * cufft_handle3 = CUFFT Handle for 3 (cufftHandle).
- * id3           = String describing block 3 contents. Useful for debugging. (char *; input).
- * copy3         = Copy contents of block 3 to GPU? 1 = copy, 0 = don't copy.
- *
- * If all three memory blocks can be allocated in GPU, their contents will
- * be transferred there and 0 is returned.
- *
- * If any of the blocks can be allocated in GPU, all three blocks will
- * be pushed back to host memory and -1 is returned.
- *
- * Note that this may end up in unresolvable situation if:
- * one of the blocks is locked to GPU and the other ones do not fit there!
+ * @FUNC{cuda_add_three_blocks, "Add three blocks to GPU"}
+ * @DESC{"Add three blocks to GPU simulatenously. Other blocks may be swapped out
+          or the three blocks may not fit in at the same time.\\
+          If all three memory blocks can be allocated in GPU, their contents will
+          be transferred there and 0 is returned.\\
+          If any of the blocks can be allocated in GPU, all three blocks will\\
+          be pushed back to host memory and -1 is returned.\\
+          Note that this may end up in unresolvable situation if:
+          one of the blocks is locked to GPU and the other ones do not fit there!"}
+ * @ARG1{void *host_mem1, "Host memory pointer 1"}
+ * @ARG2{size_t length1, "Length of host memory pointer 1"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT Handle for 1"}
+ * @ARG4{char *id1, "String describing block 1 contents"}
+ * @ARG5{char copy1, "Copy contents of block 1 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG6{void *host_mem2, "Host memory pointer 2"}
+ * @ARG7{size_t length2, "Length of host memory pointer 2"}
+ * @ARG8{cufftHandle cufft_handle2, "CUFFT Handle for 2"}
+ * @ARG9{char *id2, "String describing block 2 contents"}
+ * @ARG10{char copy2, "Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG11{void *host_mem3, "Host memory pointer 3"}
+ * @ARG12{size_t length3, "Length of host memory pointer 3"}
+ * @ARG13{cufftHandle cufft_handle3, "CUFFT Handle for 3"}
+ * @ARG14{char *id3, "String describing block 3 contents"}
+ * @ARG15{char copy3, "Copy contents of block 3 to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{char, "Returns 0 = OK, -1 = failed"}
  *
  */
 
@@ -918,38 +917,36 @@ EXPORT char cuda_add_three_blocks(void *host_mem1, size_t length1, cufftHandle c
 }
 
 /*
- * Add four blocks to GPU simulatenously. Other blocks may be swapped out
- * or the four blocks may not fit in at the same time.
- *
- * host_mem1     = Host memory pointer 1 (void *; input).
- * length1       = Length of host memory pointer 1 (size_t; input).
- * id1           = String describing block 1 contents. Useful for debugging. (char *; input).
- * cufft_handle1 = CUFFT Handle for 1 (cufftHandle).
- * copy1         = Copy contents of block 1 to GPU? 1 = copy, 0 = don't copy.
- * host_mem2     = Host memory pointer 2 (void *; input).
- * length2       = Length of host memory pointer 2 (size_t; input).
- * cufft_handle2 = CUFFT Handle for 2 (cufftHandle).
- * id2           = String describing block 2 contents. Useful for debugging. (char *; input).
- * copy2         = Copy contents of block 2 to GPU? 1 = copy, 0 = don't copy.
- * host_mem3     = Host memory pointer 3 (void *; input).
- * length3       = Length of host memory pointer 3 (size_t; input).
- * cufft_handle3 = CUFFT Handle for 3 (cufftHandle).
- * id3           = String describing block 3 contents. Useful for debugging. (char *; input).
- * copy3         = Copy contents of block 3 to GPU? 1 = copy, 0 = don't copy.
- * host_mem4     = Host memory pointer 4 (void *; input).
- * length4       = Length of host memory pointer 4 (size_t; input).
- * cufft_handle4 = CUFFT Handle for 4 (cufftHandle).
- * id4           = String describing block 4 contents. Useful for debugging. (char *; input).
- * copy4         = Copy contents of block 4 to GPU? 1 = copy, 0 = don't copy.
- *
- * If all four memory blocks can be allocated in GPU, their contents will
- * be transferred there and 0 is returned.
- *
- * If any of the blocks can be allocated in GPU, all four blocks will
- * be pushed back to host memory and -1 is returned.
- *
- * Note that this may end up in unresolvable situation if:
- * one of the blocks is locked to GPU and the other ones do not fit there!
+ * @FUNC{cuda_add_four_blocks, "Add four blocks to GPU"}
+ * @DESC{"Add four blocks to GPU simulatenously. Other blocks may be swapped out
+          or the four blocks may not fit in at the same time.\\
+          If all four memory blocks can be allocated in GPU, their contents will
+          be transferred there and 0 is returned.\\
+          If any of the blocks can be allocated in GPU, all four blocks will\\
+          be pushed back to host memory and -1 is returned.\\
+          Note that this may end up in unresolvable situation if:
+          one of the blocks is locked to GPU and the other ones do not fit there!"}
+ * @ARG1{void *host_mem1, "Host memory pointer 1"}
+ * @ARG2{size_t length1, "Length of host memory pointer 1"}
+ * @ARG3{cufftHandle cufft_handle1, "CUFFT Handle for 1"}
+ * @ARG4{char *id1, "String describing block 1 contents"}
+ * @ARG5{char copy1, "Copy contents of block 1 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG6{void *host_mem2, "Host memory pointer 2"}
+ * @ARG7{size_t length2, "Length of host memory pointer 2"}
+ * @ARG8{cufftHandle cufft_handle2, "CUFFT Handle for 2"}
+ * @ARG9{char *id2, "String describing block 2 contents"}
+ * @ARG10{char copy2, "Copy contents of block 2 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG11{void *host_mem3, "Host memory pointer 3"}
+ * @ARG12{size_t length3, "Length of host memory pointer 3"}
+ * @ARG13{cufftHandle cufft_handle3, "CUFFT Handle for 3"}
+ * @ARG14{char *id3, "String describing block 3 contents"}
+ * @ARG15{char copy3, "Copy contents of block 3 to GPU? (1 = copy, 0 = don't copy)"}
+ * @ARG16{void *host_mem4, "Host memory pointer 4"}
+ * @ARG17{size_t length4, "Length of host memory pointer 4"}
+ * @ARG18{cufftHandle cufft_handle4, "CUFFT Handle for 4"}
+ * @ARG19{char *id4, "String describing block 4 contents"}
+ * @ARG20{char copy4, "Copy contents of block 4 to GPU? (1 = copy, 0 = don't copy)"}
+ * @RVAL{char, "Returns 0 = OK, -1 = failed"}
  *
  */
 
@@ -1051,18 +1048,16 @@ EXPORT char cuda_add_four_blocks(void *host_mem1, size_t length1, cufftHandle cu
 }
 
 /*
- * Fetch one element from a GPU/CPU array.
- * If the data is not on GPU, it will be retrieved from host memory instead.
- *
- * host_mem = Host memory for output (void *; input).
- * gpu      = Which GPU to access in the gpu array (int).
- * index    = Index for the host memory array (size_t; input).
- * size     = Size of each element in bytes for indexing (size_t; input).
- * value    = Where the value will be stored (void *; output).
- *
- * Returns -1 for error, 0 = OK.
- *
- * Avoid calling this repeatedly - VERY SLOW!
+ * @FUNC{cuda_get_element, "Fetch one element from grid"}
+ * @DESC{"Fetch one element from a GPU/CPU array. If the data is not on GPU, 
+          it will be retrieved from host memory instead. Avoid calling this repeatedly
+          because it is very slow to fetch elements individually"}
+ * @ARG1{void *host_mem, "Host memory for output"}
+ * @ARG2{int gpu, "Which GPU to access in the gpu array"}
+ * @ARG3{size_t index, "Index for the host memory array"}
+ * @ARG4{size_t size, "Size of the element in bytes used for indexing"}
+ * @ARG5{void *value, "Where the value will be stored"}
+ * @RVAL{int, "Returns -1 for error, 0 = OK"}
  *
  */
 
@@ -1095,18 +1090,16 @@ EXPORT int cuda_get_element(void *host_mem, int gpu, size_t index, size_t size, 
 }
 
 /*
- * Set value for one element on a GPU/CPU array.
- * If the data is not on GPU, it will be set in host memory instead.
- *
- * host_mem = Host memory (void *; output).
- * gpu      = Which GPU to access (int).
- * index    = Index for the host memory array (size_t; input).
- * size     = Size of each element in bytes for indexing (size_t; input).
- * value    = The value that will be stored (void *; input).
- *
- * Returns -1 for error, 0 = OK.
- *
- * Avoid calling this repeatedly - VERY SLOW!
+ * @FUNC{cuda_set_element, "Set element in grid"}
+ * @DESC{"Set value for one element in GPU/CPU array. If the data is not on GPU, 
+          it will be set in host memory instead. Avoid calling this repeatedly
+          because it is very slow to set elements individually"}
+ * @ARG1{void *host_mem, "Host memory pointer"}
+ * @ARG2{int gpu, "Which GPU to access"}
+ * @ARG3{size_t index, "Index for the host memory array"}
+ * @ARG4{size_t size, "Size of the element in bytes used for indexing"}
+ * @ARG5{void *value, "The value that will be stored"}
+ * @RVAL{int, "Returns -1 for error, 0 = OK"}
  *
  */
 
@@ -1139,9 +1132,10 @@ EXPORT int cuda_set_element(void *host_mem, int gpu, size_t index, size_t size, 
 }
 
 /*
- * Free all GPU memory blocks (except locked) and optionally sync them to host memory.
- *
- * sync  = 1 sync GPU to host, 0 = no sync (char; input).
+ * @FUNC{cuda_free_all_blocks, "Free all memory blocks on GPU"}
+ * @DESC{"Free all GPU memory blocks (except locked blocks) and optionally sync their content to host memory"}
+ * @ARG1{char sync, "1 = sync GPU memory to host, 0 = no sync"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1161,13 +1155,13 @@ EXPORT void cuda_free_all_blocks(char sync) {
 }
 
 /*
- * Enable/disable CUDA.
- *
- * val   = 0 to disable CUDA or val = 1 to enable CUDA. 
- * ngpus = Number of GPUs to allocate (int). If val = 0, attempt to allocate all gpus and the gpus array not accessed.
- * gpus  = GPU numbers to use (int *). If val = 0, not accessed.
- *
- * Disabling active CUDA will flush GPU memory pages to the host memory.
+ * @FUNC{cuda_enable, "Enable / disable CUDA"}
+ * @DESC{"Enable or disable CUDA. Note that isabling active CUDA will 
+          flush GPU memory pages back to the host memory"}
+ * @ARG1{char val, "Set to 0 to disable CUDA or 1 to enable CUDA"}
+ * @ARG2{int ngpus, "Number of GPUs to allocate. If ngpus = 0, attempt to allocate all gpus and the gpus array is not accessed"}
+ * @ARG3{int *gpus, "Array of GPU numbers to use. If ngpus = 0, this is not accessed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1192,9 +1186,9 @@ EXPORT void cuda_enable(char val, int ngpus, int *gpus) {
 }
 
 /*
- * CUDA status.
- *
- * Returns 1 if CUDA enabled, 0 otherwise.
+ * @FUNC{cuda_status, "Return CUDA activation status"}
+ * @DESC{"Return CUDA activation status"}
+ * @RVAL{char, "1 = CUDA enables or 0 = CUDA disabled"}
  *
  */
 
@@ -1229,6 +1223,14 @@ static char *subformat(int fmt) {
       return "Unknown subformat";
   }
 }
+
+/*
+ * @FUNC{cuda_statistics, "Print CUDA memory statistics"}
+ * @DESC{"This function prints CUDA memory allocation statistics"}
+ * @ARG1{char verbose, "0 = General summary or 1 = include also information on blocks"}
+ * @RVAL{void, "No return value"}
+ *
+ */
 
 EXPORT void cuda_statistics(char verbose) {
 
@@ -1293,33 +1295,6 @@ EXPORT void cuda_statistics(char verbose) {
       fprintf(stderr, "================================\n");
     }
   }
-}
-
-/*
- * Return th GPU address pointer given the host memory pointer.
- *
- * host_mem = Host memory pointer (void *; input).
- *
- * Returns GPU address pointer or NULL if not found.
- *
- */
-
-EXPORT gpu_mem_block *cuda_block_address(void *host_mem) {
-
-  gpu_mem_block *ptr;
-
-  if(!enable_cuda) return NULL;
-#ifdef CUDA_DEBUG
-  fprintf(stderr, "cuda: Request GPU address for host mem %lx.\n", (unsigned long int) host_mem);
-#endif
-  if(!(ptr = cuda_find_block(host_mem))) {
-    fprintf(stderr, "libgrid(cuda): warning - host_mem %lx not found.\n", (long unsigned int) host_mem);
-    return NULL;
-  }
-#ifdef CUDA_DEBUG
-  fprintf(stderr, "cuda: Block found on GPU with host address %lx.\n", (unsigned long int) host_mem);
-#endif
-  return ptr;
 }
 
 /*

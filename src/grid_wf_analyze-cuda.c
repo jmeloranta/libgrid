@@ -27,7 +27,7 @@ EXPORT char grid_cuda_wf_fd_probability_flux_x(wf *gwf, rgrid *flux_x, REAL inv_
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_x->value, flux_x->grid_len, flux_x->cufft_handle_r2c, flux_x->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_fd_probability_flux_xW(cuda_block_address(grid->value), cuda_block_address(flux_x->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_x->nz2);
+  grid_cuda_wf_fd_probability_flux_xW(cuda_find_block(grid->value), cuda_find_block(flux_x->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_x->nz2);
 
   return 0;
 }
@@ -56,7 +56,7 @@ EXPORT char grid_cuda_wf_fd_probability_flux_y(wf *gwf, rgrid *flux_y, REAL inv_
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_y->value, flux_y->grid_len, flux_y->cufft_handle_r2c, flux_y->id, 0) < 0)
     return -1;
 
-  grid_cuda_wf_fd_probability_flux_yW(cuda_block_address(grid->value), cuda_block_address(flux_y->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_y->nz2);
+  grid_cuda_wf_fd_probability_flux_yW(cuda_find_block(grid->value), cuda_find_block(flux_y->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_y->nz2);
 
   return 0;
 }
@@ -79,7 +79,7 @@ EXPORT char grid_cuda_wf_fd_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_
   if(cuda_two_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1, flux_z->value, flux_z->grid_len, flux_z->cufft_handle_r2c, flux_z->id, 0) < 0) 
     return -1;
 
-  grid_cuda_wf_fd_probability_flux_zW(cuda_block_address(grid->value), cuda_block_address(flux_z->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_z->nz2);
+  grid_cuda_wf_fd_probability_flux_zW(cuda_find_block(grid->value), cuda_find_block(flux_z->value), inv_delta, grid->nx, grid->ny, grid->nz, flux_z->nz2);
 
   return 0;
 }

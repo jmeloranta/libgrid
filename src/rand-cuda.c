@@ -52,7 +52,7 @@ EXPORT INT grid_cuda_random_seed(INT seed) {
       fprintf(stderr, "libgrid(CUDA): Failed to allocate temporary space on GPU.\n");
       abort();
     }
-    grid_gpu_rand_addr = (cuda_block_address(grid_gpu_rand))->gpu_info->descriptor;
+    grid_gpu_rand_addr = (cuda_find_block(grid_gpu_rand))->gpu_info->descriptor;
     cuda_lock_block(grid_gpu_rand);
   }
 
@@ -81,7 +81,7 @@ EXPORT INT rgrid_cuda_random_uniform(rgrid *grid, REAL scale) {
   if(!prev_len)
     grid_cuda_random_seed(time(0));
 
-  rgrid_cuda_random_uniformW(cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_random_uniformW(cuda_find_block(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -106,7 +106,7 @@ EXPORT INT rgrid_cuda_random_normal(rgrid *grid, REAL scale) {
   if(!prev_len)
     grid_cuda_random_seed(time(0));
 
-  rgrid_cuda_random_normalW(cuda_block_address(grid->value), scale, grid->nx, grid->ny, grid->nz);
+  rgrid_cuda_random_normalW(cuda_find_block(grid->value), scale, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -135,7 +135,7 @@ EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL complex scale) {
 
   sc.x = CREAL(scale);
   sc.y = CIMAG(scale);
-  cgrid_cuda_random_uniformW(cuda_block_address(grid->value), sc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_random_uniformW(cuda_find_block(grid->value), sc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
@@ -164,7 +164,7 @@ EXPORT INT cgrid_cuda_random_normal(cgrid *grid, REAL complex scale) {
 
   sc.x = CREAL(scale);
   sc.y = CIMAG(scale);
-  cgrid_cuda_random_normalW(cuda_block_address(grid->value), sc, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_random_normalW(cuda_find_block(grid->value), sc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }
