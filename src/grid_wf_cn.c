@@ -7,13 +7,12 @@
 #include "grid.h"
 
 /*
- * Auxiliary routine for calculating the energy (Crank-Nicolson).
- * Users should rather call grid_wf_energy().
- *
- * gwf       = Wavefunction for the energy calculation (wf *).
- * potential = Potential grid (cgrid *).
- * 
- * Returns the energy.
+ * @FUNC{grid_wf_energy_cn, "Wavefunction energy (finite difference/CN)"}
+ * @DESC{"Auxiliary routine for calculating the energy (finite difference/Crank-Nicolson).
+          Users should rather call grid_wf_energy()"}
+ * @ARG1{wf *gwf, "Wavefunction for the energy calculation"}
+ * @ARG2{cgrid *potential, "Potential grid"}
+ * @RVAL{REAL, "Returns the energy"}
  *
  */
 
@@ -27,12 +26,11 @@ EXPORT REAL grid_wf_energy_cn(wf *gwf, rgrid *potential) {
 }
 
 /*
- * Auxiliary routine for calculating the kinetic energy (Crank-Nicolson).
- * Users should rather call grid_wf_energy().
- *
- * gwf       = Wavefunction for the energy calculation (wf *).
- * 
- * Returns the energy.
+ * @FUNC{grid_wf_kinetic_energy_cn, "Wavefunction kinetic energy (finite difference)"}
+ * @DESC{"Auxiliary routine for calculating the kinetic energy (finite difference/Crank-Nicolson).
+          Users should rather call grid_wf_energy()"}
+ * @ARG1{wf *gwf, "Wavefunction for the energy calculation"}
+ * @RVAL{REAL, "Returns the energy"}
  *
  */
 
@@ -51,20 +49,17 @@ EXPORT REAL grid_wf_kinetic_energy_cn(wf *gwf) {
 }
 
 /*
- * Main routine for propagating using Crank-Nicolson.
- *
- * gwf       = wavefunction to be propagated (wf *).
- * tstep     = base time step length (REAL complex).
+ * @FUNC{grid_wf_propagate_kinetic_cn, "Propagate wavefunction (Crank-Nicolson)"}
+ * @DESC{"This is the main function for propagating given wavefunction using Crank-Nicolson.
+          Note that in dimensions higher than 1, the potential should not be included.
+          It must be propagated separately"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex tstep, "Base time step length"}
+ * @RVAL{void, "No return value"}
  *
  * exp( -i (Tx + Ty + Tz) dt / hbar ) 
  *   = exp( -i (Tx+V) dt / hbar ) exp( -i (Ty+V) dt / hbar ) exp( -i (Tz+V) dt / hbar ) + O(dt^2)
- *   
- * Note: In dimensions higher than 1, the potential should not be included here because
- *       it would be propagate three times (once for each split component). It must be
- *       propagated separately.
  * 
- * No return value.
- *
  */
 
 EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex tstep) {
@@ -84,16 +79,14 @@ EXPORT void grid_wf_propagate_kinetic_cn(wf *gwf, REAL complex tstep) {
 }
 
 /*
- * Auxiliary routine for propagating along x subject to given BC (Crank-Nicolson).
- *
- * gwf        = wavefunction to be propagated (wf *; input/output).
- * 
- * tstep      = base time step length (REAL complex; input).
- * workspace  = additional storage space needed (cgrid *; overwritten).
- * workspace2 = additional storage space needed (cgrid *; overwritten).
- * workspace3 = additional storage space needed (cgrid *; overwritten).
- *
- * No return value.
+ * @FUNC{grid_wf_propagate_cn_x, "Propagate wavefunction x (Crank-Nicolson)"}
+ * @DESC{"Auxiliary routine for propagating along x subject to given BC (Crank-Nicolson)"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex tstep, "Base time step length"}
+ * @ARG3{cgrid *workspace, "Additional storage space"}
+ * @ARG4{cgrid *workspace2, "Additional storage space"}
+ * @ARG5{cgrid *workspace3, "Additional storage space needed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -217,16 +210,14 @@ EXPORT void grid_wf_propagate_cn_x(wf *gwf, REAL complex tstep, cgrid *workspace
 }
 
 /*
- * Auxiliary routine for propagating along y subject to given BC (Crank-Nicolson).
- *
- * gwf       = wavefunction to be propagated (wf *).
- * 
- * tstep     = base time step length (REAL complex).
- * workspace = additional storage space needed (cgrid *).
- * workspace2= additional storage space needed (cgrid *).
- * workspace3= additional storage space needed (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_propagate_cn_y, "Propagate wavefunction y (Crank-Nicolson)"}
+ * @DESC{"Auxiliary routine for propagating along y subject to given BC (Crank-Nicolson)"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex tstep, "Base time step length"}
+ * @ARG3{cgrid *workspace, "Additional storage space"}
+ * @ARG4{cgrid *workspace2, "Additional storage space"}
+ * @ARG5{cgrid *workspace3, "Additional storage space needed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -350,16 +341,14 @@ EXPORT void grid_wf_propagate_cn_y(wf *gwf, REAL complex tstep, cgrid *workspace
 }
 
 /*
- * Auxiliary routine for propagating along z subject to given BC (Crank-Nicolson).
- *
- * gwf       = wavefunction to be propagated (wf *).
- * 
- * tstep     = base time step length (REAL complex).
- * workspace = additional storage space needed (cgrid *).
- * workspace2= additional storage space needed (cgrid *).
- * workspace3= additional storage space needed (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_propagate_cn_z, "Propagate wavefunction z (Crank-Nicolson)"}
+ * @DESC{"Auxiliary routine for propagating along z subject to given BC (Crank-Nicolson)"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex tstep, "Base time step length"}
+ * @ARG3{cgrid *workspace, "Additional storage space"}
+ * @ARG4{cgrid *workspace2, "Additional storage space"}
+ * @ARG5{cgrid *workspace3, "Additional storage space needed"}
+ * @RVAL{void, "No return value"}
  *
  */
 

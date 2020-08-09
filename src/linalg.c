@@ -6,18 +6,18 @@
 #include "grid.h"
 
 /*
- * Solve tridiagonal matrix equation A x = b using the Thomas algorithm.
- * This is not stable in general but works for diagonally dominant systems.
- *
- * n = dimensionality (number of equations; INT).
- * a = subdiagonal (preserved) (indexed 1 ... n-1). 0 unused (REAL complex *).
- * b = diagonal (overwritten) (REAL complex *).
- * c = supdiagonal (preserved) (indexed 0 ... n-2). n-1 unused (REAL complex *).
- * v = right hand side vector (overwritten) (REAL complex *).
- * x = solution on exit (REAL complex *).
- * str = stride for writing the output (INT).
- *
- * Note: a and x may be the same array.
+ * @FUNC{grid_solve_tridiagonal_system, "Solve tridiagonal linear system"}
+ * @DESC{"Solve tridiagonal matrix equation $A x = b$ using the Thomas algorithm.
+          This is not stable in general but works for diagonally dominant systems.
+          Note that A and x may be the same array"}
+ * @ARG1{INT n, "Dimensionality (number of equations)"}
+ * @ARG2{REAL complex *a, "Subdiagonal (preserved) (indexed 1 ... n-1). 0 unused"}
+ * @ARG3{REAL complex *b, "Diagonal (overwritten)"}
+ * @ARG4{REAL complex *c, "Supdiagonal (preserved) (indexed 0 ... n-2). n-1 unused"}
+ * @ARG5{REAL complex *v, "Right hand side vector (overwritten)"}
+ * @ARG6{REAL complex *x, "Solution on exit"}
+ * @ARG7{INT str, "Stride for writing the output"}
+ * @RVAL{void, "No return value"}
  *
  * Status: Compared against Mathematica.
  *
@@ -42,17 +42,18 @@ EXPORT inline void grid_solve_tridiagonal_system(INT n, REAL complex *a, REAL co
 }
 
 /*
- * Solve tridiagonal matrix equation A x = b using the Thomas algorithm.
- * This is not stable in general but works for diagonally dominant systems.
- *
- * Sub and sup diagonals are preset for CN with NBC: 1 (+ c2/kx0 term) except at the ends 2 (c2/kx0 does not contribute).
- *
- * n = dimensionality (number of equations; INT).
- * b = diagonal elements (overwritten) (REAL complex *).
- * v = right hand side vector (overwritten) (REAL complex *).
- * x = solution on exit (REAL complex *).
- * c2 = Off diagonal parameter (REAL complex; input). Sub = 1 - c2 (or c2 at rh boundary); Sup = 1 + c2 (or c2 at lh boundary).
- * str = solution may go to a non-continuous array (INT; input).
+ * @FUNC{grid_solve_tridiagonal_system2, "Solve tridiagonal linear system (Neumann Crank-Nicolson)"}
+ * @DESC{"Solve tridiagonal matrix equation $A x = b$ using the Thomas algorithm.
+          This is not stable in general but works for diagonally dominant systems.
+          Sub and sup diagonals are preset for CN with Neumann BC: 1 (+ c2/kx0 term) except 
+          at the ends 2 (c2/kx0 does not contribute)"}
+ * @ARG1{INT n, "Dimensionality (number of equations)"}
+ * @ARG2{REAL complex *b, "Diagonal elements (overwritten)"}
+ * @ARG3{REAL complex *v, "Right hand side vector (overwritten)"}
+ * @ARG4{REAL complex *x, "Solution on exit"}
+ * @ARG5{REAL complex c2, "Off diagonal parameter. Sub = 1 - c2 (or c2 at rh boundary); Sup = 1 + c2 (or c2 at lh boundary)"}
+ * @ARG6{INT str, "Solution may go to a non-continuous array (stride)"}
+ * @RVAL{void, "No return value"}
  *
  * Status: Compared against Mathematica.
  *
@@ -91,17 +92,17 @@ EXPORT inline void grid_solve_tridiagonal_system2(INT n, REAL complex *b, REAL c
 }
 
 /*
- * Solve tridiagonal matrix equation A x = b using the Thomas algorithm.
- * This is not stable in general but works for diagonally dominant systems.
- *
- * Sub and sup diagonals are preset for CN. This is to be used with periodic BC (from ..._cyclic2 below).
- *
- * n = dimensionality (number of equations; INT).
- * b = diagonal elements (overwritten) (REAL complex *).
- * v = right hand side vector (overwritten) (REAL complex *).
- * x = solution on exit (REAL complex *).
- * c2 = Off diagonal parameter (REAL complex; input). Subdiagonal = c2 - 1; Supdiagonal = c2 + 1.
- * str = solution may go to a non-continuous array (INT; input).
+ * @FUNC{grid_solve_tridiagonal_system3, "Solve tridiagonal linear system (periodic Crank-Nicolson)"}
+ * @DESC{"Solve tridiagonal matrix equation $A x = b$ using the Thomas algorithm.
+          This is not stable in general but works for diagonally dominant systems.
+          Sub and sup diagonals are preset for CN. This is to be used with periodic BC"}
+ * @ARG1{INT n, "Dimensionality (number of equations)"}
+ * @ARG2{REAL complex *b, "Diagonal elements (overwritten)"}
+ * @ARG3{REAL complex *v, "Right hand side vector (overwritten)"}
+ * @ARG4{REAL complex *x, "Solution on exit"}
+ * @ARG5{REAL complex c2, "Off diagonal parameter. Subdiagonal = c2 - 1; Supdiagonal = c2 + 1"}
+ * @ARG6{INT str, "Solution may go to a non-continuous array (stride)"}
+ * @RVAL{void, "No return value"}
  *
  * Status: Compared against Mathematica.
  *
@@ -137,23 +138,22 @@ EXPORT inline void grid_solve_tridiagonal_system3(INT n, REAL complex *b, REAL c
 }
 
 /*
- * Solve tridiagonal matrix equation A x = b (Sherman-Morrison).
- * Alpha and beta specify the extreme non-zero elements in A.
- * (this arises from finite diff. and periodic boundary conds)
- *
- * n = dimensionality (number of equations) (INT).
- * a = subdiagonal (indexed 1 ... n-1). 0 unused (REAL complex *).
- * b = diagonal (overwritten) (REAL complex *).
- * c = supdiagonal (indexed 0 ... n-2). n-1 unused (REAL complex *).
- * v = right hand side vector (overwritten) (REAL complex *).
- * alpha = left corner matrix element for the last row of A (REAL complex).
- * beta  = right corner matrix element for the first row of A (REAL complex).
- * x = solution on exit (REAL complex *).
- * str = solution x may go to a non-continuous array (INT; input).
- * bb = Worksapce vector of dimension n (REAL complex *).
- *
- * Notes:  - with finite difference, use alpha = beta = 1.0 for periodic boundary
- *           and -1.0 for both if anti periodc.
+ * @FUNC{grid_solve_tridiagonal_system_cyclic, "Solve linear tridiagonal system (Sherman-Morrison)"}
+ * @DESC{"Solve tridiagonal matrix equation $A x = b$ (Sherman-Morrison).
+          Alpha and beta specify the extreme non-zero elements in A.
+          (this arises from finite diff. and periodic boundary conds)
+          Note that with finite difference, use alpha = beta = 1.0 for periodic boundary
+          and -1.0 for both if anti periodc"}
+ * @ARG1{INT n, "Dimensionality (number of equations)"}
+ * @ARG2{REAL complex *a, "Subdiagonal (indexed 1 ... n-1). 0 unused"}
+ * @ARG3{REAL complex *b, "Diagonal (overwritten)"}
+ * @ARG4{REAL complex *c, "Supdiagonal (indexed 0 ... n-2). n-1 unused"}
+ * @ARG5{REAL complex *v, "Right hand side vector (overwritten)"}
+ * @ARG6{REAL complex alpha, "Left corner matrix element for the last row of A"}
+ * @ARG7{REAL beta, "Right corner matrix element for the first row of A"}
+ * @ARG8{REAL complex *x, "Solution on exit"}
+ * @ARG9{INT str, "Solution may go into a non-continuous array (stride)"}
+ * @ARG10{REAL complex *bb, "Worksapce vector of dimension n"}
  *
  * Status: Compared against Mathematica.
  *
@@ -185,19 +185,19 @@ EXPORT void grid_solve_tridiagonal_system_cyclic(INT n, REAL complex *a, REAL co
 }
 
 /*
- * Solve tridiagonal matrix equation A x = b (Sherman-Morrison).
- * Special version for periodic boundaries and difference from 1st and 2nd derivatives.
- * 
- * Special version of the above:
- * Both sup and subdiagonal cyclic elements are 1.0 (alpha = beta = 1.0 + c2)
- *
- * n = dimensionality (number of equations) (INT).
- * b = diagonal (overwritten) (REAL complex *).
- * v = right hand side vector (overwritten) (REAL complex *).
- * x = solution on exit (REAL complex *).
- * c2 = Off diagonal parameter (REAL complex; input).
- * str = solution x may go to a non-continuous array (INT; input).
- * bb = worksapce1 (0, ..., n) (REAL complex *).
+ * @FUNC{grid_solve_tridiagonal_system_cyclic2, "Solve linear tridiagonal system (Sherman-Morrison special)"}
+ * @DESC{"Solve tridiagonal matrix equation $A x = b$ (Sherman-Morrison).
+          Special version for periodic boundaries and difference from 1st and 2nd derivatives.
+          Like grid_solve_tridiagonal_system_cyclic() but:
+          both sup and subdiagonal cyclic elements are 1.0 (alpha = beta = 1.0 + c2)"}
+ * @ARG1{INT n, "Dimensionality (number of equations)"}
+ * @ARG2{REAL complex *b, "Diagonal (overwritten)"}
+ * @ARG3{REAL complex *v, "Right hand side vector (overwritten)"}
+ * @ARG4{REAL complex *x, "Solution on exit"}
+ * @ARG5{REAL complex c2, "Off diagonal parameter"}
+ * @ARG6{INT str, "Solution may go to a non-continuous array (stride)"}
+ * @ARG7{REAL complex *bb, "Worksapce1 (0, ..., n)"}
+ * @RVAL{void, "No return value"}
  *
  * Status: Compared against Mathematica.
  *

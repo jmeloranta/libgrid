@@ -19,20 +19,16 @@
 #endif
 
 /*
- * Peek at a grid file to get the grid dimensions.
- *
- * fp   = File pointer for operation (FILE *; input).
- * nx   = # of points along x (INT *; input).
- * ny   = # of points along y (INT *; input).
- * nz   = # of points along z (INT *; input).
- * step = spatial step length (REAL *; input).
- *
- * No return value.
- *
- * Notes: - This works for both real and complex grids and hence it is just called
- *          grid_read_peek().
- *        - This rewinds the fp so that Xgrid_read() can be called directly
- *          after this.
+ * @FUNC{grid_read_peek, "Get grid dimensions from file"}
+ * @DESC{"Peek at a grid file to get the grid dimensions. This works for both 
+          real and complex grids and hence it is just called grid_read_peek().
+          This rewinds the file pointer so that Xgrid_read() can be called directly after this"}
+ * @ARG1{FILE *fp, "File pointer for operation"}
+ * @ARG2{INT *nx, "Number of points along x"}
+ * @ARG3{INT *ny, "Number of points along y"}
+ * @ARG4{INT *nz, "Number of points along z"}
+ * @ARG5{REAL *step, "Spatial step length"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -46,12 +42,11 @@ EXPORT void grid_read_peek(FILE *fp, INT *nx, INT *ny, INT *nz, REAL *step) {
 }
 
 /*
- * Copy a real grid to a complex grid (to real part).  Note that this zeroes the imaginary part.
- *
- * dest   = destination grid (cgrid *; output).
- * source = source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_real_to_complex_re, "Copy real grid to real part of complex grid"}
+ * @DESC{"Copy a real grid to a complex grid (to real part). Note that this zeroes the imaginary part"}
+ * @ARG1{cgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *source, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -80,12 +75,11 @@ EXPORT void grid_real_to_complex_re(cgrid *dest, rgrid *source) {
 }
 
 /*
- * Copy a real grid to a complex grid (to imaginary part). Note that this zeroes the real part.
- *
- * dest   = destination grid (cgrid *; output).
- * source = source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_real_to_complex_im, "Copy real grid to imaginary part of complex grid"}
+ * @DESC{"Copy a real grid to a complex grid (to imaginary part). Note that this zeroes the real part"}
+ * @ARG1{cgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *source, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -114,12 +108,11 @@ EXPORT void grid_real_to_complex_im(cgrid *dest, rgrid *source) {
 }
 
 /*
- * Add a real grid to a complex grid (to real part).
- *
- * dest   = destination grid (cgrid *; output).
- * source = source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_add_real_to_complex_re, "Add real grid to real part of complex grid"}
+ * @DESC{"Add a real grid to a complex grid (to real part)"}
+ * @ARG1{cgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *source, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -148,12 +141,11 @@ EXPORT void grid_add_real_to_complex_re(cgrid *dest, rgrid *source) {
 }
 
 /*
- * Add a real grid to a complex grid (to imaginary part).
- *
- * dest   = destination grid (cgrid *; output).
- * source = source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_add_real_to_complex_im, "Add real grid to imaginary part of complex grid"}
+ * @DESC{"Add a real grid to a complex grid (to imaginary part)"}
+ * @ARG1{cgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *source, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -182,13 +174,12 @@ EXPORT void grid_add_real_to_complex_im(cgrid *dest, rgrid *source) {
 }
 
 /*
- * Multiply real grid with square norm of complex grid: dest = src1 * |src2|^2
- *
- * dst   = Destination grid (rgrid *; output).
- * src1  = Source grid 1 (rgrid *; input).
- * src2  = Source grid 2 (cgrid *; input).
- * 
- * No return value.
+ * @FUNC{grid_product_norm, "Multiply real grid with square norm of complex grid"}
+ * @DESC{"Multiply real grid with square norm of complex grid: dest = src1 * $|src2|^2$"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src1, "Real source grid"}
+ * @ARG3{cgrid *src2, "Complex source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -217,14 +208,13 @@ EXPORT void grid_product_norm(rgrid *dst, rgrid *src1, cgrid *src2) {
 }
 
 /*
- * Divide real grid with square norm of complex grid: dest = src1 / (|src2|^2 + eps)
- *
- * dst   = Destination grid (rgrid *; output).
- * src1  = Source grid 1 (rgrid *; input).
- * src2  = Source grid 2 (cgrid *; input).
- * eps   = Epsilon to add when dividing (REAL; input).
- * 
- * No return value.
+ * @FUNC{grid_division_norm, "Divide real grid with square norm of complex grid"}
+ * @DESC{"Divide real grid with square norm of complex grid: dest = src1 / ($|src2|^2$ + eps)"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src1, "Real grid"}
+ * @ARG3{cgrid *src2, "Complex grid"}
+ * @ARG4{REAL eps, "Epsilon to add when dividing"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -253,12 +243,11 @@ EXPORT void grid_division_norm(rgrid *dst, rgrid *src1, cgrid *src2, REAL eps) {
 }
 
 /*
- * Product of a real grid with a complex grid: dest(complex) = dest(complex) * source(real)
- *
- * dst  = destination grid (cgrid *; output).
- * ssrc = source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNCgrid_product_complex_with_real, "Product of real grid with complex grid"}
+ * @DESC{"Product of a real grid with a complex grid: dest(complex) = dest(complex) * source(real)"}
+ * @ARG1{cgrid *dst, "Destination grid (complex)"}
+ * @ARG2{rgrid *src, "Source grid (real)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -287,12 +276,11 @@ EXPORT void grid_product_complex_with_real(cgrid *dst, rgrid *src) {
 }
 
 /*
- * Copy imaginary part of a complex grid to a real grid.
- *
- * dest   = destination grid (rgrid *; output).
- * source = source grid (cgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_complex_im_to_real, "Copy imaginary part of complex grid to real grid"}
+ * @DESC{"Copy imaginary part of a complex grid to a real grid"}
+ * @ARG1{rgrid *dest, "Destination grid (real)"}
+ * @ARG2{cgrid *source, "Source grid (complex)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -322,12 +310,11 @@ EXPORT void grid_complex_im_to_real(rgrid *dest, cgrid *source) {
 }
 
 /*
- * Copy real part of a complex grid to a real grid.
- *
- * dest   = destination grid (rgrid *; output).
- * source = source grid (cgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_complex_re_to_real, "Copy real part of complex grid to real grid"}
+ * @DESC{"Copy real part of a complex grid to a real grid"}x
+ * @ARG1{rgrid *dest, "Destination grid (real)"}
+ * @ARG2{cgrid *source, "Source grid (complex)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -357,13 +344,11 @@ EXPORT void grid_complex_re_to_real(rgrid *dest, cgrid *source) {
 }
 
 /*
- * Calculate the expectation value of a grid over a grid.
- * (int opgrid |dgrid|^2).
- *
- * dgrid  = grid giving the probability (cgrid *; input).
- * opgrid = grid to be averaged (rgrid *; input).
- *
- * Returns the average value (REAL *).
+ * @FUNC{grid_grid_expectation_value, "Expectation value of real grid over complex grid"}
+ * @DESC{"Calculate the expectation value of a grid over a grid ($\int opgrid |dgrid|^2$)"}
+ * @ARG1{cgrid *dgrid, "Grid giving the probability (complex)"}
+ * @ARG2{rgrid *opgrid, "Grid to be averaged (real)"}
+ * @RVAL{REAL, "Returns the average value"}
  *
  */
 
@@ -391,7 +376,9 @@ EXPORT REAL grid_grid_expectation_value(cgrid *dgrid, rgrid *opgrid) {
 }
 
 /*
- * Return current size of REAL complex.
+ * @FUNC{grid_sizeof_real_complex, "Return current size of REAL complex data type"}
+ * @DESC{"Return current size of REAL complex in bytes"}
+ * @RVAL{char, "Size of REAL complex type"}
  *
  */
 
@@ -401,7 +388,9 @@ EXPORT char grid_sizeof_real_complex() {
 }
 
 /*
- * Return current size of REAL.
+ * @FUNC{grid_sizeof_real, "Return current size of REAL data type"}
+ * @DESC{"Return current size of REAL in bytes"}
+ * @RVAL{char, "Size of REAL type"}
  *
  */
 
@@ -411,7 +400,9 @@ EXPORT char grid_sizeof_real() {
 }
 
 /*
- * Return current size of INT.
+ * @FUNC{grid_sizeof_int, "Return current size of INT data type"}
+ * @DESC{"Return current size of INT in bytes"}
+ * @RVAL{char, "Size of INT type"}
  *
  */
 

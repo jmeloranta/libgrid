@@ -6,15 +6,14 @@
 #include "grid.h"
 
 /*
- * Polynomial interpolation routine.
- *
- * xa    = Array of x values (REAL *).
- * ya    = Array of y values (REAL *).
- * n     = Number of points for (x,y) (INT).
- * x     = Point at which the approximation is obtained (REAL).
- * dy    = Error estimate (REAL *).
- *
- * Returns the interpolated value.
+ * @FUNC{grid_polynomial_interpolate, "Polynomial interpolation"}
+ * @DESC{"Polynomial interpolation routine"}
+ * @ARG1{REAL *xa, "Array of x values"}
+ * @ARG2{REAL *ya, "Array of y values"}
+ * @ARG3{INT n, "Number of points for (x,y) arrays"}
+ * @ARG4{REAL x, "Point at which the approximation is obtained"}
+ * @ARG5{REAL *dy, "Error estimate"}
+ * @RVAL{REAL, "Returns the interpolated value"}
  *
  * Source: Numerical Recipes (indexing from zero).
  *
@@ -62,22 +61,18 @@ EXPORT REAL grid_polynomial_interpolate(REAL *xa, REAL *ya, INT n, REAL x, REAL 
 }
 
 /*
- * Second derivative for spline interpolation.
- *
- * x    = Array of x values (REAL *).
- * y    = Array of y values (REAL *).
- * n    = Number of points for (x,y) (INT).
- * yp1	= First derivative at x[1] (REAL)
- * ypn 	= First derivative at x[n+1] (REAL)
- * y2	= Second derivative computed (REAL *).
- *
- * Must be called only once before calling grid_spline_interpolate
- *
- * If yp1 and yp2 are larger than 1.e30 the second derivative at the boundaries is 0.
+ * @FUNC{grid_spline_ypp, "Spline 2nd derivate auxiliary function"}
+ * @DESC{"Second derivative for spline interpolation. To be used with grid_spline_interpolate().
+         Must be called before calling grid_spline_interpolate"}
+ * @ARG1{REAL *x, "Array of x values"}
+ * @ARG2{REAL *y, "Array of y values"}
+ * @ARG3{INT n, "Number of points for (x,y) arrays"}
+ * @ARG4{REAL yp1, "First derivative at x[1]"}
+ * @ARG5{REAL ypn, "First derivative at x[n+1]"}
+ * @ARG6{REAL *y2, "Second derivative computed"}
+ * @RVAL{void, "No return value"}
  *
  * Source: Numerical Recipes (indexing from zero).
- *
- * No return value.
  *
  */
 
@@ -117,16 +112,14 @@ EXPORT void grid_spline_ypp(REAL *x, REAL *y, INT n, REAL yp1, REAL ypn, REAL *y
 }
 
 /*
- * Spline interpolation 
- *
- * xa    = Array of x values (REAL *).
- * ya    = Array of y values (REAL *).
- * y2a	 = Array of second derivatives of y values (REAL *). 
- *         Computed in grid_spline_ypp().
- * n     = Number of points for (x,y) (INT).
- * x     = Point at which the approximation is obtained (REAL).
- *
- * Returns the interpolated value.
+ * @FUNC{grid_spline_interpolate, "Spline interpolation"}
+ * @DESC{"Spline interpolation routine."}
+ * @ARG1{REAL *xa, "Array of x values"}
+ * @ARG2{REAL *ya, "Array of y values"}
+ * @ARG3{REAL *y2a, "Array of second derivatives of y values. Computed by grid_spline_ypp()"}
+ * @ARG4{INT n, "Number of points for (x,y) arrays"}
+ * @ARG5{REAL x, "Point at which the approximation is obtained"}
+ * @RVAL{REAL, "Returns the interpolated value"}
  *
  * Source: Numerical Recipes (indexing from zero).
  *

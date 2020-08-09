@@ -8,12 +8,11 @@
 extern char grid_analyze_method;
 
 /*
- * Calculate the momentum x component: -i\hbar d/dx
- * 
- * gwf        = wavefunction for the operation (wf *).
- * momentum_x = output grid containing the momentum (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_momentum_x, "Momentum x component of wavefunction"}
+ * @DESC{"Calculate the momentum x component: $-i\hbar d/dx$"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{cgrid *momentum_x, "Output grid containing the momentum"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -30,12 +29,11 @@ EXPORT void grid_wf_momentum_x(wf *gwf, cgrid *momentum_x) {
 }
 
 /*
- * Calculate the momentum y component: -i\hbar d/dy
- * 
- * gwf        = wavefunction for the operation (wf *).
- * momentum_y = output grid containing the momentum (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_momentum_y, "Momentum y component of wavefunction"}
+ * @DESC{"Calculate the momentum y component: $-i\hbar d/dy$"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{cgrid *momentum_y, "Output grid containing the momentum"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -52,12 +50,11 @@ EXPORT void grid_wf_momentum_y(wf *gwf, cgrid *momentum_y) {
 }
 
 /*
- * Calculate the momentum z component: -i\hbar d/dz
- * 
- * gwf        = wavefunction for the operation (wf *).
- * momentum_z = output grid containing the momentum (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_momentum_z, "Momentum z component of wavefunction"}
+ * @DESC{"Calculate the momentum z component: $-i\hbar d/dz$"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{cgrid *momentum_z, "Output grid containing the momentum"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -74,14 +71,13 @@ EXPORT void grid_wf_momentum_z(wf *gwf, cgrid *momentum_z) {
 }
 
 /*
- * Calculate the momentum: -i\hbar (d/dx, d/dy, d/dz)
- *
- * gwf        = wavefunction for the operation (wf *).
- * momentum_x = x output grid containing the momentum (cgrid *).
- * momentum_y = y output grid containing the momentum (cgrid *).
- * momentum_z = z output grid containing the momentum (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_momentum, "Momentum of wavefunction"}
+ * @DESC{"Calculate the momentum: $-i\hbar (d/dx, d/dy, d/dz)$"}
+ * @ARG1{wf *gwf, "Wavefunction for the operation"}
+ * @ARG2{cgrid *momentum_x, "Output grid containing the momentum x"}
+ * @ARG3{cgrid *momentum_y, "Output grid containing the momentum y"}
+ * @ARG4{cgrid *momentum_z, "Output grid containing the momentum z"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -93,13 +89,12 @@ EXPORT void grid_wf_momentum(wf *gwf, cgrid *momentum_x, cgrid *momentum_y, cgri
 }
 
 /*
- * Auxiliary routine for calculating the energy (FFT).
- * Users should rather call grid_wf_energy().
- *
- * gwf       = wavefunction for the energy calculation (wf *).
- * potential = Potential grid (rgrid *).
- * 
- * Returns the energy.
+ * @FUNC{grid_wf_energy_fft, "Energy of wavefunction (FFT)"}
+ * @DESC{"Auxiliary routine for calculating the energy (FFT).
+          Users should rather call grid_wf_energy()"}
+ * @ARG1{wf *gwf, "Wavefunction for the energy calculation"}
+ * @ARG2{rgrid *potential, "Potential energy grid"}
+ * @RVAL{REAL, "Returns the energy"}
  *
  */
 
@@ -113,12 +108,11 @@ EXPORT REAL grid_wf_energy_fft(wf *gwf, rgrid *potential) {
 }
 
 /*
- * Auxiliary routine for calculating kinetic energy (FFT).
- * This is used by grid_wf_energy_fft().
- * 
- * gwf       = wavefunction for the kinetic energy calculation (wf *).
- *
- * Returns the kinetic energy.
+ * @FUNC{grid_wf_kinetic_energy_fft, "Kinetic energy of wavefunction (FFT)"}
+ * @DESC{"Auxiliary routine for calculating kinetic energy (FFT). 
+          This is used by grid_wf_energy_fft()"}
+ * @ARG1{wf *gwf, "Wavefunction for the kinetic energy calculation"}
+ * @RVAL{REAL, "Returns the kinetic energy"}
  *
  */
 
@@ -135,12 +129,12 @@ EXPORT REAL grid_wf_kinetic_energy_fft(wf *gwf) {
 }
 
 /*
- * Auxiliary routine to propagate kinetic energy using FFT. The wave function must be in reciprocal space.
- *
- * gwf  = wavefunction to be propagated (wf *).
- * time = time step (REAL complex).
- *
- * No return value.
+ * @FUNC{grid_wf_propagate_kinetic_fft, "Propagate kinetic portion of wavefunction (FFT)"}
+ * @DESC{"Auxiliary routine to propagate kinetic energy using FFT. 
+          The wave function must be in reciprocal space"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex time, "Time step"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -199,14 +193,13 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
 }
 
 /*
- * Auxiliary routine to propagate kinetic energy using CFFT (with Lanczos filter). Wave function in Fourier space.
- *
- * gwf  = wavefunction to be propagated (wf *).
- * time = time step (REAL complex).
- *
- * No return value.
- *
- * NOTE: This routine often causes more trouble than it is worth.
+ * @FUNC{grid_wf_propagate_kinetic_cfft, "Propagate kinetic portion of wavefunction (CFFT)"}
+ * @DESC{"Auxiliary routine to propagate kinetic energy using FFT with Lanczos filter. 
+          The wave function must be in reciprocal space.
+          Note that this routine often causes more trouble than it is worth"} 
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex time, "Time step"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -276,13 +269,12 @@ EXPORT void grid_wf_propagate_kinetic_cfft(wf *gwf, REAL complex time) {
 }
 
 /*
- * Calculate square of potential gradient: |\nabla V|^2 = |(dV/dx)|^2 + |(dV/dy)|^2 + |(dV/dz)|^2.
- *
- * gwf         = wavefunction (wf *).
- * sq_grad_pot = output grid (cgrid *).
- * potential   = potental input grid (cgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_square_of_potential_gradient, "Square of potential gradient of wavefunction"}
+ * @DESC{"Calculate square of potential gradient: $|\nabla V|^2 = |(dV/dx)|^2 + |(dV/dy)|^2 + |(dV/dz)|^2$"}
+ * @ARG1{wf *gwf, "Wavefunction"}
+ * @ARG2{cgrid *sq_grad_pot, "Output grid"}
+ * @ARG3{cgrid *potential, "Potental input grid"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: Write a specific routine for this so that cworkspaces can be eliminate completely.
  *
