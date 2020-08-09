@@ -8,7 +8,7 @@
 #include "grid.h"
 
 /*
- * @FUNC{cgrid_value_outside_dirichlet, "Dirichlet boundary condition"}
+ * @FUNC{cgrid_value_outside_dirichlet, "Dirichlet boundary condition (complex)"}
  * @DESC{"Dirichlet (or constant boundary value) boundary condition function"}
  * @ARG1{cgrid *grid, "Grid to be evaluated"}
  * @ARG2{INT i, "1st grid index"}
@@ -24,7 +24,7 @@ EXPORT REAL complex cgrid_value_outside_dirichlet(cgrid *grid, INT i, INT j, INT
 }
 
 /*
- * @FUNC{cgrid_value_outside_neumann, "Neumann boundary condition"}
+ * @FUNC{cgrid_value_outside_neumann, "Neumann boundary condition (complex)"}
  * @DESC{"Neumann boundary condition function"}
  * @ARG1{cgrid *grid, "Grid to be evaluated"}
  * @ARG2{INT i, "1st grid index"}
@@ -56,7 +56,7 @@ EXPORT REAL complex cgrid_value_outside_neumann(cgrid *grid, INT i, INT j, INT k
 }
 
 /*
- * @FUNC{REAL complex cgrid_value_outside_periodic, "Periodic boundary condition"}
+ * @FUNC{REAL complex cgrid_value_outside_periodic, "Periodic boundary condition (complex)"}
  * @DESC{"Periodic boundary condition (FFT). The symmetry points are 0 and N"}
  * @ARG1{cgrid *grid, "Grid to be evaluated"}
  * @ARG2{INT i, "1st grid index"}

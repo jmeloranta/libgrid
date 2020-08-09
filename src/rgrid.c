@@ -21,30 +21,17 @@
 extern char grid_analyze_method;
 
 /*
- * Allocate new real grid.
- *
- *
- * nx                 = number of points on the grid along x (INT).
- * ny                 = number of points on the grid along y (INT).
- * nz                 = number of points on the grid along z (INT).
- * step               = spatial step length on the grid (REAL).
- * value_outside      = condition for accessing boundary points:
- *                      RGRID_DIRICHLET_BOUNDARY: Dirichlet boundary.
- *                      or RGRID_NEUMANN_BOUNDARY: Neumann boundary.
- *                      or RGRID_PERIODIC_BOUNDARY: Periodic boundary.
- *                      or user supplied function with pointer to grid and
- *                         grid index as parameters to provide boundary access.
- * outside_params_ptr = pointer for passing parameters for the given boundary
- *                      access function. Use 0 to with the predefined boundary
- *                      functions (void *).
- * id                 = String ID describing the grid (char *; input).
- *
- * Return value: pointer to the allocated grid (rgrid *). Returns NULL on
- * error.
- *
- * Note: We keep the grid in padded form, which can be directly used for in-place FFT.
- *
- * For CUDA, the dimensions must be powers of two.
+ * @FUNC{rgrid_alloc, "Allocate real grid"}
+ * @DESC{"Allocate memory for real grid. Note that the grid is kept in padded form, which allows
+          the use of in-place FFT. Also, for CUDA the array dimensions must be powers of two for efficiency"}
+ * @ARG1{INT nx, "Number of points on the grid along x"}
+ * @ARG2{INT ny, "Number of points on the grid along y"}
+ * @ARG3{INT nz, "Number of points on the grid along z"}
+ * @ARG4{REAL step, "Spatial step length on the grid"}
+ * @ARG5{REAL (*value_outside), "Condition for accessing boundary points: RGRID_DIRICHLET_BOUNDARY: Dirichlet boundary, RGRID_NEUMANN_BOUNDARY: Neumann boundary, RGRID_PERIODIC_BOUNDARY: Periodic boundary, or user supplied function with pointer to grid and grid index as parameters to provide boundary access"}
+ * @ARG6{void *outside_params_ptr, "Pointer for passing parameters for the given boundary access function. Use 0 to with the predefined boundary functions"}
+ * @ARG7{char *id, "String ID describing the grid"}
+ * @RVAL{rgrid *, "Returns pointer to the allocated grid or NULL on error"}
  *
  */
 
@@ -162,12 +149,12 @@ EXPORT rgrid *rgrid_alloc(INT nx, INT ny, INT nz, REAL step, REAL (*value_outsid
 }
 
 /*
- * "Clone" a real grid with the parameters identical to the given grid (except new grid->value is allocated).
- *
- * grid = Grid to be cloned (rgrid *; input).
- * id   = ID string describing the grid (char *; input);
- *
- * Returns pointer to the new grid (rgrid *).
+ * @FUNC{rgrid_clone, "Clone real grid"}
+ * @DESC{"Clone a real grid with the parameters identical to the given grid 
+          (except new grid-$>$value is allocated)"}
+ * @ARG1{rgrid *grid, "Grid to be cloned"}
+ * @ARG2{char *id, "String describing the grid (for debugging)"}
+ * @DESC{rgird *, "Returns pointer to the new grid"}
  *
  */
 
@@ -213,11 +200,10 @@ EXPORT rgrid *rgrid_clone(rgrid *grid, char *id) {
 }
 
 /*
- * Claim grid (simple locking system for the workspace model).
- *
- * grid = Grid to be claimed (rgrid *).
- *
- * No return value.
+ * @FUNC{rgrid_claim, "Claim real grid"}
+ * @DESC{"Claim real grid (simple locking system for the workspace model)"}
+ * @ARG1{rgrid *grid, "Grid to be claimed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -235,11 +221,10 @@ EXPORT void rgrid_claim(rgrid *grid) {
 }
 
 /*
- * Release grid (simple locking system for the workspace model).
- *
- * grid = Grid to be claimed (rgrid *).
- *
- * No return value.
+ * @FUNC{rgrid_release, "Release real grid"}
+ * @DESC{"Release grid (simple locking system for the workspace model)"}
+ * @ARG1{rgrid *grid, "Grid to be claimed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -253,19 +238,16 @@ EXPORT void rgrid_release(rgrid *grid) {
 }
 
 /*
- * Set the grid origin.
- *
- * grid   = Grid for which the origin is to be defined (rgrid *; input/output).
- * x0     = X coordinate for the origin (REAL; input).
- * y0     = Y coordinate for the origin (REAL; input).
- * z0     = Z coordinate for the origin (REAL; input).
- *
- * The grid coordinates will be evaluated as:
- * x(i)  = (i - nx / 2) * step - x0
- * y(j)  = (j - ny / 2) * step - y0
- * z(k)  = (k - nz / 2) * step - z0
- *
- * No return value.
+ * @FUNC{rgrid_set_origin, "Set real grid origin"}
+ * @DESC{"Set the grid origin. The grid coordinates will be evaluated as:\\
+          x(i)  = (i - nx / 2) * step - x0\\
+          y(j)  = (j - ny / 2) * step - y0\\
+          z(k)  = (k - nz / 2) * step - z0"}
+ * @ARG1{rgrid *grid, "Grid for which the origin is to be defined"}
+ * @ARG2{REAL x0, "X coordinate for the origin"}
+ * @ARG3{REAL y0, "Y coordinate for the origin"}
+ * @ARG4{REAL z0, "Z coordinate for the origin"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -277,14 +259,13 @@ EXPORT void rgrid_set_origin(rgrid *grid, REAL x0, REAL y0, REAL z0) {
 }
 
 /* 
- * Shift the grid origin.
- * 
- * grid  = Grid for which the origin is to be shifted (rgrid *; input/output).
- * x0    = Shift in X coordinate (REAL; input).
- * y0    = Shift in Y coordinate (REAL; input).
- * z0    = Shift in Z coordinate (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_shift_origin, "Shift real grid origin"}
+ * @DESC{"Shift the grid origin"}
+ * @ARG1{rgrid *grid, "Grid for which the origin is to be shifted"}
+ * @ARG2{REAL x0, "Shift in X coordinate"}
+ * @ARG3{REAL y0, "Shift in Y coordinate"}
+ * @ARG4{REAL z0, "Shift in Z coordinate"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -296,21 +277,18 @@ EXPORT void rgrid_shift_origin(rgrid *grid, REAL x0, REAL y0, REAL z0) {
 }
 
 /*
- * Set the grid origin in momentum space (or the velocity of the frame of reference).
- * 
- * grid    = Grid for which the momentum origin is to be defined (rgrid *; input/output).
- * kx0     = Momentum origin along the X axis (REAL; input).
- * ky0     = Momentum origin along the Y axis (REAL; input).
- * kz0     = Momentum origin along the Z axis (REAL; input).
- *
- * kx0, ky0 and kz0 can be any real numbers but keep in mind that the grid
- * will only contain the component k = 0 if they are multiples of:
- *
- *  kx0min = 2 * M_PI / (NX * STEP) 
- *  ky0min = 2 * M_PI / (NY * STEP) 
- *  kz0min = 2 * M_PI / (NZ * STEP)
- *
- * No return value.
+ * @FUNC{rgrid_set_momentum, "Set real grid momentum origin"}
+ * @DESC{"Set the grid origin in momentum space (or the velocity of the frame of reference).
+        Arguments kx0, ky0 and kz0 can be any real numbers but keep in mind that the grid
+        will only contain the component k = 0 if they are multiples of:\\
+        kx0min = 2 * M_PI / (NX * STEP)\\
+        ky0min = 2 * M_PI / (NY * STEP)\\
+        kz0min = 2 * M_PI / (NZ * STEP)"}
+ * @ARG1{rgrid *grid, "Grid for which the momentum origin is to be defined"}
+ * @ARG2{REAL kx0, "Momentum origin along the X axis"}
+ * @ARG3{REAL ky0, "Momentum origin along the Y axis"}
+ * @ARG4{REAL kz0, "Momentum origin along the Z axis"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -322,11 +300,10 @@ EXPORT void rgrid_set_momentum(rgrid *grid, REAL kx0, REAL ky0, REAL kz0) {
 }
 
 /*
- * Free grid.
- *
- * grid = pointer to  grid to be freed (rgrid *; input).
- *
- * No return value.
+ * @FUNC{rgrid_free, "Free real grid"}
+ * @DESC{"Free real grid memory"}
+ * @ARG1{rgrid *grid, "Pointer to grid to be freed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -351,12 +328,11 @@ EXPORT void rgrid_free(rgrid *grid) {
 }
 
 /* 
- * Write grid on disk in binary format.
- *
- * grid = grid to be written (rgrid *; input).
- * out  = file handle for the file (FILE *; input).
- *
- * No return value.
+ * @FUNC{rgrid_write, "Write real grid to disk"}
+ * @DESC{"Write grid to disk in binary format"}
+ * @ARG1{rgrid *grid, "Grid to be written to disk"}
+ * @ARG2{FILE *out, "File handle for the file"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -373,13 +349,11 @@ EXPORT void rgrid_write(rgrid *grid, FILE *out) {
 }
 
 /* 
- * Read grid from disk in binary format.
- *
- * grid = grid to be read (rgrid *; output). If NULL, a grid with the correct dimensions will be allocated.
- *        Note that the boundary condition will assigned to PERIODIC by default.
- * in   = file handle for reading the file (FILE *; input).
- *
- * Returns pointer to the grid (NULL on error).
+ * @FUNC{rgrid_read, "Read real grid from disk"}
+ * @DESC{"Read real grid from disk in binary format"}
+ * @ARG1{rgrid *grid, "Grid to be read. If NULL, a grid with the correct dimensions will be allocated. Note that the boundary condition will assigned to PERIODIC by default"}
+ * @ARG2{FILE *in, "File handle for reading the file"}
+ * @RVAL{rgrid *, "Returns pointer to the grid or NULL on error"}
  *
  */
 
@@ -424,14 +398,12 @@ EXPORT rgrid *rgrid_read(rgrid *grid, FILE *in) {
 }
 
 /*
- * Read grid from disk in binary format. This is compatible with old libgrid binary grid format.
- * Due to in place FFT being used, the new grids have holes in them...
- *
- * grid = grid to be read (rgrid *; output). If NULL, a grid with the correct dimensions will be allocated.
- *        Note that the boundary condition will assigned to PERIODIC by default.
- * in   = file handle for reading the file (FILE *; input).
- *
- * Returns pointer to the grid (NULL on error).
+ * @FUNC{rgrid_read_compat, "Read real grid from disk (compatibility)"}
+ * @DESC{"Read grid from disk in binary format. This is compatible with old libgrid binary grid format.
+          Since in-place FFT is used, the new grids have holes in them"}
+ * @ARG1{rgrid *grid, "Grid to be read. If NULL, a grid with the correct dimensions will be allocated. Note that the boundary condition will assigned to PERIODIC by default"}
+ * @ARG2{FILE *in, "File handle for reading the file"}
+ * @RVAL{rgrid *, "Returns pointer to the grid or NULL on error"}
  *
  */
 
@@ -470,12 +442,11 @@ EXPORT rgrid *rgrid_read_compat(rgrid *grid, FILE *in) {
 }
 
 /*
- * Read in real grid from a binary file (.grd). Compatibility with old libgrid binary grid files.
- *
- * grid = place to store the read density (output, rgrid *).
- * file = filename for the file (char *). Note: the .grd extension must NOT be given (input, char *).
- *
- * No return value.
+ * @FUNC{rgrid_read_grid_compat, "Read real grid from disk (compatibility)"}
+ * @DESC{"Read in real grid from a binary file (.grd). Compatibility with old libgrid binary grid files"}
+ * @ARG1{rgrid *grid, "Pointer to grid storage"}
+ * @ARG2{char *file, "File name for the file. Note that the .grd extension should not be included"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -497,12 +468,11 @@ EXPORT void rgrid_read_grid_compat(rgrid *grid, char *file) {
 }
 
 /*
- * Read in real grid from a binary file (.grd).
- *
- * grid = place to store the read density (output, rgrid *).
- * file = filename for the file (char *). Note: the .grd extension must NOT be given (input, char *).
- *
- * No return value.
+ * @FUNC{rgrid_read_grid, "Read real grid from disk"}
+ * @DESC{"Read in real grid from a binary file (.grd)"}
+ * @ARG1{rgrid *grid, "Pointer to grid storage"}
+ * @ARG2{char *file, "File name for the file. Note: the .grd extension should not be included"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -524,14 +494,11 @@ EXPORT void rgrid_read_grid(rgrid *grid, char *file) {
 }
 
 /*
- * Write real grid to disk including cuts along x, y, and z axes.
- *
- * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
- * grid     = Grid to be written to disk (rgrid *; input).
- * 
- * No return value.
- *
- * See also rgrid_write().
+ * @FUNC{rgrid_write_grid, "Write real grid to disk"}
+ * @DESC{"Write real grid to disk including cuts along x, y, and z axes. See also rgrid_write()"}
+ * @ARG1{char *basename, "Base file name to which suffixes (.x, .y, .z, and .grd) are added"}
+ * @ARG2{rgrid *grid, "Grid to be written to disk"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -599,14 +566,11 @@ EXPORT void rgrid_write_grid(char *base, rgrid *grid) {
 }
 
 /*
- * Write real grid to disk including cuts along x, y, and z axes (grid in reciprocal/Fourier space).
- *
- * basename = Base filename where suffixes (.x, .y, .z, and .grd) are added (char *; input).
- * grid     = Grid to be written to disk (rgrid *; input).
- * 
- * No return value.
- *
- * See also rgrid_write().
+ * @FUNC{rgrid_write_grid_reciprocal, "Write real grid to disk (reciprocal space)"}
+ * @DESC{"Write real grid to disk including cuts along x, y, and z axes (grid in reciprocal/Fourier space)"}
+ * @ARG1{char *basename, "Base filename where suffixes (.x, .y, .z, and .grd) are added"}
+ * @ARG2{rgrid *grid, "Grid to be written to disk"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -687,12 +651,11 @@ EXPORT void rgrid_write_grid_reciprocal(char *base, rgrid *grid) {
 }
 
 /*
- * Copy grid from one grid to another.
- *
- * dst = destination grid (rgrid *; output).
- * src = source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{rgrid_copy, "Copy real grid"}
+ * @DESC{"Copy grid from one grid to another"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -726,15 +689,14 @@ EXPORT void rgrid_copy(rgrid *dst, rgrid *src) {
 }
 
 /*
- * Shift grid by given amount spatially.
- *
- * shifted = destination grid for the operation (rgrid *; output).
- * grid    = source grid for the operation (rgrid *; input).
- * x       = shift spatially by this amount in x (REAL; input).
- * y       = shift spatially by this amount in y (REAL; input).
- * z       = shift spatially by this amount in z (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_shift, "Shift real grid spatially"}
+ * @DESC{"Shift real grid by a given amount spatially"}
+ * @ARG1{rgrid *shifted, "Destination grid for the operation"}
+ * @ARG2{rgrid *grid, "Source grid for the operation"}
+ * @ARG3{REAL x, "Shift spatially by this amount in x"}
+ * @ARG4{REAL y, "Shift spatially by this amount in y"}
+ * @ARG5{REAL z, "Shift spatially by this amount in z"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -755,11 +717,10 @@ EXPORT void rgrid_shift(rgrid *shifted, rgrid *grid, REAL x, REAL y, REAL z) {
 }
 
 /* 
- * Zero grid.
- *
- * grid = grid to be zeroed (rgrid *; input/output).
- *
- * No return value.
+ * @FUNC{rgrid_zero, "Zero real grid"}
+ * @DESC{"Zero the contents of real grid"}
+ * @ARG1{rgrid *grid, "Grid to be zeroed"}
+ * @RVAL{void, "No return value"}
  * 
  */
 
@@ -769,12 +730,11 @@ EXPORT void rgrid_zero(rgrid *grid) {
 }
 
 /* 
- * Set grid to a constant value.
- *
- * grid = grid to be set (rgrid *; input/output).
- * c    = constant value (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_constant, "Set real grid to constant value"}
+ * @DESC{"Set real grid to a constant value"}
+ * @ARG1{rgrid *grid, "Grid to be set"}
+ * @ARG2{REAL c, "Constant value"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -796,15 +756,14 @@ EXPORT void rgrid_constant(rgrid *grid, REAL c) {
 }
 
 /*
- * Multiply a given grid by a function.
- *
- * grid = destination grid for the operation (rgrid *; output).
- * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data, the next is grid value at the point,
- *        and x, y, z are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- *
- * No return value.
+ * @FUNC{rgrid_product_func, "Multiply real grid by function"}
+ * @DESC{"Multiply real grid by a function. The use specified function takes the following arguments:
+          user data (void *), value at the current grid point (REAL), and the x, y, z values of the
+          current grid point (REAL)"}
+ * @ARG1{rgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data (can be NULL if not needed)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -834,15 +793,13 @@ EXPORT void rgrid_product_func(rgrid *grid, REAL (*func)(void *arg, REAL val, RE
 }
 
 /*
- * Map a given function onto grid.
- *
- * grid = destination grid for the operation (rgrid *; output).
- * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data
- *        and x,y,z are the coordinates (REAL) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- *
- * No return value.
+ * @FUNC{rgrid_map, "Map function onto real grid"}
+ * @DESC{"Map a given function onto real grid. The function to be mapped takes the following arguments:
+          user data (void *) and x,y,z coordinates of the current grid point (REAL)"}
+ * @ARG1{rgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data (can be NULL if not needed)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -872,18 +829,17 @@ EXPORT void rgrid_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y, REAL 
 }
 
 /*
- * Map a given function onto  grid with linear "smoothing".
- * This can be used to weight the values at grid points to produce more
- * accurate integration over the grid.
- *
- * grid = destination grid for the operation (rgrid *; output).
- * func = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL); input).
- *        The first argument (void *) is for external user specified data
- *        and (x, y, z) is the point (REALs) where the function is evaluated.
- * farg = pointer to user specified data (void *; input).
- * ns   = number of intermediate points to be used in smoothing (INT; input).
- *
- * No return value.
+ * @FUNC{rgrid_smooth_map, "Map function to real grid (linear smoothing)"}
+ * @DESC{"Map a given function onto grid with linear smoothing.
+          This can be used to weight the values at grid points to produce more
+          accurate integration over the grid. The user specified function takes
+          the following arguments: user specified data (void *) and 
+          x,y,z coordinates of the current grid point (REAL)"}
+ * @ARG1{rgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data (NULL if not needed)"}
+ * @ARG4{INT ns, "Number of intermediate points to be used in smoothing"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -913,21 +869,19 @@ EXPORT void rgrid_smooth_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL y
 }
 
 /*
- * Map a given function onto grid with linear "smoothing".
- * This can be used to weight the values at grid points to produce more
- * accurate integration over the grid. Limits for intermediate steps and
- * tolerance can be given.
- *
- * grid   = destination grid for the operation (rgrid *; output).
- * func   = function providing the mapping (REAL (*)(void *, REAL, REAL, REAL); input).
- *          The first argument (void *) is for external user specified data
- *          and x, y, z are the coordinates (REAL) where the function is evaluated.
- * farg   = pointer to user specified data (void *; input).
- * min_ns = minimum number of intermediate points to be used in smoothing (INT; input).
- * max_ns = maximum number of intermediate points to be used in smoothing (INT; input).
- * tol    = tolerance for the converge of integral over the function (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_adaptive_map, "Map function onto real grid (adaptive linear smoothing)"}
+ * @DESC{"Map a given function onto grid with linear smoothing.
+          This can be used to weight the values at grid points to produce more
+          accurate integration over the grid. Limits for intermediate steps and
+          tolerance can be given. The function to be mapped takes the following arguments:
+          user data (void *) and x,y,z coordinates of the current grid point (REAL).
+ * @ARG1{rgrid *grid, "Destination grid for the operation"}
+ * @ARG2{REAL (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Pointer to user specified data"}
+ * @ARG4{INT min_ns, "Minimum number of intermediate points to be used in smoothing"}
+ * @ARG5{INT max_ns, "Maximum number of intermediate points to be used in smoothing"}
+ * @ARG6{REAL tol, "Tolerance for the converge of integral over the function"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -978,15 +932,13 @@ EXPORT void rgrid_adaptive_map(rgrid *grid, REAL (*func)(void *arg, REAL x, REAL
 }
 
 /*
- * Add two grids: gridc = grida + gridb
- *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st of the grids to be added (rgrid *; input).
- * gridb = 2nd of the grids to be added (rgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_sum, "Sum of real grids"}
+ * @DESC{"Add two grids: gridc = grida + gridb. Note that the source and destination grids
+          may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1009,15 +961,13 @@ EXPORT void rgrid_sum(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /* 
- * Subtract two grids: gridc = grida - gridb
- *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- *
- * No return value.
- *
- * Note: both source and destination may be the same.
+ * @FUNC{rgrid_difference, "Subtract real grids"}
+ * @DESC{"Subtract two grids: gridc = grida - gridb. Note that the source and destination grids
+          may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1040,15 +990,13 @@ EXPORT void rgrid_difference(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /* 
- * Calculate product of two grids: gridc = grida * gridb
- *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_product, "Product of real grids"}
+ * @DESC{"Calculate product of two grids: gridc = grida * gridb. Note that the source and
+          destination grids may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1071,18 +1019,13 @@ EXPORT void rgrid_product(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /* 
- * Rise a grid to given power.
- *
- * gridb    = destination grid (rgrid *; output).
- * grida    = 1st source grid (rgrid *; input).
- * exponent = exponent to be used (REAL; input).
- *
- * No return value.
- *
- * Notes: - Source and destination grids may be the same.
- *         - This routine uses pow() so that the exponent can be
- *           fractional but this is slow! Do not use this for integer
- *           exponents.
+ * @FUNC{rgrid_power, "Rise real grid to given power"}
+ * @DESC{"Rise a grid to given power. Note that the source and destination grids may be the same.
+          This routine uses pow() -- use rgrid_ipower() with integer exponents"}
+ * @ARG1{rgrid *gridb, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{REAL exponent, "Exponent to be used"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1104,18 +1047,13 @@ EXPORT void rgrid_power(rgrid *gridb, rgrid *grida, REAL exponent) {
 }
 
 /* 
- * Rise absolute value of a grid to given power.
- *
- * gridb    = destination grid (rgrid *; output).
- * grida    = 1st source grid (rgrid *; input).
- * exponent = exponent to be used (REAL; input).
- *
- * No return value.
- *
- * Notes: - Source and destination grids may be the same.
- *         - This routine uses pow() so that the exponent can be
- *           fractional but this is slow! Do not use this for integer
- *           exponents.
+ * @FUNC{rgrid_abs_power, "Rise absolute value of grid to given power"}
+ * @DESC{"Rise absolute value of a grid to given power (gridb = |grida|$^{exponent}$).
+          The source and destination grids may be the same"}
+ * @ARG1{rgrid *gridb, "Destination grid"}
+ * @ARG2{rgrid *grida, "Source grid"}
+ * @ARG3{REAL exponent, "Exponent to be used"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1137,15 +1075,12 @@ EXPORT void rgrid_abs_power(rgrid *gridb, rgrid *grida, REAL exponent) {
 }
 
 /*
- * Divide two grids: gridc = grida / gridb
- *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- *
- * No return value.
- *
- * Note: Source and destination grids may be the same.
+ * @FUNC{rgrid_division, "Divide real grids"}
+ * @DESC{"Divide two grids: gridc = grida / gridb. Note that the source and destination grids may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1168,16 +1103,14 @@ EXPORT void rgrid_division(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * "Safely" divide two grids: gridc = grida / (gridb + eps)
- *
- * gridc = destination grid (rgrid *; output).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- * eps   = Epsilon to add to the divisor (REAL; input).
- *
- * No return value.
- *
- * Note: Source and destination grids may be the same.
+ * @FUNC{rgrid_division_eps, "Divide real grids (numerically stable)"}
+ * @DESC{"Safely divide two grids: gridc = grida / (gridb + eps). Note that the source and the
+          destination grids may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @ARG4{REAL eps, "Epsilon to add to the divisor"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1200,12 +1133,11 @@ EXPORT void rgrid_division_eps(rgrid *gridc, rgrid *grida, rgrid *gridb, REAL ep
 }
 
 /*
- * Add a constant to a grid.
- *
- * grid = grid where the constant is added (rgrid *; input/output).
- * c    = constant to be added (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_add, "Add constant to real grid"}
+ * @DESC{"Add a constant to a grid"}
+ * @ARG1{rgrid *grid, "Grid where the constant is added"}
+ * @ARG2{REAL c, "Constant to be added"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1226,12 +1158,11 @@ EXPORT void rgrid_add(rgrid *grid, REAL c) {
 }
 
 /*
- * Multiply grid by a constant.
- *
- * grid = grid to be multiplied (rgrid *; input/output).
- * c    = multiplier (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_multiply, "Multiply real grid by constant"}
+ * @DESC{"Multiply real grid by a constant"}
+ * @ARG1{rgrid *grid, "Grid to be multiplied"}
+ * @ARG2{REAL c, "Constant multiplier"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1252,13 +1183,12 @@ EXPORT void rgrid_multiply(rgrid *grid, REAL c) {
 }
 
 /* 
- * Add and multiply: grid = (grid + ca) * cm.
- *
- * grid = grid to be operated (rgrid *; input/output).
- * ca   = constant to be added (REAL; input).
- * cm   = multiplier (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_add_and_multiply, "Add and multiply real grid"}
+ * @DESC{"Add and multiply: grid = (grid + ca) * cm"}
+ * @ARG1{rgrid *grid, "Grid to be operated"}
+ * @ARG2{REAL ca, "Constant to be added"}
+ * @ARG3{REAL cm, "Constant multiplier"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1279,13 +1209,12 @@ EXPORT void rgrid_add_and_multiply(rgrid *grid, REAL ca, REAL cm) {
 }
 
 /*
- * Multiply and add: grid = cm * grid + ca.
- *
- * grid = grid to be operated (rgrid *; input/output).
- * cm   = multiplier (REAL; input).
- * ca   = constant to be added (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_multiply_and_add, "Multiply and add real grid"}
+ * @DESC{"Multiply and add: grid = cm * grid + ca"}
+ * @ARG1{rgrid *grid, "Grid to be operated"}
+ * @ARG2{REAL cm, "Constant multiplier"}
+ * @ARG3{REAL ca, "Constant to be added"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1306,15 +1235,13 @@ EXPORT void rgrid_multiply_and_add(rgrid *grid, REAL cm, REAL ca) {
 }
 
 /* 
- * Add scaled grids (multiply/add): gridc = gridc + d * grida
- *
- * gridc = destination grid for the operation (rgrid *; input/output).
- * d     = multiplier for the operation (REAL; input).
- * grida = source grid for the operation (rgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_add_scaled, "Add scaled real grids"}
+ * @DESC{"Add scaled grids (multiply/add): gridc = gridc + d * grida.
+         Note that the source and destination grids may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid for the operation"}
+ * @ARG2{REAL d, "Multiplier for the operation"}
+ * @ARG3{rgrid *grida, "Source grid for the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1336,16 +1263,14 @@ EXPORT void rgrid_add_scaled(rgrid *gridc, REAL d, rgrid *grida) {
 }
 
 /*
- * Perform the following operation: gridc = gridc + d * grida * gridb.
- *
- * gridc = destination grid (rgrid *; output).
- * d     = constant multiplier (REAL; input).
- * grida = 1st source grid (rgrid *; input).
- * gridb = 2nd source grid (rgrid *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_add_scaled_product, "Add scaled product of real grids"}
+ * @DESC{"Perform the following operation: gridc = gridc + d * grida * gridb.
+          Note that the source and destination grids may be the same"}x
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{REAL d, "Constant multiplier"}
+ * @ARG3{rgrid *grida, "1st source grid"}
+ * @ARG4{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1368,17 +1293,15 @@ EXPORT void rgrid_add_scaled_product(rgrid *gridc, REAL d, rgrid *grida, rgrid *
 }
 
 /*
- * Operate on a grid by a given operator: gridc = O(grida).
- *
- * gridc    = destination grid (rgrid *; output).
- * grida    = source grid (rgrid *; input).
- * operator = operator (REAL (*)(REAL, void *); input). Args are value and param pointer.
- *            (i.e., a function mapping a given R-number to another)
- * params   = parameters for operator (void *).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_operate_one, "Operate on real grid"}
+ * @DESC{"Operate on a grid by a given operator: gridc = O(grida). The source and destination
+          grids may be the same. The operator function takes the following arguments:
+          the grid value at the current point (REAL) and user parameters (void *)"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "Source grid"}
+ * @ARG3{REAL (*operator), "User specified operator"}
+ * @ARG4{void *params, "User parameters for operator (may be NULL if not used)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1403,18 +1326,17 @@ EXPORT void rgrid_operate_one(rgrid *gridc, rgrid *grida, REAL (*operator)(REAL 
 }
 
 /*
- * Operate on a grid by a given operator and multiply: gridc = gridb * O(grida).
- *
- * gridc    = destination grid (rgrid *; output).
- * gridb    = multiply with this grid (rgrid *; input).
- * grida    = source grid (rgrid *; input).
- * operator = operator (REAL (*)(REAL), void *; input). Args are value and params.
- *            (i.e., a function mapping a given R-number to another)
- * params   = user supplied parameters to operator (void *).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_operate_one_product, "Operate on real grid and multiply"}
+ * @DESC{"Operate on a grid by a given operator and multiply: gridc = gridb * O(grida).
+          Note that the source and destination grids may be the same.
+          The operator function takes the following arguments:
+          grid value at the current point (REAL) and user parameters (void *)"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *gridb, "Multiply with this grid"}
+ * @ARG3{rgrid *grida, "Source grid"}
+ * @ARG4{REAL (*operator), "Operator function"}
+ * @ARG5{void *params, "User supplied parameters to operator (may be NULL)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1441,17 +1363,14 @@ EXPORT void rgrid_operate_one_product(rgrid *gridc, rgrid *gridb, rgrid *grida, 
 }
 
 /* 
- * Operate on two grids and place the result in third: gridc = O(grida, gridb).
- * where O is the operator.
- *
- * gridc    = destination grid (rgrid *; output).
- * grida    = 1st source grid (rgrid *; input).
- * gridb    = 2nd source grid (rgrid *; input).
- * operator = operator mapping grida and gridb (REAL (*)(REAL, REAL); input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_operate_two, "Operate on two real grids"}
+ * @DESC{"Operate on two grids and place the result in third: gridc = O(grida, gridb)
+          where O is the operator. Note that the source and destination grids may be the same"}
+ * @ARG1{rgrid *gridc, "Destination grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @ARG4{REAL (*operator), "Operator function"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: Allow parameter passing.
  *
@@ -1480,12 +1399,12 @@ EXPORT void rgrid_operate_two(rgrid *gridc, rgrid *grida, rgrid *gridb, REAL (*o
 }
 
 /*
- * Operate on a grid by a given operator.
- *
- * grid     = grid to be operated (rgrid *; input/output).
- * operator = operator (void (*)(REAL *); input).
- * 
- * No return value.
+ * @FUNC{rgrid_transform_one, "Transform real grid"}
+ * @DESC{"Transform real grid by a given function. The transform function takes one argument
+          that is a pointer to the grid data at the current point (REAL *)"}
+ * @ARG1{rgrid *grid, "Grid to be operated"}
+ * @ARG2{void (*operator) = Transform function"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: Allow parameter passing.
  *
@@ -1508,13 +1427,13 @@ EXPORT void rgrid_transform_one(rgrid *grid, void (*operator)(REAL *a)) {
 }
 
 /*
- * Operate on two separate grids by a given operator.
- *
- * grida    = grid to be operated (rgrid *; input/output).
- * gridb    = grid to be operated (rgrid *; input/output).
- * operator = operator (void (*)(REAL *); input).
- * 
- * No return value.
+ * @FUNC{rgrid_transform_two, "Transform two real grids"}
+ * @DESC{"Transform two real grids by a given function. The transform function takes two arguments
+          that are pointers to the data of the two grids at the current point (REAL *)"}
+ * @ARG1{rgrid *grida, "1st grid to be operated"}
+ * @ARG2{rgrid *gridb, "2nd grid to be operated"}
+ * @ARG3{void (*operator) = Transform function"}
+ * @RVAL{void, "No return value"}
  *
  * TODO: Allow parameter passing.
  *
@@ -1541,14 +1460,11 @@ EXPORT void rgrid_transform_two(rgrid *grida, rgrid *gridb, void (*operator)(REA
 }
 
 /*
- * Integrate over a grid.
- *
- * grid = grid to be integrated (rgrid *; input).
- *
- * Returns the integral value (REAL).
- *
- * NOTE: This will integrate also over the missing points due to BC
- *       such that the symmetry is preserved.
+ * @FUNC{rgrid_integral, "Integrate real grid"}
+ * @DESC{"Integrate over real grid. Note that this may be missing
+          some boundary points due to the boundary condition"}
+ * @ARG1{rgrid *grid, "Grid to be integrated"}
+ * @RVAL{REAL, "Returns the integral value"}
  *
  */
 
@@ -1575,17 +1491,16 @@ EXPORT REAL rgrid_integral(rgrid *grid) {
 }
 
 /*
- * Integrate over a grid with limits.
- *
- * grid = grid to be integrated (rgrid *; input).
- * xl   = lower limit for x (REAL; input).
- * xu   = upper limit for x (REAL; input).
- * yl   = lower limit for y (REAL; input).
- * yu   = upper limit for y (REAL; input).
- * zl   = lower limit for z (REAL; input).
- * zu   = upper limit for z (REAL; input).
- *
- * Returns the integral value (REAL).
+ * @FUNC{rgrid_integral_region, "Integrate real grid with limits"}
+ * @DESC{"Integrate over a grid with limits"}
+ * @ARG1{rgrid *grid, "Grid to be integrated"}
+ * @ARG2{REAL xl, "Lower limit for x"}
+ * @ARG3{REAL xu, "Upper limit for x"}
+ * @ARG4{REAL yl, "Lower limit for y"}
+ * @ARG5{REAL yu, "Upper limit for y"}
+ * @ARG6{REAL zl, "Lower limit for z"}
+ * @ARG7{REAL zu, "Upper limit for z"}
+ * @RVAL{REAL, "Returns the integral value"}
  *
  */
 
@@ -1620,11 +1535,10 @@ EXPORT REAL rgrid_integral_region(rgrid *grid, REAL xl, REAL xu, REAL yl, REAL y
 }
  
 /* 
- * Integrate over the grid squared (int grid^2).
- *
- * grid = grid to be integrated (rgrid *; input).
- *
- * Returns the integral (REAL).
+ * @FUNC{rgrid_integral_of_square, "Integrate over real grid squared"}
+ * @DESC{"Integrate over the grid squared ($\int grid^2$)"}
+ * @ARG1{rgrid *grid, "Grid to be integrated"}
+ * @RVAL{REAL, "Returns the integral"}
  *
  */
 
@@ -1653,12 +1567,11 @@ EXPORT REAL rgrid_integral_of_square(rgrid *grid) {
 }
 
 /*
- * Calculate overlap between two grids (int grida gridb).
- *
- * grida = 1st grid (rgrid *; input).
- * gridb = 2nd grid (rgrid *; input).
- *
- * Returns the value of the overlap integral (REAL).
+ * @FUNC{rgrid_integral_of_product, "Integral of product of two real grids"}
+ * @DESC{"Calculate overlap between two grids ($\int grida gridb$)"}
+ * @ARG1{rgrid *grida, "1st grid"}
+ * @ARG2{rgrid *gridb, "2nd grid"}
+ * @RVAL{REAL, "Returns the value of the integral"}
  *
  */
 
@@ -1686,13 +1599,11 @@ EXPORT REAL rgrid_integral_of_product(rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * Calculate the expectation value of a grid over a grid.
- * (int opgrid dgrid^2).
- *
- * dgrid  = grid giving the probability density (dgrid^2) (rgrid *; input).
- * opgrid = grid to be averaged (rgrid *; input).
- *
- * Returns the average value (REAL *).
+ * @FUNC{rgrid_grid_expectation_value, "Expectation value of real grid"}
+ * @DESC{"Calculate the expectation value of a grid over a grid ($\int opgrid dgrid^2$)"}
+ * @ARG1{rgrid *dgrid, "Grid giving the probability density (dgrid$^2$)"}
+ * @ARG2{rgrid *opgrid, "Operator grid"}
+ * @RVAL{REAL, "Returns the expectation value"}
  *
  */
 
@@ -1722,14 +1633,14 @@ EXPORT REAL rgrid_grid_expectation_value(rgrid *dgrid, rgrid *opgrid) {
 }
  
 /*
- * Calculate the expectation value of a function over a grid.
- * (int grida func grida = int func grida^2).
- *
- * func  = function to be averaged (REAL (*)(void *, REAL, REAL, REAL, REAL); input).
- *         The arguments are: optional arg, grida(x,y,z), x, y, z.
- * grida = grid giving the probability (grida^2) (rgrid *; input).
- *
- * Returns the average value (REAL).
+ * @FUNC{rgrid_grid_expectation_value_func, "Expectation value of function over real grid squared"}
+ * @DESC{"Calculate the expectation value of a function over a grid squared 
+          ($\int grida func grida = \int func grida^2$).
+          The function takes three arguments: user data (void *), value at the current grid point (REAL),
+          and the x,y,z coordinates (REAL)"}
+ * @ARG1{REAL (*func), "Function for which to calculate the expectation value"}
+ * @ARG2{rgrid *grida, "Grid giving the probability (grida$^2$)"}
+ * @RVAL{REAL, "Returns the expectation value"}
  *
  */
  
@@ -1762,13 +1673,14 @@ EXPORT REAL rgrid_grid_expectation_value_func(void *arg, REAL (*func)(void *arg,
 }
 
 /* 
- * Integrate over the grid multiplied by weighting function (int grid w(x)).
- *
- * grid   = grid to be integrated over (rgrid *; input).
- * weight = function defining the weight (REAL (*)(REAL, REAL, REAL); input). The arguments are (x,y,z) coordinates.
- * farg   = argument to the weight function (void *; input).
- *
- * Returns the value of the integral (REAL).
+ * @FUNC{rgrid_weighted_integral, "Weighted integral over real grid"}
+ * @DESC{"Integrate over the grid multiplied by weighting function ($\int grid w(x)$).
+          The weighting function takes four arguments: user data (void *) and
+          x,y,z coordinates of the current grid point (REAL)"}
+ * @ARG1{rgrid *grid, "Grid to be integrated over"}
+ * @ARG2{REAL (*weight), "Function defining the weight"}
+ * @ARG3{void *farg, "User data for weighting function (may be NULL)"}
+ * @RVAL{REAL, "Returns the value of the integral"}
  *
  */
 
@@ -1800,14 +1712,14 @@ EXPORT REAL rgrid_weighted_integral(rgrid *grid, REAL (*weight)(void *farg, REAL
 }
 
 /* 
- * Integrate over square of the grid multiplied by weighting function (int grid^2 w(x)).
- *
- * grid   = grid to be integrated over (rgrid *; input).
- * weight = function defining the weight (REAL (*)(REAL, REAL, REAL); input).
- *          The arguments are (x, y, z) coordinates.
- * farg   = argument to the weight function (void *; input).
- *
- * Returns the value of the integral (REAL).
+ * @FUNC{rgrid_weighted_integral_of_square, "Integrate real grid squared weighted by function"}
+ * @DESC{"Integrate over square of the grid multiplied by weighting function ($\int grid^2 w(x)$).
+          The weighting function takes four arguments: user data (void *) and
+          x,y,z coordinates of the current grid point (REAL)"}
+ * @ARG1{rgrid *grid, "Grid to be integrated over"}
+ * @ARG2{REAL (*weight), "Function defining the weight"}
+ * @ARG3{void *farg, "User data for the weight function (may be NULL)"}
+ * @RVAL{REAL, "Returns the value of the integral"}
  *
  */
 

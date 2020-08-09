@@ -6,14 +6,13 @@
 #include "grid.h"
 
 /*
- * Dirichlet (or constant boundary value) boundary condition.
- *
- * grid = grid to be evaluated (rgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
+ * @FUNC{rgrid_value_outside_dirichlet, "Dirichlet boundary condition (real)"}
+ * @DESC{"Dirichlet (or constant boundary value) boundary condition for real grid"}
+ * @ARG1{rgrid *grid, "Grid to be evaluated"}
+ * @ARG2{INT i, "Grid index (x)"}
+ * @ARG3{INT j, "Grid index (y)"}
+ * @ARG4{INT k, "Grid index (z)"}
+ * @RVAL{REAL, "Returns grid value subject to the boundary condition"}
  *
  */
 
@@ -23,14 +22,13 @@ EXPORT REAL rgrid_value_outside_dirichlet(rgrid *grid, INT i, INT j, INT k) {
 }
 
 /*
- * Neumann boundary condition.
- *
- * grid = grid to be evaluated (rgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
+ * @FUNC{rgrid_value_outside_neumann, "Neumann boundary condition (real)"}
+ * @DESC{"Neumann boundary condition for real grid"}
+ * @ARG1{rgrid *grid, "Grid to be evaluated"}
+ * @ARG2{INT i, "Grid index (x)"}
+ * @ARG3{INT j, "Grid index (y)"}
+ * @ARG4{INT k, "Grid index (z)"}
+ * @RVAL{REAL, "Returns grid value subject to the boundary condition"}
  * 
  */
 
@@ -51,14 +49,13 @@ EXPORT REAL rgrid_value_outside_neumann(rgrid *grid, INT i, INT j, INT k) {
 }
 
 /*
- * Periodic boundary condition.
- *
- * grid = grid to be evaluated (rgrid *; input).
- * i    = grid index (INT; input).
- * j    = grid index (INT; input).
- * k    = grid index (INT; input).
- *
- * Returns grid value subject to the boundary condition.
+ * @FUNC{rgrid_value_outside_periodic, "Periodic boundary condition (real)"}
+ * @DESC{"Periodic boundary condition for real grid"}
+ * @ARG1{rgrid *grid, "Grid to be evaluated"}
+ * @ARG2{INT i, "Grid index (x)"}
+ * @ARG3{INT j, "Grid index (y)"}
+ * @ARG4{INT k, "Grid index (z)"}
+ * @RVAL{REAL, "Returns grid value subject to the boundary condition"}
  * 
  */
 
