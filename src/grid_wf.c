@@ -9,28 +9,17 @@
 extern char grid_analyze_method;
 
 /*
- * Allocate wavefunction.
- *
- * nx         = number of spatial grid points along x (INT).
- * ny         = number of spatial grid points along y (INT).
- * nz         = number of spatial grid points along z (INT).
- * step       = spatial step size (REAL).
- * mass       = mass of the particle corresponding to this wavefunction (REAL).
- * boundary   = boundary condition (char):
- *              WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition.
- *              WF_NEUMANN_BOUNDARY   = Neumann boundary condition.
- *              WF_PERIODIC_BOUNDARY  = Periodic boundary condition.
- * propagator = which time propagator to use for this wavefunction (char):
- *              WF_2ND_ORDER_FFT      = 2nd order in time (FFT).
- *              WF_4TH_ORDER_FFT      = 4th order in time (FFT).
- *              WF_2ND_ORDER_CFFT     = 2nd order in time (FFT with cutoff in k-space).
- *              WF_4TH_ORDER_CFFT     = 4th order in time (FFT with cutoff in k-space).
- *              WF_2ND_ORDER_CN       = 2nd order in time with Crank-Nicolson propagator.
- *              WF_4TH_ORDER_CN       = 4th order in time with Crank-Nicolson propagator.
- * id         = String identifier for the grid (for debugging; char *; input).
- *
- * Return value is a pointer to the allocated wavefunction.
- * This routine returns NULL if allocation fails.
+ * @FUNC{grid_wf_alloc, "Allocate wavefunction"}
+ * @DESC{"This function allocates memory for wavefunction"}
+ * @ARG1{INT nx, "Number of spatial grid points along x (runs slowest in memory)"}
+ * @ARG2{INT ny, "Number of spatial grid points along y"}
+ * @ARG3{INT nz, "Number of spatial grid points along z (runs fastest in memory)"}
+ * @ARG4{REAL step, "Spatial grid step size"}
+ * @ARG5{REAL mass, "Mass of the particle corresponding to this wavefunction"}
+ * @ARG6{char boundary, "Boundary condition: WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition, WF_NEUMANN_BOUNDARY = Neumann boundary condition, WF_PERIODIC_BOUNDARY = Periodic boundary condition"}
+ * @ARG7{char propagator, "Which time propagator to use for this wavefunction: WF_2ND_ORDER_FFT = 2nd order in time (FFT), WF_4TH_ORDER_FFT = 4th order in time (FFT), WF_2ND_ORDER_CFFT = 2nd order in time (FFT with cutoff in k-space), WF_4TH_ORDER_CFFT = 4th order in time (FFT with cutoff in k-space), WF_2ND_ORDER_CN = 2nd order in time with Crank-Nicolson propagator, WF_4TH_ORDER_CN = 4th order in time with Crank-Nicolson propagator"}
+ * @ARG8{char *id, "String identifier for the grid"}
+ * @RVAL{cgrid *, "Return value is a pointer to the allocated wavefunction. This routine returns NULL if allocation fails"}
  *
  */
 
@@ -92,20 +81,17 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
 }
 
 /*
- * Set up absorbing boundaries.
- *
- * gwf  = wavefunction (wf *; input/output).
- * gwfp = predict wavefunction (wf *; input/output). Set to NULL if predict-correct not used.
- * lx   = lower bound index (x) for the boundary (INT; input).
- * hx   = upper bound index (x) for the boundary (INT; input).
- * ly   = lower bound index (y) for the boundary (INT; input).
- * hy   = upper bound index (y) for the boundary (INT; input).
- * lz   = lower bound index (z) for the boundary (INT; input).
- * hz   = upper bound index (z) for the boundary (INT; input).
- *
- * To clear boundaries, call with lx = hx = ly = hy = lz = hz = 0.
- *
- * No return value.
+ * @FUNC{grid_wf_boundary, "Set up absorbing boundaries"}
+ * @DESC{"Set up absorbing boundaries. To clear the boundaries, call with lx = hx = ly = hy = lz = hz = 0"}
+ * @ARG1{wf *gwf, "Wavefunction"}
+ * @ARG2{wf *gwfp, "Predict wavefunction. Set to NULL if predict-correct not used"}
+ * @ARG3{INT lx, "Lower bound index (x) for the boundary"}
+ * @ARG4{INT hx, "Upper bound index (x) for the boundary"}
+ * @ARG5{INT ly, "Lower bound index (y) for the boundary"}
+ * @ARG6{INT hy, "Upper bound index (y) for the boundary"}
+ * @ARG7{INT lz, "Lower bound index (z) for the boundary"}
+ * @ARG8{INT hz, "Upper bound index (z) for the boundary"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -133,12 +119,11 @@ EXPORT void grid_wf_boundary(wf *gwf, wf *gwfp, INT lx, INT hx, INT ly, INT hy, 
 }
 
 /*
- * "Clone" a wave function: Allocate a wave function with idential parameters.
- *
- * gwf = Wavefunction to be cloned (wf *; input).
- * id  = Comment string describing the WF (char *; input).
- *
- * Returns pointer to new wave function (wf *).
+ * @FUNC{grid_wf_clone, "Clone wavefunction"}
+ * @DESC{"Clone a wavefunction. Allocate new wavefunction with idential parameters"}
+ * @ARG1{wf *gwf, "Wavefunction to be cloned"}
+ * @ARG2{char *id, "Comment string describing the WF"}
+ * @RVAL{wf *, "Returns pointer to new wavefunction"}
  *
  */
 
@@ -161,11 +146,10 @@ EXPORT wf *grid_wf_clone(wf *gwf, char *id) {
 }
 
 /*
- * Free wavefunction.
- *
- * gwf = wavefunction to be freed (wf *).
- *
- * No return value.
+ * @FUNC{grid_wf_free, "Free wavefunction"}
+ * @DESC{"Free wavefunction memory"}
+ * @ARG1{wf *gwf, "Wavefunction to be freed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -181,15 +165,19 @@ EXPORT void grid_wf_free(wf *gwf) {
 }
 
 /* 
- * Absorbing boundary amplitude (between zero and one).
- *
- * i           = Current index along X (INT; input).
- * j           = Current index along Y (INT; input).
- * k           = Current index along Z (INT; input).
- * data        = Pointer to struct grid_abs holding values for specifying the absorbing region (void *; INPUT).
- *               This will specify amp, lx, hx, ly, hy, lz, hz.
- * 
- * Returns the scaling factor for imaginary time. The value is between 0 (regular domain) and > 1.0 (in absorbing domain). 
+ * @FUNC{grid_wf_absorb, "Absorbing boundary amplitude"}
+ * @DESC{"Return the absorbing boundary amplitude (between zero and one) at a given grid point. This is zero
+          in the regular domain (real time) whereas it is non-zero in the absorbing region (imaginary time)"}
+ * @ARG1{INT i, "Current index along x"}
+ * @ARG2{INT j, "Current index along y"}
+ * @ARG3{INT k, "Current index along z"}
+ * @ARG4{INT lx, "Lower bound index (x) for the boundary"}
+ * @ARG5{INT hx, "Upper bound index (x) for the boundary"}
+ * @ARG6{INT ly, "Lower bound index (y) for the boundary"}
+ * @ARG7{INT hy, "Upper bound index (y) for the boundary"}
+ * @ARG8{INT lz, "Lower bound index (z) for the boundary"}
+ * @ARG9{INT hz, "Upper bound index (z) for the boundary"}
+ * @RVAL{REAL, "Returns the scaling factor between 0.0 and 1.0"}
  *
  */
 
@@ -214,13 +202,12 @@ EXPORT REAL grid_wf_absorb(INT i, INT j, INT k, INT lx, INT hx, INT ly, INT hy, 
 }
 
 /*
- * Calculate total energy for the wavefunction. 
- * Includes -E_{kin} * n if the frame of reference has momentum != 0.
- *
- * gwf       = wavefunction for the energy calculation (wf *).
- * potential = grid containing the potential (rgrid *).
- *
- * Returns the energy (REAL).
+ * @FUNC{grid_wf_energy, "Total energy of wavefunction"}
+ * @DESC{"Calculate total energy for the wavefunction. This includes $-E_{kin} * n$ ($n$ is the number
+          of particles), if the frame of reference has momentum != 0"}
+ * @ARG1{wf *gwf, "Wavefunction for the energy calculation"}
+ * @ARG2{rgrid *potential, "Grid containing the potential energy"}
+ * @RVAL{REAL, "Returns the total energy"}
  *
  */
 
@@ -233,12 +220,11 @@ EXPORT REAL grid_wf_energy(wf *gwf, rgrid *potential) {
 }
 
 /*
- * Calculate kinetic energy for the wavefunction. 
- * Includes -E_{kin} * n if the frame of reference has momentum != 0.
- *
- * gwf       = wavefunction for the energy calculation (wf *).
- *
- * Returns the energy (REAL).
+ * @FUNC{grid_wf_kinetic_energy, "Kinetic energy of wavefunction"}
+ * @DESC{"Calculate kinetic energy for the wavefunction. This includes $-E_{kin} * n$ 
+          ($n$ is the number of particles), if the frame of reference has momentum != 0"}
+ * @ARG1{wf *gwf, "Wavefunction for kinetic energy calculation"}
+ * @RVAL{REAL, "Returns the kinetic energy"}
  *
  */
 
@@ -248,12 +234,11 @@ EXPORT REAL grid_wf_kinetic_energy(wf *gwf) {
 }
 
 /*
- * Calcucate potential energy.
- * 
- * gwf       = wavefunction for potential energy calculation (wf *).
- * potential = potential energy (rgrid *).
- *
- * Returns the potential energy.
+ * @FUNC{grid_wf_potential_energy, "Potential energy of wavefunction"}
+ * @DESC{"Calcucate potential energy of wavefunction"}
+ * @ARG1{wf *gwf, "Wavefunction for potential energy calculation"}
+ * @ARG2{rgrid *potential, "Potential energy"}
+ * @RVAL{REAL, "Returns the potential energy"}
  *
  */
 
@@ -263,16 +248,15 @@ EXPORT REAL grid_wf_potential_energy(wf *gwf, rgrid *potential) {
 }
 
 /*
- * Propagate (PREDICT) wavefunction in time subject to given potential.
- *
- * gwf         = wavefunction to be propagated; wf up to kinetic propagation (wf *).
- * gwfp        = wavefunction to be propagated; predicted (wf *).
- * potential   = grid containing the potential (cgrid *).
- * time        = time step (REAL complex). Note this may be either real or imaginary.
- *
- * No return value.
- *
- * NOTE: FFT can only do absorption for the potential part (CN does both).
+ * @FUNC{grid_wf_propagate_predict, "Propagate wavefunction (PREDICT)"}
+ * @DESC{"Propagate (PREDICT) wavefunction in time subject to given potential.
+         FFT propagation can only do absorption for the potential part whereas
+         CN can do it for both"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated; wf up to kinetic propagation"}
+ * @ARG2{wf *gwfp, "Wavefunction to be propagated; predicted"}
+ * @ARG3{cgrid *potential, "Grid containing the potential"}
+ * @ARG4{REAL complex time, "Propagation time step. Note this can include real and imaginary parts"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -333,13 +317,12 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
 }
 
 /*
- * Propagate (CORRECT) wavefunction in time subject to given potential.
- *
- * gwf         = wavefunction to be propagated (wf *).
- * potential   = grid containing the potential (cgrid *).
- * time        = time step (REAL complex). Note this may be either real or imaginary.
- *
- * No return value.
+ * @FUNC{grid_wf_propagate_correct, "Propagate wavefunction (CORRECT)"}
+ * @DESC{"Propagate (CORRECT) wavefunction in time subject to given potential"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{cgrid *potential, "Grid containing the potential"}
+ * @ARG3{REAL complex time, "Time step. Note that this can have real and imaginary parts"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -381,13 +364,12 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
 }
 
 /*
- * Propagate wavefunction in time subject to given potential.
- *
- * gwf         = wavefunction to be propagated (wf *).
- * potential   = grid containing the potential (cgrid *).
- * time        = time step (REAL complex). Note this may be either real or imaginary.
- *
- * No return value.
+ * @FUNC{grid_wf_propagate, "Propagate wavefunction"}
+ * @DESC{"Propagate wavefunction in time subject to given potential"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{cgrid *potential, "Grid containing the potential"}
+ * @ARG3{REAL complex time, "Time step. Note that this may have real and imaginary parts"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -550,14 +532,13 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
 }
 
 /*
- * Auxiliary routine to propagate potential energy (only used with FFT propagation of kinetic energy; CN includes potential).
- *
- * gwf       = wavefunction to be propagated (wf *).
- * tstep     = time step (REAL complex).
- * potential = grid containing the potential (cgrid *). If NULL, no propagation needed.
- * cons      = constant term to add to potential (REAL; input).
- *
- * No return value.
+ * @FUNC{grid_wf_propagate_potential, "Propagate potential operator"}
+ * @DESC{"Auxiliary routine to propagate potential energy"}
+ * @ARG1{wf *gwf, "Wavefunction to be propagated"}
+ * @ARG2{REAL complex tstep, "Time step"}
+ * @ARG3{cgrid *potential, "Grid containing the potential. If NULL, no propagation needed"}
+ * @ARG4{REAL cons, "Constant term to add to potential (usually zero)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -595,12 +576,11 @@ EXPORT void grid_wf_propagate_potential(wf *gwf, REAL complex tstep, cgrid *pote
 }
 
 /*
- * Produce density grid from a given wavefunction.
- *
- * gwf     = wavefunction (wf *).
- * density = output density grid (rgrid *).
- *
- * No return value.
+ * @FUNC{grid_wf_density, "Density of wavefunction"}
+ * @DESC{"Produce density grid from a given wavefunction"}
+ * @ARG1{wf *gwf, "Wavefunction"}
+ * @ARG2{rgrid *density, "Output density grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -623,11 +603,10 @@ EXPORT inline void grid_wf_density(wf *gwf, rgrid *density) {
 }
 
 /*
- * Zero wavefunction.
- *
- * gwf = wavefunction to be zeroed (wf *).
- *
- * No return value.
+ * @FUNC{grid_wf_zero, "Zero wavefunction"}
+ * @DESC{"Zero wavefunction"}
+ * @ARG1{wf *gwf, "Wavefunction to be zeroed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -637,12 +616,11 @@ EXPORT inline void grid_wf_zero(wf *gwf) {
 }
 
 /*
- * Set wavefunction to some constant value.
- *
- * gwf = wavefunction to be set (wf *).
- * c   = value (REAL complex).
- *
- * No return value.
+ * @FUNC{grid_wf_constant, "Set wavafunction to constant value"}
+ * @DESC{"Set wavefunction to some constant value"}
+ * @ARG1{wf *gwf, "Wavefunction to be set"}
+ * @ARG2{REAL complex c, "Value"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -652,13 +630,14 @@ EXPORT inline void grid_wf_constant(wf *gwf, REAL complex c) {
 }
 
 /*
- * Map a given function on a wavefunction.
- *
- * gwf  = wavefunction where function will be mapped to (wf *).
- * func = function providing the mapping (REAL complex (*)(void *, REAL, REAL, REAL)).
- * farg = optional argument for passing parameters to func (void *).
- *
- * No return value.
+ * @FUNC{grid_wf_map, "Map wavefunction"}
+ * @DESC{"Map a given function to a wavefunction. The arguments to the user specified function are:
+          user parameters (void *; may be NULL) and the current x, y, z coordinates. The function
+          must return REAL complex type data"}
+ * @ARG1{wf *gwf, "Wavefunction where function will be mapped to"}
+ * @ARG2{REAL complex (*func), "Function providing the mapping"}
+ * @ARG3{void *farg, "Optional argument for passing parameters to func"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -668,11 +647,10 @@ EXPORT inline void grid_wf_map(wf *gwf, REAL complex (*func)(void *arg, REAL x, 
 }
 
 /*
- * Calculate the norm of the given wavefunction.
- *
- * gwf = wavefunction for the calculation (wf *).
- *
- * Returns the norm (REAL).
+ * @FUNC{grid_wf_norm, "Wavefunction norm"}
+ * @DESC{"Calculate the norm of the given wavefunction"}
+ * @ARG1{wf *gwf, "Wavefunction for the calculation"}
+ * @RVAL{REAL, "Returns the norm"}
  *
  */
 
@@ -682,11 +660,10 @@ EXPORT inline REAL grid_wf_norm(wf *gwf) {
 }
 
 /*
- * Normalize wavefunction (to the value given in gwf->norm).
- *
- * gwf = wavefunction to be normalized (wf *).
- *
- * Returns the normalization constant (REAL).
+ * @FUNC{grid_wf_normalize, "Normalize wavefunction"}
+ * @DESC{"Normalize wavefunction (to the value given in gwf-$>$norm)"}
+ * @ARG1{wf *gwf, "Wavefunction to be normalized"}
+ * @RVAL{REAL, "Returns the normalization constant applied"}
  *
  */
 
@@ -699,12 +676,11 @@ EXPORT inline REAL grid_wf_normalize(wf *gwf) {
 }
 
 /*
- * Calculate overlap between two wavefunctions.
- *
- * gwfa = 1st wavefunction (wf *).
- * gwfb = 2nd wavefunction (wf *).
- *
- * Returns the overlap (REAL complex).
+ * @FUNC{grid_wf_overlap, "Overlap between wavefunctions"}
+ * @DESC{"Calculate overlap between two wavefunctions"}
+ * @ARG1{wf *gwfa, "1st wavefunction"}
+ * @ARG2{wf *gwfb, "2nd wavefunction"}
+ * @RVAL{REAL complex, "Returns the overlap"}
  *
  */
 
@@ -714,16 +690,14 @@ EXPORT inline REAL complex grid_wf_overlap(wf *gwfa, wf *gwfb) {
 }
 
 /*
- * Merge two wavefunctions according to: wf = (1 - alpha(r)) wfr + alpha(r) wfi.
- * alpha is computed by grid_wf_absorb().
- *
- * Used by FFT absorbing BC. Not to be called from user programs.
- *
- * wf    = Resulting wave functon (wf *; output).
- * wfr   = Wave function (the grid only) from propagating in real time (cgrid *; input).
- * wfi   = Wave function (the grid only) from propagating in imaginary time (cgrid *; input).
- *
- * No return value.
+ * @FUNC{grid_wf_merge, "Merge two wavefunctions"}
+ * @DESC{"Merge two wavefunctions according to: wf = (1 - alpha(r)) wfr + alpha(r) wfi.
+          alpha is computed by grid_wf_absorb(). Used by FFT absorbing BC. 
+          Should be no need to call it from user programs"}
+ * @ARG1{wf *wf, "Resulting wave functon"}
+ * @ARG2{wf *wfr, "Wavefunction (the grid only) from propagating in real time"}
+ * @ARG3{wf *wfi, "Wavefunction (the grid only) from propagating in imaginary time"}
+ * @RVAL{void, "No return value"}
  *
  */ 
 
