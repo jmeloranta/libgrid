@@ -17,13 +17,14 @@
 static char init = 0;
 
 /* 
- * Initialize the random number generator.
- *
- * seed = See value for the radom number generator (INT).
- *        Set to zero to take the seed from current wallclock time.
- *
- * NOTE: This is not thread safe. Also if cuda_status is off, when this is called,
- *       curand initialization is skipped!
+ * @FUNC{grid_random_seed, "Set random number generator seed"}
+ * @DESC{"Initialize the random number generator"}
+ * @ARG1{INT seed, "Set value for the radom number generator. 
+                    Set to zero to take the seed from current wallclock time.
+                    This is not OpenMP thread safe as it uses drand48().
+                    Also if cuda_status is off, when this is called,
+                    curand initialization is skipped"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -40,12 +41,11 @@ EXPORT void grid_random_seed(INT seed) {
 }
 
 /*
- * Add uniform random numbers to grid between -scale and scale.
- *
- * grid  = Grid where the random numbers are added to (rgrid *).
- * scale = Numbers are produced between -scale and scale (REAL).
- *
- * No return value.
+ * @FUNC{rgrid_random_uniform, "Add uniformly distributed random numbers to real grid"}
+ * @DESC{"Add uniform random numbers to grid between -scale and scale"}
+ * @ARG1{rgrid *grid, "Grid where the random numbers are added to"}
+ * @ARG2{REAL scale, "Numbers are produced between -scale and scale"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -70,12 +70,11 @@ EXPORT void rgrid_random_uniform(rgrid *grid, REAL scale) {
 }
 
 /* 
- * Add normal random numbers to grid between -scale and scale.
- * 
- * grid  = Grid where the random numbers are added to (rgrid *).
- * scale = Width of the distribution -scale, scale (REAL).
- * 
- * No return value.
+ * @FUNC{rgrid_random_normal, "Add normal distributed random numbers to real grid"}
+ * @DESC{"Add normal random numbers to grid between -scale and scale"}
+ * @ARG1{rgrid *grid, "Grid where the random numbers are added to"}
+ * @ARG2{REAL scale, "Width of the distribution -scale, scale"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -119,12 +118,11 @@ EXPORT void rgrid_random_normal(rgrid *grid, REAL scale) {
 }
 
 /*
- * Add unform random numbers to complex grid.
- *
- * grid  = Grid where the random numbers are added to (cgrid *).
- * scale = Scaling factor for random numbers (-scale to scale). Note that this is complex number allowing to scale each component separately (REAL complex).
- *
- * No return value.
+ * @FUNC{cgrid_random_uniform, "Add uniformly distributed random numbers to complex grid"}
+ * @DESC{"Add unform random numbers to complex grid"}
+ * @ARG1{cgrid *grid, "Grid where the random numbers are added to"}
+ * @ARG2{REAL complex scale, "Scaling factor for random numbers (-scale to scale). Note that this is complex number allowing to scale each component separately"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -147,13 +145,11 @@ EXPORT void cgrid_random_uniform(cgrid *grid, REAL complex scale) {
 }
 
 /* 
- *
- * Add normal random numbers to complex grid.
- *
- * grid  = Grid where the random numbers are added to (cgrid *).
- * scale = Scaling factor for random numbers (-scale to scale). Note that this is complex number allowing to scale each component separately (REAL complex).
- *
- * No return value.
+ * @FUNC{cgrid_random_normal, "Add normal distributed random numbers to complex grid"}x
+ * @DESC{"Add normal random numbers to complex grid"}
+ * @ARG1{cgrid *grid, "Grid where the random numbers are added to"}
+ * @ARG2{REAL complex scale, "Scaling factor for random numbers (-scale to scale). Note that this is complex number allowing to scale each component separately"}
+ * @RVAL{void, "No return value"}
  *
  */
 

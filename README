@@ -3,12 +3,8 @@ focus on solving linear/non-linear Schrodinger equation.
 
 See documentation and license information under doc/ directory.
 
-List of people who contributed to the code:
-
-1) Lauri Lehtovaara
-2) David Mateo
-3) Jussi Eloranta (eloranta@aa6kj.hopto.org)
+Libgrid was written by Jussi Eloranta (eloranta@aa6kj.hopto.org) with contributions 
+from Lauri Lehtovaara and David Mateo.
 
 This project was partly funded by National Science Foundation grants CHE-0949057, CHE-1262306 
 and DMR-1205734. For license information see doc/GPL.txt .
-
