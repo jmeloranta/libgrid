@@ -428,7 +428,7 @@ extern "C" void rgrid_cuda_multiplyW(gpu_mem_block *grid, CUREAL c, INT nx, INT 
  *
  */
 
-__global__ void rgrid_cuda_fft_multiply_gpu(CUCOMPLEX *dst, CUREAL c, INT nx, INT ny, INT nz) {
+__global__ void rgrid_cuda_fft_multiply_gpu(CUCOMPLEX *dst, CUCOMPLEX c, INT nx, INT ny, INT nz) {
 
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
 
@@ -443,14 +443,14 @@ __global__ void rgrid_cuda_fft_multiply_gpu(CUCOMPLEX *dst, CUREAL c, INT nx, IN
  * Multiply (complex) grid by a constant (in Fourier space).
  *
  * st       = Grid to be operated on (gpu_mem_block *; input/output).
- * c        = Multiplying constant (CUREAL; input).
+ * c        = Multiplying constant (CUCOMPLEX; input).
  * nx       = # of points along x (INT; input).
  * ny       = # of points along y (INT; input).
  * nz       = # of points along z (INT; input).
  *
  */
 
-extern "C" void rgrid_cuda_fft_multiplyW(gpu_mem_block *grid, CUREAL c, INT nx, INT ny, INT nz) {
+extern "C" void rgrid_cuda_fft_multiplyW(gpu_mem_block *grid, CUCOMPLEX c, INT nx, INT ny, INT nz) {
 
   SETUP_VARIABLES_RECIPROCAL(grid);
   cudaXtDesc *GRID = grid->gpu_info->descriptor;

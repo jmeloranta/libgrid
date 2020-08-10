@@ -199,11 +199,13 @@ EXPORT char rgrid_cuda_multiply(rgrid *grid, REAL c) {
  * Multiply grid by a constant (in fft space).
  *
  * grid = grid to be multiplied (rgrid *; input/output).
- * c    = multiplier (REAL; input).
+ * c    = multiplier (REAL complex; input).
  *
  */
 
-EXPORT char rgrid_cuda_fft_multiply(rgrid *grid, REAL c) {
+EXPORT char rgrid_cuda_fft_multiply(rgrid *grid, REAL complex c) {
+
+  CUCOMPLEX cc;
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -212,7 +214,9 @@ EXPORT char rgrid_cuda_fft_multiply(rgrid *grid, REAL c) {
 
   if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle_c2r, grid->id, 1) < 0) return -1;
 
-  rgrid_cuda_fft_multiplyW(cuda_find_block(grid->value), c, grid->nx, grid->ny, grid->nz);
+  cc.x = CREAL(c);
+  cc.y = CIMAG(c);
+  rgrid_cuda_fft_multiplyW(cuda_find_block(grid->value), cc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }

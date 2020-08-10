@@ -1752,14 +1752,10 @@ EXPORT REAL rgrid_weighted_integral_of_square(rgrid *grid, REAL (*weight)(void *
 }
 
 /*
- * Perform Fast Fourier Transformation of a grid.
- *
- * grid = grid to be Fourier transformed (input/output) (rgrid *; input/output).
- *
- * No return value.
- *
- * Notes: - The input grid is overwritten with the output.
- *        - No normalization is performed.
+ * @FUNC{rgrid_fft, "FFT of real grid"}
+ * @DESC{"Perform Fast Fourier Transformation (FFT) of real grid (in-place). No normalization is performed"}
+ * @ARG1{rgrid *grid, "Grid to be Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1773,14 +1769,10 @@ EXPORT void rgrid_fft(rgrid *grid) {
 }
 
 /*
- * Perform inverse Fast Fourier Transformation of a grid.
- *
- * grid = grid to be inverse Fourier transformed (input/output) (rgrid *; input/output).
- *
- * No return value.
- *
- * Notes: - The input grid is overwritten with the output.
- *        - No normalization.
+ * @FUNC{rgrid_inverse_fft, "Inverse FFT of real grid"}
+ * @DESC{"Perform noninverse Fast Fourier Transformation of a grid (in-place). No normalization is performed"}
+ * @ARG1{rgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1794,14 +1786,11 @@ EXPORT void rgrid_inverse_fft(rgrid *grid) {
 }
  
 /*
- * Perform scaled inverse Fast Fourier Transformation of a grid.
- *
- * grid = grid to be inverse Fourier transformed (input/output) (rgrid *; input/output).
- * c    = scaling factor (i.e. the output is multiplied by this constant) (REAL; input).
- *
- * No return value.
- *
- * Note: The input grid is overwritten with the output.
+ * @FUNC{rgrid_scaled_inverse_fft, "Scaled inverse FFT of real grid"}
+ * @DESC{"Perform scaled inverse Fast Fourier Transformation of a grid"}
+ * @ARG1{rgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @ARG2{REAL c, "Scaling factor"}
+ * @RVAL{void, "No return value"}
  *
  */
  
@@ -1812,13 +1801,10 @@ EXPORT void rgrid_scaled_inverse_fft(rgrid *grid, REAL c) {
 }
 
 /*
- * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm.
- *
- * grid = grid to be inverse Fourier transformed (rgrid *; input/output).
- *
- * No return value.
- *
- * Note: The input grid is overwritten with the output.
+ * @FUNC{rgrid_inverse_fft_norm, "Normalized inverse FFT of real grid"}
+ * @DESC{"Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm (number of grid points)"}
+ * @ARG1{rgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1828,13 +1814,10 @@ EXPORT void rgrid_inverse_fft_norm(rgrid *grid) {
 }
 
 /*
- * Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm (including spatial step).
- *
- * grid = grid to be inverse Fourier transformed (rgrid *; input/output).
- *
- * No return value.
- *
- * Note: The input grid is overwritten with the output.
+ * @FUNC{rgrid_inverse_fft_norm2, "Normalized inverse FFT of real grid (spatial step included)"}
+ * @DESC{"Perform inverse Fast Fourier Transformation of a grid scaled by FFT norm (including spatial step)"}
+ * @ARG1{rgrid *grid, "Grid to be inverse Fourier transformed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1844,26 +1827,21 @@ EXPORT void rgrid_inverse_fft_norm2(rgrid *grid) {
 }
 
 /*
- * Convolute FFT transformed grids (periodic). To apply this on grids grida and gridb and place the result in gridc:
- * rgrid_fft(grida);
- * rgrid_fft(gridb);
- * rgrid_convolute(gridc, grida, gridb);
- * rgrid_inverse_fft_norm2(gridc);    // note: must be norm2
- * gridc now contains the convolution of grida and gridb.
- *
- * grida = 1st grid to be convoluted (rgrid *; input).
- * gridb = 2nd grid to be convoluted (rgrid *; input).
- * gridc = output (rgrid *; output).
- *
- * No return value.
- *
- * Notes: - the input/output grids may be the same.
- *        - this no longer multiplies the result by the norm (use *_inverse_fft_norm2).
- *
- * Convert from FFT to Fourier integral:
- *
- * Forward: Multiply FFT result by step^3.
- * Inverse: Multiply FFT result by (1 / (step * N))^3.
+ * @FUNC{rgrid_fft_convolute, "Convolute two real grids in reciprocal space"}
+ * @DESC{"Convolute FFT transformed grids. To apply this on grids grida and gridb and 
+          place the result in gridc (integral):\\
+          rgrid_fft(grida);\\
+          rgrid_fft(gridb);\\
+          rgrid_convolute(gridc, grida, gridb);\\
+          rgrid_inverse_fft_norm2(gridc); // includes multiplication by step$^3$\\
+          gridc now contains the convolution of grida and gridb\\
+          In general,to convert from FFT to Fourier integral:
+          Forward: Multiply FFT result by step$^3$\\
+          Inverse: Multiply FFT result by (1 / (step * N))$^3$"}
+ * @ARG1{rgrid *grida, "1st grid to be convoluted"}
+ * @ARG2{rgrid *gridb, "2nd grid to be convoluted"}
+ * @ARG3{rgrid *gridc, "output"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1901,13 +1879,12 @@ EXPORT void rgrid_fft_convolute(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * Add grids in Fourier space: gridc = grida + gridb.
- *
- * gridc = output (rgrid *; output).
- * grida = 1st grid (rgrid *; input).
- * gridb = 2nd grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{rgrid_fft_sum, "Sum real grids in reciprocal space"}
+ * @DESC{"Sum grids in the reciprocal space: gridc = grida + gridb"}
+ * @ARG1{rgrid *gridc, "Output grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1936,13 +1913,12 @@ EXPORT void rgrid_fft_sum(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * Multiply grids in Fourier space.
- *
- * gridc = output (rgrid *; output).
- * grida = 1st grid (rgrid *; input).
- * gridb = 2nd grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{rgrid_fft_product, "Product of real grids in reciprocal space"}
+ * @DESC{"Product of two grids in reciprocal space"}
+ * @ARG1{rgrid *gridc, "Output grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -1971,13 +1947,12 @@ EXPORT void rgrid_fft_product(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * Multiply conj(grida) * gridb in Fourier space.
- *
- * gridc = output (rgrid *; output).
- * grida = 1st grid (rgrid *; input).
- * gridb = 2nd grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{rgrid_fft_product_conj, "Conjugate product of real grids in reciprocal space"}
+ * @DESC{"Multiply conj(grida) * gridb in reciprocal space"}
+ * @ARG1{rgrid *gridc, "Output grid"}
+ * @ARG2{rgrid *grida, "1st source grid"}
+ * @ARG3{rgrid *gridb, "2nd source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2006,16 +1981,15 @@ EXPORT void rgrid_fft_product_conj(rgrid *gridc, rgrid *grida, rgrid *gridb) {
 }
 
 /*
- * Multiply grid by a constant in Fourier space (grid->value is complex) 
- *
- * grid = Grid to be multiplied (rgrid *; input/output).
- * c    = Multiply by this value (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_fft_multiply, "Multiply real grid by constant in reciprocal space"}
+ * @DESC{"Multiply grid by a constant in Fourier space (grid-$>$value is complex!)"}
+ * @ARG1{rgrid *grid, "Grid to be multiplied"}
+ * @ARG2{REAL complex c, "Multiply by this value"}
+ * @RVAL{void, "No return value"}
  *
  */
 
-EXPORT void rgrid_fft_multiply(rgrid *grid, REAL c) {
+EXPORT void rgrid_fft_multiply(rgrid *grid, REAL complex c) {
 
   INT ij, k, ijnz, nxy = grid->nx * grid->ny, nz = grid->nz2 / 2;
   REAL complex *value = (REAL complex *) grid->value;
@@ -2032,16 +2006,14 @@ EXPORT void rgrid_fft_multiply(rgrid *grid, REAL c) {
 }
 
 /*
- * Access grid point at given index (follows boundary condition).
- *
- * grid = grid to be accessed (rgrid *; input).
- * i    = index along x (INT; input).
- * j    = index along y (INT; input).
- * k    = index along z (INT; input).
- *
- * Returns grid value at index (i, j, k) (REAL).
- *
- * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ * @FUNC{rgrid_value_at_index, "Access real grid point at given index"}
+ * @DESC{"Access grid point at given index (follows boundary condition).
+          Note that this is *very* slow on CUDA as it transfers each element individually"}
+ * @ARG1{rgrid *grid, "Grid to be accessed"}
+ * @ARG2{INT i, "Index along x"}
+ * @ARG3{INT j, "Index along y"}
+ * @ARG4{INT k, "Index along z"}
+ * @RVAL{REAL, "Returns grid value at index (i, j, k)"}
  *
  */
 
@@ -2077,17 +2049,15 @@ EXPORT inline REAL rgrid_value_at_index(rgrid *grid, INT i, INT j, INT k) {
 }
 
 /*
- * Set value to a grid point at given index.
- *
- * grid  = grid to be accessed (rgrid *; output).
- * i     = index along x (INT; input).
- * j     = index along y (INT; input).
- * k     = index along z (INT; input).
- * value = value to be set at (i, j, k) (REAL; input).
- *
- * No return value.
- *
- * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ * @FUNC{rgrid_value_to_index, "Write value to real grid at given index"}
+ * @DESC{"Set value to a grid point at given index. 
+          Note that this is *very* slow on CUDA as it transfers each element individually"}
+ * @ARG1{rgrid *grid, "Grid to be accessed"}
+ * @ARG2{INT i, "Index along x"}
+ * @ARG3{INT j, "Index along y"}
+ * @ARG4{INT k, "Index along z"}
+ * @ARG5{REAL value, "Value to be set at (i, j, k)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2124,16 +2094,14 @@ EXPORT inline void rgrid_value_to_index(rgrid *grid, INT i, INT j, INT k, REAL v
 }
 
 /*
- * Access grid point in Fourier space at given index (returns zere outside the grid).
- *
- * grid = grid to be accessed (rgrid *; input).
- * i    = index along x (INT; input).
- * j    = index along y (INT; input).
- * k    = index along z (INT; input).
- *
- * Returns grid value at index (i, j, k) (REAL complex).
- *
- * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ * @FUNC{rgrid_cvalue_at_index, "Access complex grid value at given index (reciprocal space)"}
+ * @DESC{"Access grid point in Fourier space at given index (returns zere outside the grid).
+          This is very slow on CUDA as it transfers each element individually"}
+ * @ARG1{rgrid *grid, "Grid to be accessed"}
+ * @ARG2{INT i, "Index along x"}
+ * @ARG3{INT j, "Index along y"}
+ * @ARG4{INT k, "Index along z"}
+ * @RVAL{REAL complex, "Returns grid value at index (i, j, k)"}
  *
  */
 
@@ -2175,17 +2143,15 @@ EXPORT inline REAL complex rgrid_cvalue_at_index(rgrid *grid, INT i, INT j, INT 
 }
 
 /*
- * Set grid point in Fourier space at given index.
- *
- * grid = grid to be accessed (rgrid *; input).
- * i    = index along x (INT; input).
- * j    = index along y (INT; input).
- * k    = index along z (INT; input).
- * value= value to be set at (i, j, k) (REAL comple; input).
- *
- * No return value.
- *
- * NOTE: This is *very* slow on cuda as it transfers each element individually.
+ * @FUNC{rgrid_cvalue_to_index, "Set complex value to grid point (reciprocal space)"}
+ * @DESC{"Set grid point in Fourier space at given index.
+          Note that this is very slow on CUDA as it transfers each element individually"}
+ * @ARG1{rgrid *grid, "Grid to be accessed"}
+ * @ARG2{INT i, "Index along x"}
+ * @ARG3{INT j, "Index along y"}
+ * @ARG4{INT k, "Index along z"}
+ * @ARG5{REAL complex value, "Value to be set at (i, j, k)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2229,14 +2195,13 @@ EXPORT inline void rgrid_cvalue_to_index(rgrid *grid, INT i, INT j, INT k, REAL 
 }
 
 /*
- * Access grid point at given (x,y,z) point using linear interpolation.
- *
- * grid = grid to be accessed (rgrid *; input).
- * x    = x value (REAL; input).
- * y    = y value (REAL; input).
- * z    = z value (REAL; input).
- *
- * Returns grid value at (x,y,z) (REAL).
+ * @FUNC{rgrid_value, "Access real grid point at (x, y, z) with linear interpolation"}
+ * @DESC{"Access grid point at given (x,y,z) point using linear interpolation"}
+ * @ARG1{rgrid *grid, "Grid to be accessed"}
+ * @ARG2{REAL x, "x value"}
+ * @ARG3{REAL y, "y value"}
+ * @ARG4{REAL z, "z value"}
+ * @RVAL{REAL, "Returns grid value at (x,y,z)"}
  *
  */
 
@@ -2291,12 +2256,11 @@ EXPORT inline REAL rgrid_value(rgrid *grid, REAL x, REAL y, REAL z) {
 }
 
 /*
- * Extrapolate between two different grid sizes.
- *
- * dest = Destination grid (rgrid *; output).
- * src  = Source grid (rgrid *; input).
- *
- * No return value.
+ * @FUNC{rgrid_extrapolate, "Extrapolate between different size real grids"}
+ * @DESC{"Extrapolate between two different grid sizes"}
+ * @ARG1{rgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *src, "Source grid"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2324,15 +2288,13 @@ EXPORT void rgrid_extrapolate(rgrid *dest, rgrid *src) {
 }
 
 /*
- * Rotate a grid by a given angle around the z-axis.
- *
- * in  = original grid (to be rotated) (rgrid *; input).
- * out = output grid (rotated) (rgrid *; output).
- * th  = rotation angle in radians (REAL; input).
- *
- * Note: The grids in and out CANNOT be the same.
- *
- * No return value.
+ * @FUNC{rgrid_rotate_z, "Rotate real grid around z-axis"}
+ * @DESC{"Rotate a grid by a given angle around the z-axis. Note that the in and out grids
+          CANNOT be the same"}
+ * @ARG1{rgrid *in, "Original grid (to be rotated)"}
+ * @ARG2{rgrid *out, "Output grid (rotated)"}
+ * @ARG3{REAL th, "Rotation angle in radians"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2357,11 +2319,10 @@ EXPORT void rgrid_rotate_z(rgrid *out, rgrid *in, REAL th) {
 }
 
 /*
- * Get the largest value contained in a grid.
- *
- * grid = Grid from which the largest value is to be searched from (rgrid *; input).
- *
- * Returns the largest value found (REAL).
+ * @FUNC{rgrid_max, "Find maximum value in real grid"}
+ * @DESC{"Get the largest value contained in a grid"}
+ * @ARG1{rgrid *grid, "Grid from which the largest value is to be searched from"}
+ * @RVAL{REAL, "Returns the largest value found"}
  *
  */
 
@@ -2385,11 +2346,10 @@ EXPORT REAL rgrid_max(rgrid *grid) {
 }
 
 /*
- * Get the smallest value in a grid.
- *
- * grid = Grid from which the smallest value is to be searched from (rgrid *; input).
- *
- * Returns the smallest value found (REAL).
+ * @FUNC{rgrid_min, "Find minimum value in real grid"}
+ * @DESC{"Get the smallest value contained in a grid"}
+ * @ARG1{rgrid *grid, "Grid from which the smallest value is to be searched from"}
+ * @RVAL{REAL, "Returns the smallest value found"}
  *
  */
 
@@ -2413,17 +2373,16 @@ EXPORT REAL rgrid_min(rgrid *grid) {
 }
 
 /*
- * Zero a given index range of a complex grid over [lx, hx[ X [ly, hy[ X [lz, hz[ .
- *
- * grid     = Grid to be operated on (cgrid *; input/output).
- * lx       = Lower limit for x index (INT; input).
- * hx       = Upper limit for x index (INT; input).
- * ly       = Lower limit for y index (INT; input).
- * hy       = Upper limit for y index (INT; input).
- * lz       = Lower limit for z index (INT; input).
- * hz       = Upper limit for z index (INT; input).
- *
- * No return value.
+ * @FUNC{rgrid_zero_index, "Zero given range in real grid"}
+ * @DESC{"Zero a given index range of a complex grid over $[lx, hx[$ X $[ly, hy[$ X $[lz, hz[$"}
+ * @ARG1{rgrid *grid, "Grid to be operated on"}
+ * @ARG2{INT lx, "Lower limit for x index"}
+ * @ARG3{INT hx, "Upper limit for x index"}
+ * @ARG4{INT ly, "Lower limit for y index"}
+ * @ARG5{INT hy, "Upper limit for y index"}
+ * @ARG6{INT lz, "Lower limit for z index"}
+ * @ARG7{INT hz, "Upper limit for z index"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2451,13 +2410,12 @@ EXPORT void rgrid_zero_index(rgrid *grid, INT lx, INT hx, INT ly, INT hy, INT lz
 }
 
 /*
- * Raise grid to integer power (fast).
- *
- * dst = Destination grid (rgrid *; output).
- * src = Source grid (rgrid *; input).
- * exponent = Exponent to be used (INT; input). This value can be negative.
- *
- * No return value.
+ * @FUNC{rgrid_ipower, "Rise real grid to integer power"}
+ * @DESC{"Raise grid to integer power (fast)"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src, "Source grid"}
+ * @ARG3{INT exponent, "Exponent to be used. This value can be negative"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2485,18 +2443,16 @@ EXPORT void rgrid_ipower(rgrid *dst, rgrid *src, INT exponent) {
 }
 
 /*
- * Set a value to given grid based on upper/lower limit thresholds of another grid (possibly the same).
- *
- * dest = destination grid (rgrid *; input/output).
- * src  = source grid for evaluating the thresholds (rgrid *; input).
- * ul   = upper limit threshold for the operation (REAL; input).
- * ll   = lower limit threshold for the operation (REAL; input).
- * uval = value to set when the upper limit was exceeded (REAL; input).
- * lval = value to set when the lower limit was exceeded (REAL; input).
- *
- * Source and destination may be the same.
- *
- * No return value.
+ * @FUNC{rgrid_threshold_clear, "Clear part of real grid based on threshold values"}
+ * @DESC{"Set a value to given grid based on upper/lower limit thresholds of another grid (possibly the same).
+          Note that the source and destination grids may be the same"}
+ * @ARG1{rgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *src, "Source grid for evaluating the thresholds"}
+ * @ARG3{REAL ul, "Upper limit threshold value"}
+ * @ARG4{REAL ll, "Lower limit threshold value"}x
+ * @ARG5{REAL uval, "Value to set when the upper limit was exceeded"}
+ * @ARG6{REAL lval, "Value to set when the lower limit was exceeded"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2525,28 +2481,24 @@ EXPORT void rgrid_threshold_clear(rgrid *dest, rgrid *src, REAL ul, REAL ll, REA
 }
 
 /*
- * Decompose a vector field into "compressible (irrotational)" (u) and "incompressible (rotational)" (w) parts:
- * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
- *
- * One can also take rot of both sides: rot v = rot w + rot u = rot w + rot grad q = rot w. So, 
- * u = grad q is the irrotational part and w is the is the rotational part.
- * 
- * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
- * The incompressible part is then w = v - u.
- *
- * vx = X component of the vector field to be decomposed (rgrid *; input).
- * vy = Y component of the vector field to be decomposed (rgrid *; input).
- * vz = Z component of the vector field to be decomposed (rgrid *; input).
- * ux = X component of the compressible vector field (rgrid *; output).
- * uy = Y component of the compressible vector field (rgrid *; output).
- * uz = Z component of the compressible vector field (rgrid *; output).
- * wx = X component of the incompressible vector field (rgrid *; output). May be NULL if not needed.
- * wy = Y component of the incompressible vector field (rgrid *; output). May be NULL if not needed.
- * wz = Z component of the incompressible vector field (rgrid *; output). May be NULL if not needed.
- *
- * No return value.
- *
- * Note: uses either FD or FFT based on grid_analyze_method.
+ * @FUNC{rgrid_hodge, "Hodge decomposition of vector field"}
+ * @DESC{"Decompose a vector field into compressible (irrotational) ($u$) and incompressible (rotational)
+          ($w$) parts: $v = w + u = w + \nabla q$ where $div w = 0$ and $u = \nabla q$ (Hodge's decomposition).
+          One can also take rot of both sides: $rot v = rot w + rot u = rot w + rot grad q = rot w$. So, 
+          $u = \nabla q$ is the irrotational part and $w$ is the is the rotational part.
+          This is performed through solving the Poisson equation: $\Delta q = div v$. Then $u = \nabla q$.
+          The incompressible part is then $w = v - u$.
+          Note that this routine uses either FD or FFT based on grid_analyze_method setting"}
+ * @ARG1{rgrid *vx, "X component of the vector field to be decomposed"}
+ * @ARG2{rgrid *vy, "Y component of the vector field to be decomposed"}
+ * @ARG3{rgrid *vz, "Z component of the vector field to be decomposed"}
+ * @ARG4{rgrid *ux, "X component of the compressible vector field"}
+ * @ARG5{rgrid *uy, "Y component of the compressible vector field"}
+ * @ARG6{rgrid *uz, "Z component of the compressible vector field"}
+ * @ARG7{rgrid *wx, "X component of the incompressible vector field. May be NULL if not needed"}
+ * @ARG8{rgrid *wy, "Y component of the incompressible vector field. May be NULL if not needed"}
+ * @ARG9{rgrid *wz, "Z component of the incompressible vector field. May be NULL if not needed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2585,25 +2537,13 @@ EXPORT void rgrid_hodge(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *ux, rgrid *uy, r
 }
 
 /*
- * Decompose a vector field into "compressible (irrotational)" (u) and "incompressible (rotational)" (w) parts:
- * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
- *
- * One can also take rot of both sides: rot v = rot w + rot u = rot w + rot grad q = rot w. So, 
- * u = grad q is the irrotational part and w is the is the rotational part.
- * 
- * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
- * The incompressible part is then w = v - u.
- *
- * This is special version of rgrid_hodge() such that it only computes the compressible part.
- *
- * vx        = X component of the vector field to be decomposed (rgrid *; input). Output: X component of compressible part.
- * vy        = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of compressible part.
- * vz        = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of compressible part.
- * workspace = Additional workspace required (rgrid *; output).
- *
- * No return value.
- *
- * Note: uses either FD or FFT based on grid_analyze_method.
+ * @FUNC{rgrid_hodge_comp, "Hodge decomposition of vector field (compressible)"}
+ * @DESC{"See documentation for rgrid_hodge(). This routine computes only the compressible portion"}
+ * @ARG1{rgrid *vx, "X component of the vector field to be decomposed. On exit: X component of compressible part"}
+ * @ARG2{rgrid *vy, "Y component of the vector field to be decomposed. On exit: Y component of compressible part"}
+ * @ARG3{rgrid *vz, "Z component of the vector field to be decomposed. On exit: Z component of compressible part"}
+ * @ARG4{rgrid *workspace, "Additional workspace required"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2633,24 +2573,14 @@ EXPORT void rgrid_hodge_comp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace) 
 }
 
 /*
- * Decompose a vector field into "compressible (irrotational)" (u) and "incompressible (rotational)" (w) parts:
- * v = w + u = w + \nabla q where div w = 0 and u = \nabla q (Hodge's decomposition).
- *
- * One can also take rot of both sides: rot v = rot w + rot u = rot w + rot grad q = rot w. So, 
- * u = grad q is the irrotational part and w is the is the rotational part.
- * 
- * This is performed through solving the Poisson equation: \Delta q = div v. Then u = \nabla q.
- * The incompressible part is then w = v - u.
- *
- * This is special version of rgrid_hodge() such that it only computes the incompressible part.
- *
- * vx         = X component of the vector field to be decomposed (rgrid *; input). Output: X component of incompressible part.
- * vy         = Y component of the vector field to be decomposed (rgrid *; input). Output: Y component of incompressible part.
- * vz         = Z component of the vector field to be decomposed (rgrid *; input). Output: Z component of incompressible part.
- * workspace  = Additional workspace required (rgrid *; output).
- * workspace2 = Additional workspace required (rgrid *; output).
- *
- * No return value.
+ * @FUNC{rgrid_hodge_incomp, "Hodge decomposition of vector field (incompressible)"}
+ * @DESC{"See documentation for rgrid_hodge(). This routine computes only the incompressible portion"}
+ * @ARG1{rgrid *vx, "X component of the vector field to be decomposed. On exit: X component of incompressible part"}
+ * @ARG2{rgrid *vy, "Y component of the vector field to be decomposed. On exit: Y component of incompressible part"}
+ * @ARG3{rgrid *vz, "Z component of the vector field to be decomposed. On exit: Z component of incompressible part"}
+ * @ARG4{rgrid *workspace, "Additional workspace required"}
+ * @ARG5{rgrid *workspace2, "Additional workspace required"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2689,18 +2619,17 @@ EXPORT void rgrid_hodge_incomp(rgrid *vx, rgrid *vy, rgrid *vz, rgrid *workspace
 }
 
 /*
- * Compute spherical shell average in real space with respect to the grid origin
- * (result 1-D grid). Normalized \sum grid(i) = N.
- *
- * input1  = Input grid 1 for averaging (rgrid *; input).
- * input2  = Input grid 2 for averaging (rgrid *; input). Can be NULL if N/A.
- * input3  = Input grid 3 for averaging (rgrid *; input). Can be NULL if N/A.
- * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
- * binstep = Binning step length (REAL; input).
- * nbins   = Number of bins requested (INT; input).
- * volel   = 1: direct sum or 0: radial average (char; input).
- *
- * No return value.
+ * @FUNC{rgrid_spherical_average, "Spherical average of real grid"}
+ * @DESC{"Compute spherical shell average in real space with respect to the grid origin
+          (result 1-D grid). Averaging can be done with up to three grids"}
+ * @ARG1{rgrid *input1, "Input grid 1 for averaging"}
+ * @ARG2{rgrid *input2, "Input grid 2 for averaging. Can be NULL if N/A"}
+ * @ARG3{rgrid *input3, "Input grid 3 for averaging. Can be NULL if N/A"}
+ * @ARG4{REAL *bins, "1-D array for the averaged values. This is an array with dimension equal to nbins"}
+ * @ARG5{REAL binstep, "Binning step length"}
+ * @ARG6{INT nbins, "Number of bins requested"}
+ * @ARG7{char volel, "1: direct sum or 0: radial average"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2763,20 +2692,19 @@ EXPORT void rgrid_spherical_average(rgrid *input1, rgrid *input2, rgrid *input3,
 }
 
 /*
- * Compute spherical shell average in the reciprocal space of power spectrum with respect to the grid origin
- * (result 1-D grid). Note: Uses power spectrum (Fourier space)! Normalization \sum grid(i) = N.
- *
- * input1  = Input grid 1 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT).
- * input2  = Input grid 2 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
- * input3  = Input grid 3 for averaging (rgrid *; input), but this complex data (i.e., *after* FFT). Can be NULL if N/A.
- * bins    = 1-D array for the averaged values (REAL *; output). This is an array with dimension equal to nbins.
- * binstep = Binning step length for k (REAL; input). 
- * nbins   = Number of bins requested (INT; input).
- * volel   = 2: direct sum, 1: Include the volume element or 0: just calculate radial average (char; input).
- *
- * No return value.
- *
- * Notes: - to compute E(k), grid should correspond to flux / sqrt(rho) = \sqrt(rho) * v.
+ * @FUNC{rgrid_spherical_average_reciprocal, "Spherical average in reciprocal space"}
+ * @DESC{"Compute spherical shell average in the reciprocal space of power spectrum 
+          with respect to the grid origin (result 1-D grid). This can be done over three (or less)
+          separate grids, This produces power spectrum, so the output is REAL.\\
+          Notes: To compute $E(k)$, grid should correspond to $flux / \sqrt(\rho) = \sqrt(\rho) v$"}
+ * @ARG1{rgrid *input1, "Input grid 1 for averaging, but this complex data (i.e., *after* FFT)"}
+ * @ARG2{rgrid *input2, "Input grid 2 for averaging, but this complex data (i.e., *after* FFT). Can be NULL if N/A"}
+ * @ARG3{rgrid *input3, "Input grid 3 for averaging, but this complex data (i.e., *after* FFT). Can be NULL if N/A"}
+ * @ARG4{REAL *bins, "1-D array for the averaged values. This is an array with dimension equal to nbins"}
+ * @ARG5{REAL binstep, "Binning step length for k"}
+ * @ARG6{INT nbins, "Number of bins requested"}
+ * @ARG7{char volel, "2: direct sum, 1: Include the volume element, or 0: just calculate radial average"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2851,16 +2779,14 @@ EXPORT void rgrid_spherical_average_reciprocal(rgrid *input1, rgrid *input2, rgr
 }
 
 /*
- * Calculate running average to smooth unwanted high freq. components.
+ * @FUNC{rgrid_npoint_smooth, "Running average of grid"}
+ * @DESC{"Calculate running average to smooth unwanted high frequency components.
+          Note that the destination and source grids cannot be the same"}
+ * @ARG1{rgrid *dest, "Destination grid"}
+ * @ARG2{rgrid *source, "Source grid"}
+ * @ARG3{INT npts, "Number of points used in running average"}
+ * @RVAL{void, "No return value"}
  *
- * dest   = destination grid (rgrid *).
- * source = source grid (rgrid *).
- * npts   = number of points used in running average (int). This smooths over +-npts points (effectively 2 X npts).
- *
- * No return value.
- *
- * Note: dest and source cannot be the same array.
- * 
  */
 
 EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
@@ -2901,13 +2827,14 @@ EXPORT void rgrid_npoint_smooth(rgrid *dest, rgrid *source, INT npts) {
 }
 
 /*
- * Apply user defined filter in Fourier space.
- *
- * grid   = Grid in Fourier space to be filtered (rgrid *; input/output).
- * func   = Filter function (REAL complex (*func)(void *farg, REAL kx, REAL ky, REAL kz); input).
- * farg   = Arguments to be passed to the function (void *; input).
- *
- * No return value.
+ * @FUNC{rgrid_fft_filter, "Apply user defined filter in reciprocal space"}
+ * @DESC{"Apply user defined filter in reciproca space.
+          The user filter function takes four arguments:
+          user data (void *) and kx,ky,kz coordinates (REAL)"}
+ * @ARG1{rgrid *grid, "Grid in reciprocal space to be filtered"}
+ * @ARG2{REAL complex *(func), "Filter function"}
+ * @ARG3{void *farg, "Optional arguments to be passed to the function (can be NULL)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2960,12 +2887,11 @@ EXPORT void rgrid_fft_filter(rgrid *grid, REAL complex (*func)(void *, REAL, REA
 }
 
 /*
- * Lock grid into host memory. This does nothing on pure CPU-based systems.
- * On GPU-based systems it forces a given grid to stay in host memory.
- *
- * grid = grid to be host-locked (rgrid *; input).
- * 
- * No return value.
+ * @FUNC{rgrid_host_lock, "Lock real grid in host memory"}
+ * @DESC{"Lock grid into host memory. This does nothing on pure CPU-based systems
+          but on GPU-based systems it forces a given grid to stay in the host memory"}
+ * @ARG1{rgrid *grid, "Grid to be host-locked"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2977,12 +2903,11 @@ EXPORT void rgrid_host_lock(rgrid *grid) {
 }
 
 /*
- * Unlock grid. This does nothing on pure CPU-based systems.
- * On GPU-based systems it allows again the grid to move to GPU.
- *
- * grid = grid to be host-locked (rgrid *; input).
- * 
- * No return value.
+ * @FUNC{rgrid_host_unlock, "Unlock real grid from host memory"}
+ * @DESC{"Unlock grid. This does nothing on pure CPU-based systems
+         but on GPU-based systems it allows again the grid to move to GPU"}
+ * @ARG1{rgrid *grid, "Grid to be host-unlocked"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -2994,18 +2919,16 @@ EXPORT void rgrid_host_unlock(rgrid *grid) {
 }
 
 /*
- * Set space flag for grid. On CPU systems this does nothing.
- * On GPU systems it affects the data storage order (INPLACE vs. INPLACE_SHUFFLED).
- *
- * Since the real and complex (R2C and C2R) storage formats are already different
- * on CPU systems, this routine probably does not need to be called. If there is
- * a complaint that the data is in wrong space (real vs. fourier) then there is
- * likely something wrong with the program.
- *
- * grid = Grid for the operation (rgrid *; input).
- * flag = 0: Real data or 1: fourier space data (char; input).
- *
- * No return value.
+ * @FUNC{rgrid_fft_space, "Set real/reciprocal space flag for grid"}
+ * @DESC{"Set space flag for grid. On CPU systems this does nothing.
+          On GPU systems it affects the data storage order (INPLACE vs. INPLACE_SHUFFLED).
+          Since the real and complex (R2C and C2R) storage formats are already different
+          on CPU systems, this routine probably does not need to be called. If there is
+          a complaint that the data is in wrong space (real vs. reciprocal) then there is
+          likely something wrong with the program"}
+ * @ARG1{rgrid *grid, "Grid for the operation"}
+ * @ARG2{char flag, "0: Real data or 1: reciprocal space data"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -3021,11 +2944,10 @@ EXPORT void rgrid_fft_space(rgrid *grid, char space) {
 }
 
 /*
- * Multiply real grid by coordinate x.
- * 
- * grid  = Grid to be operated on (rgrid *; input/output).
- *
- * No return value.
+ * @FUNC{rgrid_multiply_by_x, "Multiply grid by coordinate x"}
+ * @DESC{"Multiply real grid by coordinate x"}
+ * @ARG1{rgrid *grid, "Grid to be operated on"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -3050,11 +2972,10 @@ EXPORT void rgrid_multiply_by_x(rgrid *grid) {
 }
 
 /*
- * Multiply real grid by coordinate y.
- * 
- * grid  = Grid to be operated on (rgrid *; input/output).
- *
- * No return value.
+ * @FUNC{rgrid_multiply_by_y, "Multiply grid by coordinate y"}
+ * @DESC{"Multiply real grid by coordinate y"}
+ * @ARG1{rgrid *grid, "Grid to be operated on"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -3079,11 +3000,10 @@ EXPORT void rgrid_multiply_by_y(rgrid *grid) {
 }
 
 /*
- * Multiply real grid by coordinate z.
- * 
- * grid  = Grid to be operated on (rgrid *; input/output).
- *
- * No return value.
+ * @FUNC{rgrid_multiply_by_z, "Multiply grid by coordinate z"}
+ * @DESC{"Multiply real grid by coordinate z"}
+ * @ARG1{rgrid *grid, "Grid to be operated on"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -3108,13 +3028,13 @@ EXPORT void rgrid_multiply_by_z(rgrid *grid) {
 }
 
 /* 
- * Natural logarithm of absolute value of grid.
- *
- * dst     = Destination grid (rgrid *; output).
- * src     = Source grid (rgrid *; input).
- * eps     = Small number to avoid zero (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_log, "Natural logarithm of real grid"}
+ * @DESC{"Natural logarithm of absolute value of grid. Note that the source and destination may be
+          the same grid"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src, "Source grid"}
+ * @ARG3{REAL eps, "Small number to add in order to avoid zero"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -3136,14 +3056,13 @@ EXPORT void rgrid_log(rgrid *dst, rgrid *src, REAL eps) {
 }
 
 /*
- * Make histogram of the values in grid (from 0 to nbins * step).
- *
- * grid  = Grid of NON-NEGATIVE numbers (rgrid *; input).
- * bins  = Historgram bins (REAL *; output).
- * nbins = Number of bins (INT; input).
- * step  = Bin step (REAL; input).
- *
- * No return value.
+ * @FUNC{rgrid_histogram, "Make histogram of grid"}x
+ * @DESC{"Make histogram of the values in grid (from 0 to nbins * step)"}
+ * @ARG1{rgrid *grid, "Grid of NON-NEGATIVE numbers"}
+ * @ARG2{REAL *bins, "Historgram bins (length nbins)"}
+ * @ARG3{INT nbins, "Number of bins"}
+ * @ARG4{REAL step, "Bin step"}
+ * @RVAL{void, "No return value"}
  *
  */
 
