@@ -13,16 +13,16 @@
 #endif
 
 /*
- * Allocate and initialize precomputed function object.
- *
- * func   = Function to be mapped (REAL (*)(REAL, void *); input).
- * params = Additional parameters for func (void *; input).
- * begin  = Lowest x value (REAL; input).
- * end    = Highest x value (REAL; input).
- * step   = Step for x (REAL; input).
- * id     = ID string identifying the function (char *; input).
- *
- * Returns pointer to the precomputed function object (rfunction *).
+ * @FUNC{rgrid_function_alloc, "Allocate space for precomputed function object"} 
+ * @DESC{"Allocate and initialize precomputed 1-D function object.
+          The function takes the x value (REAL) and user data (void *) as arguments"}
+ * @ARG1{REAL (*func), "Function to be mapped"}
+ * @ARG2{void *params, "Additional parameters for func"}
+ * @ARG3{REAL begin, "Lowest x value"}
+ * @ARG4{REAL end, "Highest x value"}
+ * @ARG5{REAL step, "Step for x"}
+ * @ARG6{char *id, "ID string identifying the function"}
+ * @RVAL{rfunction *, "Returns pointer to the precomputed function object"}
  *
  */
 
@@ -54,11 +54,10 @@ EXPORT rfunction *rgrid_function_alloc(REAL (*func)(REAL, void *), void *params,
 }
 
 /*
- * Free precomputed function object.
- *
- * pfunc = Precomputed function to be freed (rfunction *; input).
- *
- * No return value.
+ * @FUNC{rgrid_function_free, "Free precomputed function object"}
+ * @DESC{"Free precomputed function object"}
+ * @ARG1{rfunctin *, "Precomputed function to be freed"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -72,12 +71,11 @@ EXPORT void rgrid_function_free(rfunction *pfunc) {
 }
 
 /*
- * Return precomputed function value at given value (no interpolation). Not to be called directly.
- *
- * pfunc = Precomputed function (rfunction *; input).
- * x     = Value where the function is evaluated (REAL; input).
- * 
- * Returns the function value.
+ * @FUNC{rgrid_function_value, "Return value for precomputed function"}
+ * @DESC{"Return precomputed function value at given value (no interpolation)"}
+ * @ARG1{rfunction *, "Precomputed function"}
+ * @ARG2{REAL x, "Value where the function is evaluated"}
+ * @RVAL{REAL, "Returns the function value at x"}
  *
  */
 
@@ -94,15 +92,13 @@ inline REAL rgrid_function_value(rfunction *pfunc, REAL x) {
 }
 
 /*
- * Operate on a grid by precomputed function: dst = operator(src).
- *
- * dst      = Destination grid (rgrid *; output).
- * src      = Source grid (rgrid *; input).
- * operator = Operator grid (rfunction *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_function_operate_one, "Operate on grid by precomputed function"}
+ * @DESC{"Operate on a grid by precomputed function: dst = operator(src).
+          Note that the source and destination grids may be the same"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src, "Source grid"}
+ * @ARG3{rfunction *operator, "Function defining the operation"}
+ * @RVAL{void, "No return value"}
  *
  */
 
@@ -124,16 +120,14 @@ EXPORT void rgrid_function_operate_one(rgrid *dst, rgrid *src, rfunction *operat
 }
 
 /*
- * Operate on a grid by a given precomputed function and multiply: dst = src1 * operator(src2).
- *
- * dst      = Destination grid (rgrid *; output).
- * src1     = Multiply with this grid (rgrid *; input).
- * src2     = Source grid for precomputed function (rfunction *; input).
- * operator = Operator (function) (rfunction *; input).
- *
- * No return value.
- *
- * Note: source and destination grids may be the same.
+ * @FUNC{rgrid_function_operate_one_product, "Operate on grid by precomputed function and multiply"}
+ * @DESC{"Operate on a grid by a given precomputed function and multiply: dst = src1 * operator(src2).
+          Note that the source and destination grids may be the same"}
+ * @ARG1{rgrid *dst, "Destination grid"}
+ * @ARG2{rgrid *src1, "Multiply with this grid"}
+ * @ARG3{rgrid *src2, "Source grid entering the precomputed function"}
+ * @ARG4{rfunction *operator, "Operator (function)"}
+ * @RVAL{void, "No return value"}
  *
  */
 
