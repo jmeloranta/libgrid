@@ -36,9 +36,14 @@ To install these packages on Fedora linux, use (\# prompt implies execution with
 \end{verbatim}
 or
 \begin{verbatim}
-# apt-get install git gcc fftw3-dev grace libnetcdf-dev
+# apt install git gcc fftw3-dev grace libnetcdf-dev
 \end{verbatim}
-If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA driver and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs. libgrid uses the following CUDA packages: CUFFT, CURAND, and the basic CUDA runtime (libcuda and libcudart). Also, the CUDA compiler (nvcc) must be installed to compile GPU code.
+If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA driver and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of NVIDIA drivers and CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs. libgrid uses the following CUDA packages: CUFFT, CURAND, and the basic CUDA runtime (libcuda and libcudart). Also, the CUDA compiler (nvcc) must be installed to compile GPU code. So, on Debian you should do (there is a similar dnf install for Fedora):
+
+\begin{verbatim}
+# apt install nvidia-cuda-dev nvidia-cuda-gdb nvidia-cuda-mps 
+# apt install vidia-cuda-toolkit nvidia-cuda-toolkit-gcc
+\end{verbatim}
 
 To copy the current version of libgrid to subdirectory libgrid, issue (\% implies execution with normal user privileges):
 \begin{verbatim}
@@ -61,7 +66,7 @@ ROOT & Root installation directory (default /usr)\\
 CUDA & Set to "yes" if CUDA is installed and "no" if not. The default is to auto-detect, so changing this is not usually required.\\
 CUDAINC & Include file directory for CUDA C header files (default /usr/include/cuda; Fedora). Will also search /usr/include (Debian).\\
 CUDALIB & Directory containing the CUDA libraries (default /usr/lib64).\\
-CUDA\_HOSTCC & GCC version that is compatible with the current installation of CUDA (default is to auto detect; works on Fedora and to some extent on Debian).\\
+CUDA\_HOSTCC & GCC version that is compatible with the current installation of CUDA (default is to auto detect; works on Fedora and Debian).\\
 CUDA\_ARCH & NVIDIA GPU architecture (e.g., sm\_50; default auto-detect).\\
 CUDA\_FASTMATH & "yes" adds NVCC options: --ftz=true --prec-div=false --prec-sqrt=false --fmad=true and "no" implies options: --ftz=false --prec-div=true --prec-sqrt=true --fmad=true (default no). Seems to provide no performance improvement.\\
 CUDA\_TPB & Number of CUDA threads per block (GPU architecture dependent; default 8).\\
