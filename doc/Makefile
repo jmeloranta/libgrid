@@ -1,3 +1,8 @@
+all: libgrid-manual.pdf libgrid-manual.html
+
+libgrid-manual.html:gendoc libgrid-manual.tex
+	latex2html -dir html/ libgrid-manual.tex
+
 libgrid-manual.pdf: gendoc libgrid-manual.tex
 	$(shell ./gendoc ../src/rgrid*.c > real-functions.tex)
 	$(shell ./gendoc ../src/cgrid*.c > complex-functions.tex)
@@ -22,4 +27,5 @@ clean:
 	-rm wf-functions.tex random-functions.tex thread-functions.tex
 	-rm linalg-functions.tex interpolate-functions.tex
 	-rm timer-functions.tex cuda-functions.tex cuda-ext-functions.tex
+	-rm html/*
 
