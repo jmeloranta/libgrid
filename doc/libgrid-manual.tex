@@ -38,11 +38,11 @@ or
 \begin{verbatim}
 # apt install git gcc fftw3-dev grace libnetcdf-dev
 \end{verbatim}
-If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA driver and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of NVIDIA drivers and CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs. libgrid uses the following CUDA packages: CUFFT, CURAND, and the basic CUDA runtime (libcuda and libcudart). Also, the CUDA compiler (nvcc) must be installed to compile GPU code. So, on Debian you should do (there is a similar dnf install for Fedora):
+If the system has NVIDIA GPUs, libgrid can use CUDA to accelerate the grid operations. For Fedora-based systems, the propriatary NVIDIA driver (i.e., apt install nvidia-driver) and the CUDA libraries can be obtained from: \url{https://negativo17.org/nvidia-driver/}. For Debian enable the testing repository in /etc/apt/sources.list so that you can install the latest version of NVIDIA drivers and CUDA. Both systems are compatible with the default settings in make.conf as described below. Currently, libgrid does not support AMD based GPUs. libgrid uses the following CUDA packages: CUFFT, CURAND, and the basic CUDA runtime (libcuda and libcudart). Also, the CUDA compiler (nvcc) must be installed to compile GPU code. So, on Debian you should do (there is a similar dnf install for Fedora):
 
 \begin{verbatim}
 # apt install nvidia-cuda-dev nvidia-cuda-gdb nvidia-cuda-mps 
-# apt install vidia-cuda-toolkit nvidia-cuda-toolkit-gcc
+# apt install nvidia-cuda-toolkit nvidia-cuda-toolkit-gcc
 \end{verbatim}
 
 To copy the current version of libgrid to subdirectory libgrid, issue (\% implies execution with normal user privileges):
