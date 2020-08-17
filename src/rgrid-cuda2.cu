@@ -1604,7 +1604,7 @@ __global__ void rgrid_cuda_max_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, IN
 
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++)
-      els[t] = 0.0;
+      els[t] = -1.0E99;
   }
   __syncthreads();
 
@@ -1617,7 +1617,7 @@ __global__ void rgrid_cuda_max_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, IN
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++) {
       idx2 = (blockIdx.z * gridDim.y + blockIdx.y) * gridDim.x + blockIdx.x;
-      blocks[idx2] += els[t];  // reduce threads
+      blocks[idx2] = MAX(blocks[idx2], els[t]);  // reduce threads
     }
   }
 }
@@ -1743,7 +1743,7 @@ __global__ void rgrid_cuda_min_gpu(CUREAL *a, CUREAL *blocks, INT nx, INT ny, IN
   if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) {
     for(t = 0; t < d; t++) {
       idx2 = (blockIdx.z * gridDim.y + blockIdx.y) * gridDim.x + blockIdx.x;
-      blocks[idx2] += els[t];  // reduce threads
+      blocks[idx2] = MIN(blocks[idx2], els[t]);  // reduce threads
     }
   }
 }

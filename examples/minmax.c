@@ -1,7 +1,7 @@
 /*
  * Example: minimum and maximum values of grid.
  *
- * The result should be equal to -1 (min) and +1 (max).
+ * The result should be equal to approx 0 (min) and approx 1.436697e-03 (max).
  *
  */
 
