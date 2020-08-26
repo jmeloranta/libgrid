@@ -2449,7 +2449,7 @@ EXPORT void rgrid_ipower(rgrid *dst, rgrid *src, INT exponent) {
  * @ARG1{rgrid *dest, "Destination grid"}
  * @ARG2{rgrid *src, "Source grid for evaluating the thresholds"}
  * @ARG3{REAL ul, "Upper limit threshold value"}
- * @ARG4{REAL ll, "Lower limit threshold value"}x
+ * @ARG4{REAL ll, "Lower limit threshold value"}
  * @ARG5{REAL uval, "Value to set when the upper limit was exceeded"}
  * @ARG6{REAL lval, "Value to set when the lower limit was exceeded"}
  * @RVAL{void, "No return value"}
