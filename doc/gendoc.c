@@ -66,7 +66,7 @@ void scan_docs(char *file) {
     fgets(buf, sizeof(buf), fp);
     if(sscanf(buf, "%*[a-z A-Z*/]@FUNC{%128[^,], \"%1024[^\"]\"}", func_name, func_doc) != 2) continue;
     // Use fscanf to get multiline description
-    if(fscanf(fp, "%*[a-z A-Z*/]@DESC{\"%1024[^\"]\"}\n", func_desc) != 1) {
+    if(fscanf(fp, "%*[a-z A-Z*/]@DESC{\"%2048[^\"]\"}\n", func_desc) != 1) {
       fprintf(stderr, "Error reading description for %s.\n", func_name);
       continue;
     }
