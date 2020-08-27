@@ -103,63 +103,55 @@ extern "C" void grid_cuda_wf_propagate_kinetic_fftW(gpu_mem_block *grid, CUREAL 
  *
  */
 
-__global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL cx, CUREAL cy, CUREAL cz, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUCOMPLEX time_mass, REAL cnorm, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
+__global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL cx, CUREAL cy, CUREAL cz, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUCOMPLEX time_mass, CUREAL kmax, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg, ki, kj, kk;
-  CUREAL kx, ky, kz, ktot, tot;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, jj = j + seg;
+  CUREAL kx, ky, kz, tot;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
   idx = (i * ny + j) * nz + k;
 
-  if (i <= nx2) {
+  if (i <= nx2)
     kx = cx * ((CUREAL) i) - kx0;
-    ki = i;
-  } else {
+  else
     kx = cx * ((CUREAL) (i - nx)) - kx0;
-    ki = i - nx;
-  }
 
-  if (jj <= ny2) {
+  if (jj <= ny2)
     ky = cy * ((CUREAL) jj) - ky0;
-    kj = jj;
-  } else {
+  else
     ky = cy * ((CUREAL) (jj - nyy)) - ky0;
-    kj = jj - nyy;
-  }
 
-  if (k <= nz2) {
+  if (k <= nz2)
     kz = cz * ((CUREAL) k) - kz0; 
-    kk = k;
-  } else {
+  else
     kz = cz * ((CUREAL) (k - nz)) - kz0;
-    kk = k - nz;
-  }
       
   /* psi(k,t+dt) = psi(k,t) exp( - i (hbar^2 * k^2 / 2m) dt / hbar ) */
-  ktot = kx * kx + ky * ky + kz * kz;
-  tot = SQRT((CUREAL) (ki * ki + kj * kj + kk * kk)) * cnorm;
-  b[idx] = b[idx] * CUCEXP(time_mass * ktot);
-  if(tot != 0.0) b[idx] = b[idx] * SIN(tot) / tot;
+  tot = kx * kx + ky * ky + kz * kz;
+  if(tot < kmax)
+    b[idx] = b[idx] * CUCEXP(time_mass * tot);
+  else
+    b[idx] = CUMAKE(0.0, 0.0); 
 }
 
 /*
  * Propagate kinetic energy in Fourier space (CFFT) with Lanczos cutoff.
  *
  * wf       = Source/destination grid for operation (gpu_mem_block *; input/output).
- * kx0      = Momentum shift of origin along X (REAL; input).
- * ky0      = Momentum shift of origin along Y (REAL; input).
- * kz0      = Momentum shift of origin along Z (REAL; input).
- * step     = Spatial step length (REAL; input).
+ * kx0      = Momentum shift of origin along X (CUREAL; input).
+ * ky0      = Momentum shift of origin along Y (CUREAL; input).
+ * kz0      = Momentum shift of origin along Z (CUREAL; input).
+ * step     = Spatial step length (CUREAL; input).
  * time_mass= Time step & mass (CUCOMPLEX; input).
- * cnorm    = SINC filter normaliztion (REAL; input).
+ * kmax     = Maximum k-vector to propagate (CUREAL).
  * nx       = # of points along x (INT).
  * ny       = # of points along y (INT).
  * nz       = # of points along z (INT).
  *
  */
 
-extern "C" void grid_cuda_wf_propagate_kinetic_cfftW(gpu_mem_block *grid, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, CUCOMPLEX time_mass, REAL cnorm, INT nx, INT ny, INT nz) {
+extern "C" void grid_cuda_wf_propagate_kinetic_cfftW(gpu_mem_block *grid, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUREAL step, CUCOMPLEX time_mass, CUREAL kmax, INT nx, INT ny, INT nz) {
 
   INT segx = 0, segy = 0, nx2 = nx / 2, ny2 = ny / 2, nz2 = nz / 2;
   SETUP_VARIABLES_SEG(grid);
@@ -178,7 +170,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cfftW(gpu_mem_block *grid, CUREAL
   for(i = 0; i < ngpu1; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     grid_cuda_wf_propagate_kinetic_cfft_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], cx, cy, cz, kx0, ky0, kz0,
-        time_mass, cnorm, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
+        time_mass, kmax, nnx1, nny1, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx1;
     segy += dsegy1;
   }
@@ -186,7 +178,7 @@ extern "C" void grid_cuda_wf_propagate_kinetic_cfftW(gpu_mem_block *grid, CUREAL
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     grid_cuda_wf_propagate_kinetic_cfft_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], cx, cy, cz, kx0, ky0, kz0,
-        time_mass, cnorm, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
+        time_mass, kmax, nnx2, nny2, nz, ny, nx2, ny2, nz2, segy);
     segx += dsegx2;
     segy += dsegy2;
   }

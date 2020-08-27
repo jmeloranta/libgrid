@@ -76,6 +76,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
   gwf->cworkspace3 = NULL;
   gwf->ts_func = NULL;
   gwf->cfft_width = 1.0;  // window width: between 0 and 2.
+  gwf->kmax = 9999.0;     // Default not to use
 
   return gwf;
 }

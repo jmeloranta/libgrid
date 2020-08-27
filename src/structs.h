@@ -99,6 +99,7 @@ typedef struct wf_struct {
   cgrid *cworkspace3;           /* Workspace (NULL if not in use) */
   REAL (*ts_func)(INT, INT, INT, INT, INT, INT, INT, INT, INT);  /* Time step function (allows spatially dependent time) */
   INT lx, hx, ly, hy, lz, hz;   /* Abs boundary region indices */
+  REAL kmax;                    /* Maximum wavenumber for kinetic energy propagation (used by grid_wf_propagate_kinetic_cfft) */
 } wf;
 
 /*
