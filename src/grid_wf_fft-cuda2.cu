@@ -101,6 +101,8 @@ extern "C" void grid_cuda_wf_propagate_kinetic_fftW(gpu_mem_block *grid, CUREAL 
 /*
  * Kinetic energy propagation in Fourier space (with Lanczos cutoff).
  *
+ * TODO: Can we improve performance by optimizing the if statements?
+ *
  */
 
 __global__ void grid_cuda_wf_propagate_kinetic_cfft_gpu(CUCOMPLEX *b, CUREAL cx, CUREAL cy, CUREAL cz, CUREAL kx0, CUREAL ky0, CUREAL kz0, CUCOMPLEX time_mass, CUREAL kmax, INT nx, INT ny, INT nz, INT nyy, INT nx2, INT ny2, INT nz2, INT seg) {

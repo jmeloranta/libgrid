@@ -195,7 +195,8 @@ EXPORT void grid_wf_propagate_kinetic_fft(wf *gwf, REAL complex time) {
 /*
  * @FUNC{grid_wf_propagate_kinetic_cfft, "Propagate kinetic portion of wavefunction (CFFT)"}
  * @DESC{"Auxiliary routine to propagate kinetic energy using FFT with high wavenumber sink (cutoff specified by gwf$->$kmax).
-          The wave function must be in reciprocal space"}
+          The wave function must be in reciprocal space.
+ *        This can alleviate problems related to FFT dealiasing and numerical noise that is amplified by the operator splitting scheme"}
  * @ARG1{wf *gwf, "Wavefunction to be propagated"}
  * @ARG2{REAL complex time, "Time step"}
  * @RVAL{void, "No return value"}
