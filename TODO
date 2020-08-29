@@ -10,6 +10,8 @@
 - FFT abs boundaries for predict-correct.
 - update manual - it is now quite out of date.
 - Implement cfunction the same way as rfunction. These functions need to use linear interpolation...
+- When many GPUs are available, it might be beneficial to run the low leverl GPU loops using OpenMP. For just a couple of GPUs, there did not seem to be benefit.
+- Finite difference routines are much faster on single GPU than FFT-based. It is likely that the top level user code is doing excess FFT/IFFTs.
 
 also fgrep TODO *.[ch] to find out more specific issues.
 
