@@ -30,12 +30,13 @@ extern "C" void cuda_error_check();
 
 __global__ void grid_cuda_real_to_complex_re_gpu(CUCOMPLEX *dst, CUREAL *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;    // Index for complex grid
-  idx2 = (i * ny + j) * nzz + k;  // Index for real grid
+  tmp = i * ny + j;
+  idx = tmp * nz + k;    // Index for complex grid
+  idx2 = tmp * nzz + k;  // Index for real grid
 
   dst[idx] = CUMAKE(src[idx2], 0.0);
 }
@@ -80,12 +81,13 @@ extern "C" void grid_cuda_real_to_complex_reW(gpu_mem_block *dst, gpu_mem_block 
 
 __global__ void grid_cuda_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src, INT nx, INT ny, INT nz, INT nzz) {
 
-  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2;
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx, idx2, tmp;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
-  idx = (i * ny + j) * nz + k;
-  idx2 = (i * ny + j) * nzz + k;
+  tmp = i * ny + j;
+  idx = tmp * nz + k;
+  idx2 = tmp * nzz + k;
 
   dst[idx] = CUMAKE(0.0, src[idx2]);
 }
@@ -138,7 +140,7 @@ __global__ void grid_cuda_add_real_to_complex_re_gpu(CUCOMPLEX *dst, CUREAL *src
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  dst[idx].x = CUCREAL(dst[idx]) + src[idx2];
+  dst[idx].x = dst[idx].x + src[idx2];
 }
 
 /*
@@ -193,7 +195,7 @@ __global__ void grid_cuda_add_real_to_complex_im_gpu(CUCOMPLEX *dst, CUREAL *src
   idx = tmp * nz + k;
   idx2 = tmp * nzz + k;
 
-  dst[idx].y = CUCIMAG(dst[idx]) + src[idx2];
+  dst[idx].y = dst[idx].y + src[idx2];
 }
 
 /*
