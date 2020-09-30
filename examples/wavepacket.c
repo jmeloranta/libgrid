@@ -40,8 +40,8 @@
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
-#define NGPUS 2
-int gpus[NGPUS] = {1, 2};
+#define NGPUS 1
+int gpus[NGPUS] = {0};
 #endif
 
 REAL complex wavepacket(void *arg, REAL x, REAL y, REAL z);
@@ -122,7 +122,8 @@ int main(int argc, char *argv[]) {
 #ifdef FOURTH_ORDER_FFT
                       WF_4TH_ORDER_FFT, "WF");
 #else
-                      WF_2ND_ORDER_FFT, "WF");
+//                      WF_2ND_ORDER_FFT, "WF");
+                      WF_1ST_ORDER_EULER, "WF");
 #endif
   potential = cgrid_alloc(n, n, n, step, CGRID_PERIODIC_BOUNDARY, 0, "potential");
   rworkspace = rgrid_alloc(n, n, n, step, RGRID_PERIODIC_BOUNDARY, 0, "rworkspace");

@@ -17,7 +17,7 @@ extern char grid_analyze_method;
  * @ARG4{REAL step, "Spatial grid step size"}
  * @ARG5{REAL mass, "Mass of the particle corresponding to this wavefunction"}
  * @ARG6{char boundary, "Boundary condition: WF_DIRICHLET_BOUNDARY = Dirichlet boundary condition, WF_NEUMANN_BOUNDARY = Neumann boundary condition, WF_PERIODIC_BOUNDARY = Periodic boundary condition"}
- * @ARG7{char propagator, "Which time propagator to use for this wavefunction: WF_2ND_ORDER_FFT = 2nd order in time (FFT), WF_4TH_ORDER_FFT = 4th order in time (FFT), WF_2ND_ORDER_CFFT = 2nd order in time (FFT with cutoff in k-space), WF_4TH_ORDER_CFFT = 4th order in time (FFT with cutoff in k-space), WF_2ND_ORDER_CN = 2nd order in time with Crank-Nicolson propagator, WF_4TH_ORDER_CN = 4th order in time with Crank-Nicolson propagator"}
+ * @ARG7{char propagator, "Which time propagator to use for this wavefunction: WF_2ND_ORDER_FFT = 2nd order in time (FFT), WF_4TH_ORDER_FFT = 4th order in time (FFT), WF_2ND_ORDER_CFFT = 2nd order in time (FFT with cutoff in k-space), WF_4TH_ORDER_CFFT = 4th order in time (FFT with cutoff in k-space), WF_2ND_ORDER_CN = 2nd order in time with Crank-Nicolson propagator, WF_4TH_ORDER_CN = 4th order in time with Crank-Nicolson propagator, WF_1ST_ORDER_EULER = Explicit Euler"}
  * @ARG8{char *id, "String identifier for the grid"}
  * @RVAL{cgrid *, "Return value is a pointer to the allocated wavefunction. This routine returns NULL if allocation fails"}
  *
@@ -33,7 +33,7 @@ EXPORT wf *grid_wf_alloc(INT nx, INT ny, INT nz, REAL step, REAL mass, char boun
     return 0;
   }
   
-  if(propagator < WF_2ND_ORDER_FFT || propagator > WF_4TH_ORDER_CN) {
+  if(propagator < WF_2ND_ORDER_FFT || propagator > WF_1ST_ORDER_EULER) {
     fprintf(stderr, "libgrid: Error in grid_wf_alloc(). Unknown propagator.\n");
     return 0;
   }
@@ -309,7 +309,8 @@ EXPORT void grid_wf_propagate_predict(wf *gwf, wf *gwfp, cgrid *potential, REAL 
     case WF_4TH_ORDER_FFT:
     case WF_4TH_ORDER_CFFT:
     case WF_4TH_ORDER_CN:
-      fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
+    case WF_1ST_ORDER_EULER:
+      fprintf(stderr, "libgrid: Propagator not implemented for predict-correct.\n");
       abort();
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
@@ -351,7 +352,8 @@ EXPORT void grid_wf_propagate_correct(wf *gwf, cgrid *potential, REAL complex ti
     case WF_4TH_ORDER_FFT:
     case WF_4TH_ORDER_CFFT:
     case WF_4TH_ORDER_CN:
-      fprintf(stderr, "libgrid: 4th order propagator not implemented for predict-correct.\n");
+    case WF_1ST_ORDER_EULER:
+      fprintf(stderr, "libgrid: Propagator not implemented for predict-correct.\n");
       abort();
     case WF_2ND_ORDER_CN:
       grid_wf_propagate_potential(gwf, time, potential, 0.0);
@@ -532,6 +534,14 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
       grid_wf_propagate_kinetic_cn(gwf, half_time);
       grid_wf_propagate_potential(gwf, one_sixth_time, potential, 0.0);
       break;
+    case WF_1ST_ORDER_EULER: /* explicit Euler (not stable but simple and no op. splitting) */
+      if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
+      cgrid_laplace(gwf->grid, gwf->cworkspace);
+      cgrid_multiply(gwf->cworkspace, -0.5 * HBAR * HBAR / gwf->mass);
+      cgrid_add_scaled_product(gwf->cworkspace, 1.0, potential, gwf->grid);
+      cgrid_multiply(gwf->cworkspace, -I * time / HBAR);
+      cgrid_sum(gwf->grid, gwf->grid, gwf->cworkspace);
+      break;      
     default:
       fprintf(stderr, "libgrid: Error in grid_wf_propagate(). Unknown propagator.\n");
       abort();

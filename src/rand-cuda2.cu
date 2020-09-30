@@ -140,9 +140,9 @@ __global__ void rgrid_cuda_random_normal_gpu(CUREAL *grid, curandState *st, CURE
   idx = (i * ny + j) * nzz + k;
 
 #if CUREAL == float
-  grid[idx] = grid[idx] + curand_normal(&st[cstate]);
+  grid[idx] = grid[idx] + scale * curand_normal(&st[cstate]);
 #else
-  grid[idx] = grid[idx] + curand_normal_double(&st[cstate]);
+  grid[idx] = grid[idx] + scale * curand_normal_double(&st[cstate]);
 #endif
 }
 

@@ -29,3 +29,4 @@
 #define WF_4TH_ORDER_CFFT	4
 #define WF_2ND_ORDER_CN		5
 #define WF_4TH_ORDER_CN		6
+#define WF_1ST_ORDER_EULER      7

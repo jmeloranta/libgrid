@@ -145,7 +145,7 @@ EXPORT void cgrid_random_uniform(cgrid *grid, REAL complex scale) {
 }
 
 /* 
- * @FUNC{cgrid_random_normal, "Add normal distributed random numbers to complex grid"}x
+ * @FUNC{cgrid_random_normal, "Add normal distributed random numbers to complex grid"}
  * @DESC{"Add normal random numbers to complex grid"}
  * @ARG1{cgrid *grid, "Grid where the random numbers are added to"}
  * @ARG2{REAL complex scale, "Scaling factor for random numbers (-scale to scale). Note that this is complex number allowing to scale each component separately"}

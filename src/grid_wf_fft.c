@@ -282,8 +282,8 @@ EXPORT void grid_wf_square_of_potential_gradient(wf *gwf, cgrid *sq_grad_pot, cg
   if(!gwf->cworkspace2) gwf->cworkspace2 = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 2");
   cworkspace2 = gwf->cworkspace2;
 
-  cgrid_copy(sq_grad_pot, potential);
   if(grid_analyze_method) {
+    cgrid_copy(sq_grad_pot, potential);
     cgrid_fft(sq_grad_pot);
     cgrid_fft_gradient_x(sq_grad_pot, cworkspace);
     cgrid_fft_gradient_y(sq_grad_pot, cworkspace2);
@@ -292,9 +292,9 @@ EXPORT void grid_wf_square_of_potential_gradient(wf *gwf, cgrid *sq_grad_pot, cg
     cgrid_inverse_fft_norm(cworkspace);
     cgrid_inverse_fft_norm(cworkspace2);
   } else {
-    cgrid_fd_gradient_x(sq_grad_pot, cworkspace);
-    cgrid_fd_gradient_y(sq_grad_pot, cworkspace2);
-    cgrid_fd_gradient_z(sq_grad_pot, sq_grad_pot);
+    cgrid_fd_gradient_x(potential, cworkspace);
+    cgrid_fd_gradient_y(potential, cworkspace2);
+    cgrid_fd_gradient_z(potential, sq_grad_pot);
   }
   
   cgrid_conjugate_product(sq_grad_pot, sq_grad_pot, sq_grad_pot);
