@@ -120,6 +120,30 @@ EXPORT char cgrid_cuda_power(cgrid *dst, cgrid *src, REAL exponent) {
   return 0;
 }
 
+/* 
+ * Exponentiate grid.
+ *
+ * dst      = destination grid (cgrid *; output).
+ * src      = 1st source grid (cgrid *; input).
+ *
+ */
+
+EXPORT char cgrid_cuda_cexp(cgrid *dst, cgrid *src) {
+
+  if(dst->host_lock || src->host_lock) {
+    cuda_remove_block(src->value, 1);
+    cuda_remove_block(dst->value, 0);
+    return -1;
+  }
+
+  if(cuda_two_block_policy(src->value, src->grid_len, src->cufft_handle, src->id, 1, dst->value, dst->grid_len, dst->cufft_handle, dst->id, 0) < 0) return -1;
+
+  cgrid_cuda_cexpW(cuda_find_block(dst->value), cuda_find_block(src->value), dst->nx, dst->ny, dst->nz);
+
+  return 0;
+}
+
+
 /*
  * Multiply grid by a constant.
  *

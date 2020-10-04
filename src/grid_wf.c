@@ -460,35 +460,42 @@ EXPORT void grid_wf_propagate(wf *gwf, cgrid *potential, REAL complex time) {
         fprintf(stderr, "libgrid: omega != 0.0 allowed only with WF_XX_ORDER_CN.\n");
         abort();
       }
+
       if(gwf->ts_func && CREAL(time) != 0.0) { // do not include boundary for pure imaginary time propagation
         save = gwf->ts_func;
         gwf->ts_func = NULL;
         if(!gwf->cworkspace) gwf->cworkspace = cgrid_alloc(grid->nx, grid->ny, grid->nz, grid->step, grid->value_outside, grid->outside_params_ptr, "WF cworkspace 1");
         /* Real time step */
         cgrid_copy(gwf->cworkspace, gwf->grid);
-        grid_wf_propagate_potential(gwf, half_time, potential, cons);
         cgrid_fft(gwf->grid);
-        grid_wf_propagate_kinetic_cfft(gwf, time);
+        grid_wf_propagate_kinetic_cfft(gwf, half_time);
         cgrid_inverse_fft_norm(gwf->grid);
-        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        grid_wf_propagate_potential(gwf, time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_cfft(gwf, half_time);
+        cgrid_inverse_fft_norm(gwf->grid);
         /* Imaginary time step */
         gsave = gwf->grid;
         gwf->grid = gwf->cworkspace;
-        grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
         cgrid_fft(gwf->grid);
-        grid_wf_propagate_kinetic_cfft(gwf, -I * CREAL(time));
+        grid_wf_propagate_kinetic_cfft(gwf, -I * CREAL(half_time));
         cgrid_inverse_fft_norm(gwf->grid);
-        grid_wf_propagate_potential(gwf, -I * CREAL(half_time), potential, cons);
+        grid_wf_propagate_potential(gwf, -I * CREAL(time), potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_cfft(gwf, -I * CREAL(half_time));
+        cgrid_inverse_fft_norm(gwf->grid);
         gwf->grid = gsave;
         gwf->ts_func = save;
         /* merge solutions according to the boundary function grid_wf_boundary() */
         grid_wf_merge(gwf, gwf->grid, gwf->cworkspace);
       } else {
-        grid_wf_propagate_potential(gwf, half_time, potential, cons);
         cgrid_fft(gwf->grid);
-        grid_wf_propagate_kinetic_cfft(gwf, time);
+        grid_wf_propagate_kinetic_cfft(gwf, half_time);
         cgrid_inverse_fft_norm(gwf->grid);
-        grid_wf_propagate_potential(gwf, half_time, potential, cons);
+        grid_wf_propagate_potential(gwf, time, potential, cons);
+        cgrid_fft(gwf->grid);
+        grid_wf_propagate_kinetic_cfft(gwf, half_time);
+        cgrid_inverse_fft_norm(gwf->grid);
       }
       break;
     case WF_4TH_ORDER_CFFT:

@@ -1013,7 +1013,7 @@ EXPORT void cgrid_product(cgrid *gridc, cgrid *grida, cgrid *gridb) {
  * @FUNC{cgrid_abs_power, "Power of absolute value of grid"}
  * @DESC{"Rise absolute value of a grid to a given power.
           Note that the source and destination grids may be the same grid.
-          This routine uses pow() so that the exponent can be fractional."}
+          This routine uses POW() so that the exponent can be fractional."}
  * @ARG1{cgrid *gridb, "Destination grid"}
  * @ARG2{cgrid *grida, "Source grid"}
  * @ARG3{REAL exponent, "Exponent to be used"}
@@ -1040,8 +1040,35 @@ EXPORT void cgrid_abs_power(cgrid *gridb, cgrid *grida, REAL exponent) {
 }
 
 /* 
- * @FUNC{cgrid_power, "Rise grid to given power"}
- * @DESC{"Rise grid to given power. The exponent can be fractional as this uses pow().
+ * @FUNC{cgrid_cexp, "Operate on the grid by complex exponent function"}
+ * @DESC{"Operate on the grid by complex exponent function (CEXP()). Note that the source and destination grids may be the same grid"}
+ * @ARG1{cgrid *dst, "Destination grid"}
+ * @ARG2{cgrid *src, "Source grid"}
+ * @RVAL{void, "No return value"}
+ *
+ */
+
+EXPORT void cgrid_cexp(cgrid *dst, cgrid *src) {
+
+  INT ij, k, ijnz, nxy = src->nx * src->ny, nz = src->nz;
+  REAL complex *avalue = src->value;
+  REAL complex *bvalue = dst->value;
+  
+#ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_cexp(dst, src)) return;
+#endif
+
+#pragma omp parallel for firstprivate(nxy,nz,avalue,bvalue) private(ij,ijnz,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    for(k = 0; k < nz; k++)
+      bvalue[ijnz + k] = CEXP(avalue[ijnz + k]);
+  }
+}
+
+/* 
+ * @FUNC{cgrid_cpower, "Rise grid to given power (complex)"}
+ * @DESC{"Rise grid to given power. The exponent can be fractional as this uses CPOW().
           Note that the source and destination grids may be the same grid"}
  * @ARG1{cgrid *gridb, "Destination grid"}
  * @ARG2{cgrid *grida, "Source grid"}

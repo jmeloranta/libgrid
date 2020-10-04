@@ -194,6 +194,54 @@ extern "C" void cgrid_cuda_powerW(gpu_mem_block *dst, gpu_mem_block *src, CUREAL
 }
 
 /*
+ * Complex exponentiation device code.
+ *
+ * dst = CEXP(src)
+ *
+ */
+
+__global__ void cgrid_cuda_cexp_gpu(CUCOMPLEX *dst, CUCOMPLEX *src, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+  dst[idx] = CUCEXP(src[idx]);
+}
+
+/*
+ * Exponentiate grid.
+ *
+ * dst      = Destination for operation (gpu_mem_block *; output).
+ * src      = Source for operation (gpu_mem_block *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void cgrid_cuda_cexpW(gpu_mem_block *dst, gpu_mem_block *src, INT nx, INT ny, INT nz) {
+
+  dst->gpu_info->subFormat = src->gpu_info->subFormat;
+  SETUP_VARIABLES(dst);
+  cudaXtDesc *SRC = src->gpu_info->descriptor, *DST = dst->gpu_info->descriptor;
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    cgrid_cuda_cexp_gpu<<<blocks1,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx1, nny1, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(DST->GPUs[i]);
+    cgrid_cuda_cexp_gpu<<<blocks2,threads>>>((CUCOMPLEX *) DST->data[i], (CUCOMPLEX *) SRC->data[i], nnx2, nny2, nz);
+  }
+
+  cuda_error_check();
+}
+
+/*
  * Multiply grid by constant device code.
  *
  * dst = C * dst
