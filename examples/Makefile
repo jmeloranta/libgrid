@@ -1,7 +1,7 @@
 
 include ../make.conf
 
-all: fft cfft spherical cspherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson cgradient fspherical bench minmax
+all: fft cfft spherical cspherical poisson wavepacket gradient decomp veloc random integrate cintegrate cpoisson cgradient fspherical bench minmax fspherical2
 
 decomp: decomp.o
 	$(CC) $(CFLAGS) -o decomp decomp.o $(LDFLAGS)
@@ -20,6 +20,9 @@ cspherical: cspherical.o
 
 fspherical: fspherical.o
 	$(CC) $(CFLAGS) -o fspherical fspherical.o $(LDFLAGS)
+
+fspherical2: fspherical2.o
+	$(CC) $(CFLAGS) -o fspherical2 fspherical2.o $(LDFLAGS)
 
 poisson: poisson.o
 	$(CC) $(CFLAGS) -o poisson poisson.o $(LDFLAGS)

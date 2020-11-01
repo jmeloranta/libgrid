@@ -98,7 +98,7 @@ EXPORT void rgrid_random_normal(rgrid *grid, REAL scale) {
   for(i = 0; i < grid->nx; i++)
     for(j = 0; j < grid->ny; j++)
       for(k = 0; k < grid->nz; k++) {
-        if(flag) { // Produces two random numbers
+        if(flag) { // Produces two random numbers, unit variance
           do {
             v1 = 2.0 * (((REAL) drand48()) - 0.5);
             v2 = 2.0 * (((REAL) drand48()) - 0.5);

@@ -2,6 +2,7 @@
  * Example: Calculate spherical average of a real grid in Fourier space.
  *
  */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -14,12 +15,12 @@
 #define NZ 256
 
 /* Spatial step length of the grid */
-#define STEP 0.2
+#define STEP 0.5
 
 /* Binning info */
 #define BINSTEP (2.0 * M_PI / (NX * STEP))
 #define NBINS 256
-#define VOLEL 1   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
+#define VOLEL 0   /* 0 = Calculate spherical average, 1 = direct sum */
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
@@ -53,6 +54,7 @@ int main(int argc, char **argv) {
 
   /* Map function func() onto the grid */
   rgrid_map(grid, &func, NULL);
+
   printf("Integral before = " FMT_R "\n", rgrid_integral_of_square(grid));
 
   /* FFT */
@@ -60,6 +62,7 @@ int main(int argc, char **argv) {
 
   /* Allocate memory for the bins */
   bins = (REAL *) malloc(sizeof(REAL) * NBINS);
+
   /* Perform spherical average of the grid */
   rgrid_spherical_average_reciprocal(grid, NULL, NULL, bins, BINSTEP, NBINS, VOLEL);
 
@@ -71,11 +74,6 @@ int main(int argc, char **argv) {
   for (i = 0; i < NBINS; i++)
     fprintf(fp, FMT_R " " FMT_R "\n", BINSTEP * (REAL) i, bins[i]);
   fclose(fp);
-
-  rgrid_fft_product_conj(grid, grid, grid);
-   /* Write the data on disk before starting */
-  rgrid_fft_multiply(grid, 1.0 / (REAL) (NX * NY * NZ));
-  rgrid_write_grid_reciprocal("before", grid);
 
   return 0;
 }

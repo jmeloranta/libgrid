@@ -19,7 +19,7 @@
 /* Binning info */
 #define BINSTEP 0.5
 #define NBINS (NX / 2)
-#define VOLEL 0   /* 0 = Calculate spherical average, 1 = Include multiplication by 4pi r^2 */
+#define VOLEL 0   /* 0 = Calculate spherical average, 1 = direct sum */
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA
@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
 
   /* Allocate memory for the bins */
   bins = (REAL *) malloc(sizeof(REAL) * NBINS);
+
   /* Perform spherical average of the grid */
   rgrid_spherical_average(grid, NULL, NULL, bins, BINSTEP, NBINS, VOLEL);
 
