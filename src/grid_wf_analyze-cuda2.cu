@@ -200,3 +200,55 @@ extern "C" void grid_cuda_wf_fd_probability_flux_zW(gpu_mem_block *gwf, gpu_mem_
 
   cuda_error_check();
 }
+
+/*
+ * Entropy.
+ *
+ */
+
+__global__ void grid_cuda_wf_entropy_gpu(CUCOMPLEX *grd, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  CUCOMPLEX s;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+  s = grd[idx];
+  grd[idx].x = s.x * LOG(s.x);
+  grd[idx].y = 0.0;
+}
+
+/*
+ * Entropy.
+ *
+ * grid     = Source/destination for operation (gpu_mem_block *; input).
+ * nx       = # of points along x (INT; input).
+ * ny       = # of points along y (INT; input).
+ * nz       = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void grid_cuda_wf_entropyW(gpu_mem_block *grid, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES(grid);
+  cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  if(grid->gpu_info->subFormat != CUFFT_XT_FORMAT_INPLACE_SHUFFLED) {
+    fprintf(stderr, "libgrid(cuda): wf_entropy wrong subformat.\n");
+    abort();
+  }
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(GRID->GPUs[i]);
+    grid_cuda_wf_entropy_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], nnx1, nny1, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(GRID->GPUs[i]);
+    grid_cuda_wf_entropy_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], nnx2, nny2, nz);
+  }
+
+  cuda_error_check();
+}

@@ -84,3 +84,22 @@ EXPORT char grid_cuda_wf_fd_probability_flux_z(wf *gwf, rgrid *flux_z, REAL inv_
   return 0;
 }
 
+/*
+ * Calculate entropy.
+ * 
+ */
+
+EXPORT char grid_cuda_wf_entropy(cgrid *grid) {
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) 
+    return -1;
+
+  grid_cuda_wf_entropyW(cuda_find_block(grid->value), grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}

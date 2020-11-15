@@ -905,3 +905,45 @@ EXPORT REAL grid_wf_normalfluid(wf *gwf) {
 
   return 1.0 - grid_wf_superfluid(gwf);
 }
+
+/*
+ * @FUNC{grid_wf_entropy, "Calculate entropy"}
+ * @DESC{"Calculate entropy: $S = -K_b\sum p_i\ln(p_i)$"}
+ * @ARG1{wf *wf, "Wavefunction for the calculation"}
+ * @ARG2{cgrid *cworkspace, "Workspace required for the operation"}
+ * @RVAL{REAL, "Returns entropy"}
+ *
+ */
+
+EXPORT REAL grid_wf_entropy(wf *wf, cgrid *cworkspace) {
+
+  REAL S, tmp;
+  INT ij, k, ijnz, nxy = wf->grid->nx * wf->grid->ny, nz = wf->grid->nz;
+  REAL complex *cwrk = cworkspace->value;
+
+  cgrid_copy(cworkspace, wf->grid);
+  cgrid_fft(cworkspace);
+  tmp = cworkspace->step;
+  cworkspace->step = 1.0;
+  cgrid_multiply(cworkspace, SQRT(1.0 / cgrid_integral_of_square(cworkspace)));
+  cgrid_abs_power(cworkspace, cworkspace, 2.0);
+//  p_i ln(p_i)  
+
+#ifdef USE_CUDA
+  if(cuda_status() && !grid_cuda_wf_entropy(cworkspace)) {
+    S = -GRID_AUKB * CREAL(cgrid_integral(cworkspace));
+    cworkspace->step = tmp;  
+    return S;
+  }    
+#endif
+#pragma omp parallel for firstprivate(nxy,nz,cwrk) private(ij,ijnz,k) default(none) schedule(runtime)
+  for(ij = 0; ij < nxy; ij++) {
+    ijnz = ij * nz;
+    for(k = 0; k < nz; k++)
+      cwrk[ijnz + k] = cwrk[ijnz + k] * LOG(CREAL(cwrk[ijnz + k]));
+  }
+
+  S = -GRID_AUKB * CREAL(cgrid_integral(cworkspace));
+  cworkspace->step = tmp;  
+  return S;
+}
