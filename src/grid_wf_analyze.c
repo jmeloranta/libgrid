@@ -925,8 +925,8 @@ EXPORT REAL grid_wf_entropy(wf *wf, cgrid *cworkspace) {
   cgrid_fft(cworkspace);
   tmp = cworkspace->step;
   cworkspace->step = 1.0;  // use sum rather than integral
+  cgrid_multiply(cworkspace, SQRT(1.0 / cgrid_integral_of_square(cworkspace)));
   cgrid_abs_power(cworkspace, cworkspace, 2.0);
-  cgrid_multiply(cworkspace, 1.0 / cgrid_integral_of_square(cworkspace));
 
 #ifdef USE_CUDA
   if(cuda_status() && !grid_cuda_wf_entropy(cworkspace)) {
