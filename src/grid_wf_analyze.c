@@ -907,8 +907,8 @@ EXPORT REAL grid_wf_normalfluid(wf *gwf) {
 }
 
 /*
- * @FUNC{grid_wf_entropy, "Calculate entropy"}
- * @DESC{"Calculate entropy: $S = K_b \sum_i \left((1+n_i)\ln(1+n_i) - n_i\ln(n_i)\right)$"}
+ * @FUNC{grid_wf_entropy, "Calculate total entropy"}
+ * @DESC{"Calculate entropy: $$S = K_b \sum_i \left((1+n_i)\ln(1+n_i) - n_i\ln(n_i)\right)$$ (see Entropy 22, 956 (2020)"}
  * @ARG1{wf *wf, "Wavefunction for the calculation"}
  * @ARG2{cgrid *cworkspace, "Workspace required for the operation"}
  * @RVAL{REAL, "Returns entropy"}
