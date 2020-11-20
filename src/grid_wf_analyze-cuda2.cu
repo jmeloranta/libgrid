@@ -216,7 +216,7 @@ __global__ void grid_cuda_wf_entropy_gpu(CUCOMPLEX *grd, INT nx, INT ny, INT nz)
   idx = (i * ny + j) * nz + k;
 
   s = grd[idx];
-  grd[idx].x = s.x * LOG(GRID_EPS + s.x);
+  grd[idx].x = (1.0 + s.x) * LOG(GRID_EPS + 1.0 + s.x) - s.x * LOG(GRID_EPS + s.x);
   grd[idx].y = 0.0;
 }
 
