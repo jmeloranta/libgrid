@@ -15,8 +15,10 @@ extern void grid_func3_cuda_operate_one_productW(gpu_mem_block *, gpu_mem_block 
 /* rho * (dG/rho) + G(rho) */
 static inline REAL grid_func3(REAL rhop, REAL xi, REAL rhobf) {
 
-  REAL tmp = 1.0 / (COSH((rhop - rhobf) * xi) + DFT_BF_EPS);
-  REAL tmp2 = 0.5 * (1.0 - TANH(xi * (rhop - rhobf)));
+  REAL tmp3 = xi * (rhop - rhobf);
+  if (tmp3 > DFT_MAX_COSH) tmp3 = DFT_MAX_COSH;
+  REAL tmp = 1.0 / (COSH(tmp3) + DFT_BF_EPS);
+  REAL tmp2 = 0.5 * (1.0 - TANH(tmp3));
   
   return rhop * (-0.5 * xi * tmp * tmp) + tmp2;
 }

@@ -19,7 +19,7 @@ extern "C" void cuda_error_check();
 __global__ void grid_func3_cuda_operate_one_product_gpu(CUREAL *dst, CUREAL *src1, CUREAL *src2, CUREAL xi, CUREAL rhobf, INT nx, INT ny, INT nz, INT nzz) {
   
   INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
-  CUREAL rhop, tmp, tmp2;
+  CUREAL rhop, tmp, tmp2, tmp3;
 
   if(i >= nx || j >= ny || k >= nz) return;
 
@@ -27,8 +27,10 @@ __global__ void grid_func3_cuda_operate_one_product_gpu(CUREAL *dst, CUREAL *src
 
   rhop = src2[idx];
 
-  tmp = 1.0 / (COSH((rhop - rhobf) * xi) + DFT_BF_EPS);
-  tmp2 = 0.5 * (1.0 - TANH(xi * (rhop - rhobf)));
+  tmp3 = xi * (rhop - rhobf);
+  if(tmp3 > DFT_MAX_COSH) tmp3 = DFT_MAX_COSH;
+  tmp = 1.0 / (COSH(tmp3) + DFT_BF_EPS);
+  tmp2 = 0.5 * (1.0 - TANH(tmp3));
   
   dst[idx] = src1[idx] * (rhop * (-0.5 * xi * tmp * tmp) + tmp2);
 }
