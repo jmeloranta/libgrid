@@ -144,6 +144,33 @@ EXPORT void cgrid_random_uniform(cgrid *grid, REAL complex scale) {
     grid->value[i] += 2.0 * CREAL(scale) * (((REAL) drand48()) - 0.5) + I * 2.0 * CIMAG(scale) * (((REAL) drand48()) - 0.5);
 }
 
+/*
+ * @FUNC{cgrid_random_uniform_sp, "Add uniformly distributed random numbers to complex grid (random amplitude and phase)"}
+ * @DESC{"Add unform random numbers to complex grid. This assigns random complex vector length and phase, which is different from assigning random numbers to real and imaginary parts separately"}
+ * @ARG1{cgrid *grid, "Grid where the random numbers are added to"}
+ * @ARG2{REAL scale, "Scaling factor for random numbers. This scales the length of the complex vector"}
+ * @RVAL{void, "No return value"}
+ *
+ */
+
+EXPORT void cgrid_random_uniform_sp(cgrid *grid, REAL scale) {
+
+  INT i;
+
+  if(!init) {
+    grid_random_seed(0);
+    init = 1;
+  }
+
+#ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_random_uniform_sp(grid, scale)) return;
+  cuda_remove_block(grid->value, 1);
+#endif
+
+  for(i = 0; i < grid->nx * grid->ny * grid->nz; i++)
+    grid->value[i] += scale * ((REAL) drand48()) * CEXP(I * 2.0 * M_PI * ((REAL) drand48()));
+}
+
 /* 
  * @FUNC{cgrid_random_normal, "Add normal distributed random numbers to complex grid"}
  * @DESC{"Add normal random numbers to complex grid"}
@@ -179,5 +206,44 @@ EXPORT void cgrid_random_normal(cgrid *grid, REAL complex scale) {
     v1 *= fac;
     v2 *= fac;  
     grid->value[i] += CREAL(scale) * v1 + I * CIMAG(scale) * v2;
+  }
+}
+
+/* 
+ * @FUNC{cgrid_random_normal_sp, "Add normal distributed random numbers to complex grid (gaussian amplitude and uniform phase)"}
+ * @DESC{"Add normal random numbers to complex grid. This assigns random complex vector length from gaussian distribution and phase from uniform distribution"}
+ * @ARG1{cgrid *grid, "Grid where the random numbers are added to"}
+ * @ARG2{REAL scale, "Scaling factor for random numbers. This scales the length of the complex vector"}
+ * @RVAL{void, "No return value"}
+ *
+ */
+
+EXPORT void cgrid_random_normal_sp(cgrid *grid, REAL scale) {
+
+  REAL v1, rsq, fac;
+  static REAL v2;
+  INT i;
+
+  if(!init) {
+    grid_random_seed(0);
+    init = 1;
+  }
+
+#ifdef USE_CUDA
+  if(cuda_status() && !cgrid_cuda_random_normal_sp(grid, scale)) return;
+  cuda_remove_block(grid->value, 1);
+#endif
+
+  for(i = 0; i < grid->nx * grid->ny * grid->nz; i++) {
+    do {
+      v1 = 2.0 * (((REAL) drand48()) - 0.5);
+      v2 = 2.0 * (((REAL) drand48()) - 0.5);
+      rsq = v1 * v1 + v2 * v2;
+    } while(rsq == 0.0 || rsq > 1.0);
+    fac = SQRT(-2.0 * LOG(rsq) / rsq);
+    v1 *= fac;
+    v2 *= fac;  
+    // v2 is not needed
+    grid->value[i] += scale * v1 * CEXP(I * M_PI * ((REAL) drand48()));  // Only between 0 and Pi as v1 is +-
   }
 }

@@ -141,6 +141,35 @@ EXPORT INT cgrid_cuda_random_uniform(cgrid *grid, REAL complex scale) {
 }
 
 /*
+ * Add random numbers to complex grid using cuRAND (uniform distribution).
+ *
+ * grid  = Grid for the operation (cgrid *; input/output).
+ * scale = Scale factor (REAL; input).
+ *
+ */
+
+EXPORT INT cgrid_cuda_random_uniform_sp(cgrid *grid, REAL scale) {
+
+  CUREAL sc;
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+
+  if(!prev_len) 
+    grid_cuda_random_seed(time(0));
+
+  sc = scale;
+
+  cgrid_cuda_random_uniform_spW(cuda_find_block(grid->value), sc, grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}
+
+/*
  * Add random numbers to complex grid using cuRAND (normal distribution).
  *
  * grid  = Grid for the operation (cgrid *; input/output).
@@ -165,6 +194,35 @@ EXPORT INT cgrid_cuda_random_normal(cgrid *grid, REAL complex scale) {
   sc.x = CREAL(scale);
   sc.y = CIMAG(scale);
   cgrid_cuda_random_normalW(cuda_find_block(grid->value), sc, grid->nx, grid->ny, grid->nz);
+
+  return 0;
+}
+
+/*
+ * Add random numbers to complex grid using cuRAND (normal distribution).
+ *
+ * grid  = Grid for the operation (cgrid *; input/output).
+ * scale = Scale factor (REAL; input).
+ *
+ */
+
+EXPORT INT cgrid_cuda_random_normal_sp(cgrid *grid, REAL scale) {
+
+  CUREAL sc;
+
+  if(grid->host_lock) {
+    cuda_remove_block(grid->value, 1);
+    return -1;
+  }
+
+  if(cuda_one_block_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id, 1) < 0) return -1;
+
+  if(!prev_len) 
+    grid_cuda_random_seed(time(0));
+
+  sc = scale;
+
+  cgrid_cuda_random_normal_spW(cuda_find_block(grid->value), sc, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }

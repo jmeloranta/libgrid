@@ -84,7 +84,7 @@ __global__ void rgrid_cuda_random_uniform_gpu(CUREAL *grid, curandState *st, CUR
 
   idx = (i * ny + j) * nzz + k;
 
-#if CUREAL == float
+#ifdef SINGLE_PREC
   grid[idx] = grid[idx] + 2.0 * (curand_uniform(&st[cstate]) - 0.5) * scale;
 #else
   grid[idx] = grid[idx] + 2.0 * (curand_uniform_double(&st[cstate]) - 0.5) * scale;
@@ -139,7 +139,7 @@ __global__ void rgrid_cuda_random_normal_gpu(CUREAL *grid, curandState *st, CURE
 
   idx = (i * ny + j) * nzz + k;
 
-#if CUREAL == float
+#ifdef SINGLE_PREC
   grid[idx] = grid[idx] + scale * curand_normal(&st[cstate]);
 #else
   grid[idx] = grid[idx] + scale * curand_normal_double(&st[cstate]);
@@ -194,7 +194,7 @@ __global__ void cgrid_cuda_random_uniform_gpu(CUCOMPLEX *grid, curandState *st, 
 
   idx = (i * ny + j) * nz + k;
 
-#if CUREAL == float
+#ifdef SINGLE_PREC
   grid[idx] = grid[idx] + CUMAKE(2.0 * (curand_uniform(&st[cstate]) - 0.5) * scale.x, 2.0 * (curand_uniform(&st[cstate]) - 0.5) * scale.y);
 #else
   grid[idx] = grid[idx] + CUMAKE(2.0 * (curand_uniform_double(&st[cstate]) - 0.5) * scale.x, 2.0 * (curand_uniform_double(&st[cstate]) - 0.5) * scale.y);
@@ -231,6 +231,61 @@ extern "C" void cgrid_cuda_random_uniformW(gpu_mem_block *grid, CUCOMPLEX scale,
 }
 
 /*
+ * Add uniform random numbers to complex grid (uniform distribution between +- scale).
+ *
+ */
+
+__global__ void cgrid_cuda_random_uniform_sp_gpu(CUCOMPLEX *grid, curandState *st, CUREAL scale, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
+  REAL r1, r2;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+#ifdef SINGLE_PREC
+  r1 = scale * curand_uniform(&st[cstate]);
+  r2 = curand_uniform(&st[cstate]) * 2.0 * M_PI;
+#else
+  r1 = scale * curand_uniform_double(&st[cstate]);
+  r2 = curand_uniform_double(&st[cstate]) * 2.0 * M_PI;
+#endif
+  grid[idx].x = grid[idx].x + r1 * COS(r2);
+  grid[idx].y = grid[idx].y + r1 * SIN(r2);
+}
+
+/*
+ * Add uniform random numbers between -scale and +scale to real grid.
+ *
+ * grid    = Destination for operation (gpu_mem_block *; output).
+ * scale   = Random number scle (-scale, scale) (CUREAL; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void cgrid_cuda_random_uniform_spW(gpu_mem_block *grid, CUREAL scale, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES(grid);
+  cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(GRID->GPUs[i]);
+    cgrid_cuda_random_uniform_sp_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, nny1, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(GRID->GPUs[i]);
+    cgrid_cuda_random_uniform_sp_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, nny2, nz);
+  }
+
+  cuda_error_check();
+}
+
+/*
  * Add normal random numbers to real grid (normal distribution between +- scale).
  *
  */
@@ -244,7 +299,7 @@ __global__ void cgrid_cuda_random_normal_gpu(CUCOMPLEX *grid, curandState *st, C
 
   idx = (i * ny + j) * nz + k;
 
-#if CUREAL == float
+#ifdef SINGLE_PREC
   grid[idx] = grid[idx] + CUMAKE(scale.x * curand_normal(&st[cstate]), scale.y * curand_normal(&st[cstate]));
 #else
   grid[idx] = grid[idx] + CUMAKE(scale.x * curand_normal_double(&st[cstate]), scale.y * curand_normal_double(&st[cstate]));
@@ -275,6 +330,61 @@ extern "C" void cgrid_cuda_random_normalW(gpu_mem_block *grid, CUCOMPLEX scale, 
   for(i = ngpu1; i < ngpu2; i++) {
     cudaSetDevice(GRID->GPUs[i]);
     cgrid_cuda_random_normal_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, nny2, nz);
+  }
+
+  cuda_error_check();
+}
+
+/*
+ * Add normal random numbers to real grid (normal distribution between +- scale).
+ *
+ */
+
+__global__ void cgrid_cuda_random_normal_sp_gpu(CUCOMPLEX *grid, curandState *st, CUREAL scale, INT nx, INT ny, INT nz) {
+
+  INT k = blockIdx.x * blockDim.x + threadIdx.x, j = blockIdx.y * blockDim.y + threadIdx.y, i = blockIdx.z * blockDim.z + threadIdx.z, idx;
+  INT cstate = threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x + threadIdx.x;
+  CUREAL r1, r2;
+
+  if(i >= nx || j >= ny || k >= nz) return;
+
+  idx = (i * ny + j) * nz + k;
+
+#ifdef SINGLE_PREC
+  r1 = scale * curand_normal(&st[cstate]);
+  r2 = curand_uniform(&st[cstate]) * M_PI;
+#else
+  r1 = scale * curand_normal_double(&st[cstate]);
+  r2 = curand_uniform_double(&st[cstate]) * M_PI;
+#endif
+  grid[idx].x = grid[idx].x + r1 * COS(r2);
+  grid[idx].y = grid[idx].y + r1 * SIN(r2);
+}
+
+/*
+ * Add normal random numbers between -scale and +scale to real grid.
+ *
+ * grid    = Destination for operation (gpu_mem_block *; output).
+ * scale   = Scale for the random numbers (CUREAL; input).
+ * nx      = # of points along x (INT; input).
+ * ny      = # of points along y (INT; input).
+ * nz      = # of points along z (INT; input).
+ *
+ */
+
+extern "C" void cgrid_cuda_random_normal_spW(gpu_mem_block *grid, CUREAL scale, INT nx, INT ny, INT nz) {
+
+  SETUP_VARIABLES(grid);
+  cudaXtDesc *GRID = grid->gpu_info->descriptor;
+
+  for(i = 0; i < ngpu1; i++) {
+    cudaSetDevice(GRID->GPUs[i]);
+    cgrid_cuda_random_normal_sp_gpu<<<blocks1,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx1, nny1, nz);
+  }
+
+  for(i = ngpu1; i < ngpu2; i++) {
+    cudaSetDevice(GRID->GPUs[i]);
+    cgrid_cuda_random_normal_sp_gpu<<<blocks2,threads>>>((CUCOMPLEX *) GRID->data[i], (curandState *) grid_gpu_rand_addr->data[i], scale, nnx2, nny2, nz);
   }
 
   cuda_error_check();
