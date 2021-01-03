@@ -876,21 +876,13 @@ EXPORT REAL grid_wf_temperature(wf *gwf, REAL tl, REAL exponent) {
 EXPORT REAL grid_wf_superfluid(wf *gwf) {
 
   cgrid *grid = gwf->grid;
+  REAL n, ngnd, step = grid->step;
 
-#if 1 // Real space
-  // |\int\psi d^3r|^2 / (N * V)
-  return (csqnorm(cgrid_integral(grid)) / (grid_wf_norm(gwf) * (grid->step * grid->step * grid->step * (REAL) (grid->nx * grid->ny * grid->nz))));
-#else // Reciprocal space, amplitude of the DC component
-  REAL n, ngnd, tmp;
+  n = grid_wf_norm(gwf);
   cgrid_fft(grid);
   ngnd = csqnorm(cgrid_value_at_index(grid, 0, 0, 0));
-  tmp = grid->step;
-  grid->step = 1.0;
-  n = cgrid_integral_of_square(grid);
-  grid->step = tmp;
   cgrid_inverse_fft_norm(grid);
-  return ngnd / n;
-#endif
+  return ngnd / (n * step * step * step);
 }
 
 /*
