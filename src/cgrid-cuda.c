@@ -833,12 +833,13 @@ EXPORT char cgrid_cuda_multiply_by_z(cgrid *grid) {
 /*
  * Apply anti-alias based on k_max.
  *
- * grid = Grid for the operation (cgrid *; output).
+ * grid = Grid for the operation (cgrid *; output). *
+ * kmin = Minimum k-value (REAL; input).
  * kmax = Maximum k-value (REAL; input).
  *
  */
 
-EXPORT char cgrid_cuda_dealias2(cgrid *grid, REAL kmax) {
+EXPORT char cgrid_cuda_dealias2(cgrid *grid, REAL kmin, REAL kmax) {
 
   if(grid->host_lock) {
     cuda_remove_block(grid->value, 1);
@@ -847,7 +848,7 @@ EXPORT char cgrid_cuda_dealias2(cgrid *grid, REAL kmax) {
 
   if(cuda_misc_policy(grid->value, grid->grid_len, grid->cufft_handle, grid->id) < 0) return -1;
 
-  cgrid_cuda_dealias2W(cuda_find_block(grid->value), kmax, grid->step, grid->nx, grid->ny, grid->nz);
+  cgrid_cuda_dealias2W(cuda_find_block(grid->value), kmin, kmax, grid->step, grid->nx, grid->ny, grid->nz);
 
   return 0;
 }

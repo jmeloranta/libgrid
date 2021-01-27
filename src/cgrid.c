@@ -2745,27 +2745,27 @@ EXPORT void cgrid_dealias(cgrid *grid, char rule) {
 }
 
 /*
- * @FUNC{cgrid_dealias2, "Apply dealias with limit"}
- * @DESC{"Apply dealias to grid by a given $k_max$ value (i.e., zero when $|k| > k_max$).
-          Note that the grid must be in Fourier space"}
+ * @FUNC{cgrid_dealias2, "Apply dealias with limits"}
+ * @DESC{"Zero to Fourier transformed grid between $k_{min}$ and $k_{max}$. Note that the grid must be in Fourier space"}
  * @ARG1{cgrid *grid, "Grid for the operation"}
+ * @ARG2{REAL kmin, "Minimum value for k (set to zero if not needed)"}
  * @ARG2{REAL kmax, "Maximum value for k"}
  * @RVAL{void, "No return value"}
  * 
  */
 
-EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
+EXPORT void cgrid_dealias2(cgrid *grid, REAL kmin, REAL kmax) {
 
   INT nx = grid->nx, ny = grid->ny, nz = grid->nz, nxy, i, j, k, ij, ijnz, nx2, ny2, nz2;
   REAL kx, ky, kz, r, lx, ly, lz, step = grid->step;
   REAL complex *value = grid->value;
 
-  if(kmax < 0.0) {
-    fprintf(stderr, "libgrid: Negative kmax in cgrid_dealias2().\n");
+  if(kmax < 0.0 || kmin > kmax) {
+    fprintf(stderr, "libgrid: Illegal values for kmin/kmax in cgrid_dealias2().\n");
     abort();
   }
 #ifdef USE_CUDA
-  if(cuda_status() && !cgrid_cuda_dealias2(grid, kmax)) return;
+  if(cuda_status() && !cgrid_cuda_dealias2(grid, kmin, kmax)) return;
 #endif
 
   nx2 = nx / 2;
@@ -2775,7 +2775,7 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
   lx = 2.0 * M_PI / (step * (REAL) nx);
   ly = 2.0 * M_PI / (step * (REAL) ny);
   lz = 2.0 * M_PI / (step * (REAL) nz);
-#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,nxy,value,lx,ly,lz,kmax) private(ij,ijnz,k,r,i,j,kx,ky,kz) default(none) schedule(runtime)
+#pragma omp parallel for firstprivate(nx,ny,nz,nx2,ny2,nz2,nxy,value,lx,ly,lz,kmin,kmax) private(ij,ijnz,k,r,i,j,kx,ky,kz) default(none) schedule(runtime)
   for(ij = 0; ij < nxy; ij++) {
     ijnz = ij * nz;
     i = ij / ny;
@@ -2794,7 +2794,7 @@ EXPORT void cgrid_dealias2(cgrid *grid, REAL kmax) {
       else
         kz = -((REAL) (nz - k)) * lz; /* - kz0; */
       r = SQRT(kx * kx + ky * ky + kz * kz);
-      if(r > kmax) value[ijnz + k] = 0.0;
+      if(r < kmin || r > kmax) value[ijnz + k] = 0.0;
     }
   }
 }
