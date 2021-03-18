@@ -10,12 +10,12 @@
 #include <grid/grid.h>
 
 /* Grid dimensions */
-#define NX 1024
+#define NX 1
 #define NY 1
-#define NZ 1
+#define NZ 2048
 #define STEP 0.5
 
-#undef USE_CUDA
+// #undef USE_CUDA
 
 /* If using CUDA, use the following GPU allocation */
 #ifdef USE_CUDA

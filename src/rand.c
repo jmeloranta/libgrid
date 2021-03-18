@@ -19,7 +19,10 @@ static char init = 0;
 /* 
  * @FUNC{grid_random_seed, "Set random number generator seed"}
  * @DESC{"Initialize the random number generator"}
- * @ARG1{INT seed, "Set value for the radom number generator. 
+ * @ARG1{INT nx, "Maximum grid dimension (x). Only used for allocating CUDA random states"}
+ * @ARG2{INT ny, "Maximum grid dimension (y). Only used for allocating CUDA random states"}
+ * @ARG3{INT nz, "Maximum grid dimension (z). Only used for allocating CUDA random states"}
+ * @ARG4{INT seed, "Set value for the radom number generator. 
                     Set to zero to take the seed from current wallclock time.
                     This is not OpenMP thread safe as it uses drand48().
                     Also if cuda_status is off, when this is called,
@@ -28,13 +31,13 @@ static char init = 0;
  *
  */
 
-EXPORT void grid_random_seed(INT seed) {
+EXPORT void grid_random_seed(INT nx, INT ny, INT nz, INT seed) {
 
   if(!seed) srand48(time(0));
   else srand48((long int) seed);
 
 #ifdef USE_CUDA
-  if(cuda_status()) grid_cuda_random_seed(seed);
+  if(cuda_status()) grid_cuda_random_seed(nx, ny, nz, seed);
 #endif
 
   init = 1;
@@ -54,7 +57,7 @@ EXPORT void rgrid_random_uniform(rgrid *grid, REAL scale) {
   INT i, j, k;
 
   if(!init) {
-    grid_random_seed(0);
+    grid_random_seed(grid->nx, grid->ny, grid->nz, time(0));
     init = 1;
   }
 
@@ -86,7 +89,7 @@ EXPORT void rgrid_random_normal(rgrid *grid, REAL scale) {
   INT i, j, k;
 
   if(!init) {
-    grid_random_seed(0);
+    grid_random_seed(grid->nx, grid->ny, grid->nz, time(0));
     init = 1;
   }
 
@@ -131,7 +134,7 @@ EXPORT void cgrid_random_uniform(cgrid *grid, REAL complex scale) {
   INT i;
 
   if(!init) {
-    grid_random_seed(0);
+    grid_random_seed(grid->nx, grid->ny, grid->nz, time(0));
     init = 1;
   }
 
@@ -158,7 +161,7 @@ EXPORT void cgrid_random_uniform_sp(cgrid *grid, REAL scale) {
   INT i;
 
   if(!init) {
-    grid_random_seed(0);
+    grid_random_seed(grid->nx, grid->ny, grid->nz, time(0));
     init = 1;
   }
 
@@ -187,7 +190,7 @@ EXPORT void cgrid_random_normal(cgrid *grid, REAL complex scale) {
   INT i;
 
   if(!init) {
-    grid_random_seed(0);
+    grid_random_seed(grid->nx, grid->ny, grid->nz, time(0));
     init = 1;
   }
 
@@ -225,7 +228,7 @@ EXPORT void cgrid_random_normal_sp(cgrid *grid, REAL scale) {
   INT i;
 
   if(!init) {
-    grid_random_seed(0);
+    grid_random_seed(grid->nx, grid->ny, grid->nz, time(0));
     init = 1;
   }
 
