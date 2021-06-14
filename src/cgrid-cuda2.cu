@@ -1063,7 +1063,7 @@ __global__ void cgrid_cuda_integral_region_gpu(CUCOMPLEX *a, CUCOMPLEX *blocks, 
   }
   __syncthreads();
 
-  if(ii >= il && ii <= iu && jj >= jl && jj <= ju && k >= kl && k <= ku) {
+  if(ii >= il && ii < iu && jj >= jl && jj < ju && k >= kl && k < ku) {
     idx = (i * ny + j) * nz + k;
     idx2 = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
     els[idx2] = els[idx2] + a[idx];

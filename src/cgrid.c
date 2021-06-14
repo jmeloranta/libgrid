@@ -1589,9 +1589,9 @@ EXPORT REAL complex cgrid_integral_region(cgrid *grid, REAL xl, REAL xu, REAL yl
 
   sum = 0.0;
 #pragma omp parallel for firstprivate(il,iu,jl,ju,kl,ku,grid) private(i,j,k) reduction(+:sum) default(none) schedule(runtime)
-  for (i = il; i <= iu; i++)
-    for (j = jl; j <= ju; j++)
-      for (k = kl; k <= ku; k++)
+  for (i = il; i < iu; i++)
+    for (j = jl; j < ju; j++)
+      for (k = kl; k < ku; k++)
 	sum += cgrid_value_at_index(grid, i, j, k);
   if(nx != 1) sum *= step;
   if(ny != 1) sum *= step;
